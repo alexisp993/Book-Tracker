@@ -5,7 +5,7 @@
   "description": "AI-powered personal library and reading tracker (BookBuddy + Goodreads + StoryGraph)",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
