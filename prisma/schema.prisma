@@ -1,0 +1,274 @@
+// Book Tracker — Prisma schema
+// Provider is SQLite for local dev. The model design stays Postgres-portable:
+//   - no native enums (status stored as a constrained String, validated in app code)
+//   - no scalar arrays (lists modeled as relations / join tables)
+// Switching to Postgres later = change `provider` + datasource URL, then re-migrate.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity. Single local user this phase; userId FKs everywhere so multi-user
+// (NextAuth) can be added later without restructuring.
+// ---------------------------------------------------------------------------
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userBooks   UserBook[]
+  shelves     Shelf[]
+  collections Collection[]
+  reviews     Review[]
+  notes       Note[]
+  sessions    ReadingSession[]
+  goals       Goal[]
+}
+
+// ---------------------------------------------------------------------------
+// Canonical book metadata (shared across users; deduped by ISBN where possible).
+// ---------------------------------------------------------------------------
+model Book {
+  id              String    @id @default(cuid())
+  title           String
+  subtitle        String?
+  description     String?
+  publisher       String?
+  publishedDate   String? // raw provider value (year, or full date) kept as text
+  isbn10          String?
+  isbn13          String?   @unique
+  language        String?
+  pageCount       Int?
+  coverUrl        String?
+  // Provenance of the metadata: MANUAL | OPEN_LIBRARY | GOOGLE_BOOKS | ISBNDB
+  source          String    @default("MANUAL")
+  seriesId        String?
+  seriesPosition  Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  series      Series?       @relation(fields: [seriesId], references: [id])
+  authors     BookAuthor[]
+  genres      BookGenre[]
+  userBooks   UserBook[]
+
+  @@index([title])
+  @@index([isbn10])
+  @@index([seriesId])
+}
+
+model Author {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  bio       String?
+  createdAt DateTime     @default(now())
+  books     BookAuthor[]
+
+  @@index([name])
+}
+
+model BookAuthor {
+  bookId   String
+  authorId String
+  // ordering of authors on a book (0 = primary author)
+  order    Int    @default(0)
+
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@index([authorId])
+}
+
+model Genre {
+  id    String      @id @default(cuid())
+  name  String      @unique
+  books BookGenre[]
+}
+
+model BookGenre {
+  bookId  String
+  genreId String
+
+  book  Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, genreId])
+  @@index([genreId])
+}
+
+model Series {
+  id    String @id @default(cuid())
+  name  String @unique
+  books Book[]
+}
+
+// ---------------------------------------------------------------------------
+// A user's library entry for a book (the heart of the tracker).
+// status values: WANT_TO_READ | CURRENTLY_READING | READ | DID_NOT_FINISH | ON_HOLD
+// ---------------------------------------------------------------------------
+model UserBook {
+  id          String    @id @default(cuid())
+  userId      String
+  bookId      String
+  status      String    @default("WANT_TO_READ")
+  rating      Int? // 1..5, validated in app
+  favorite    Boolean   @default(false)
+  currentPage Int       @default(0)
+  startDate   DateTime?
+  finishDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book            Book             @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  shelves         ShelfBook[]
+  collections     CollectionBook[]
+  reviews         Review[]
+  notes           Note[]
+  readingSessions ReadingSession[]
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, favorite])
+}
+
+// ---------------------------------------------------------------------------
+// Shelves (unlimited, many-to-many with library entries).
+// ---------------------------------------------------------------------------
+model Shelf {
+  id        String      @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime    @default(now())
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  books ShelfBook[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ShelfBook {
+  shelfId    String
+  userBookId String
+
+  shelf    Shelf    @relation(fields: [shelfId], references: [id], onDelete: Cascade)
+  userBook UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
+
+  @@id([shelfId, userBookId])
+  @@index([userBookId])
+}
+
+// ---------------------------------------------------------------------------
+// Collections (curated, unlimited).
+// ---------------------------------------------------------------------------
+model Collection {
+  id          String           @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  books CollectionBook[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model CollectionBook {
+  collectionId String
+  userBookId   String
+  order        Int    @default(0)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  userBook   UserBook   @relation(fields: [userBookId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, userBookId])
+  @@index([userBookId])
+}
+
+// ---------------------------------------------------------------------------
+// Reviews (public-ish) and Notes (private).
+// ---------------------------------------------------------------------------
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  userBookId String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userBook UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
+
+  @@index([userBookId])
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  userId     String
+  userBookId String
+  body       String
+  page       Int?
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userBook UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
+
+  @@index([userBookId])
+}
+
+// ---------------------------------------------------------------------------
+// Reading sessions — fuel for analytics (speed, consistency, time spent).
+// ---------------------------------------------------------------------------
+model ReadingSession {
+  id          String   @id @default(cuid())
+  userId      String
+  userBookId  String
+  date        DateTime @default(now())
+  minutes     Int?
+  pagesRead   Int?
+  startPage   Int?
+  endPage     Int?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userBook UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userBookId])
+}
+
+// ---------------------------------------------------------------------------
+// Reading goals / challenges.
+// type values: BOOKS | PAGES | GENRE | AUTHOR | CUSTOM
+// ---------------------------------------------------------------------------
+model Goal {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  type      String   @default("BOOKS")
+  target    Int
+  year      Int?
+  // optional scoping for GENRE/AUTHOR goals
+  metaKey   String?
+  metaValue String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

@@ -1,0 +1,270 @@
+import {
+  coverUrlForIsbn,
+  isbn10To13,
+  isValidIsbn,
+  normalizeIsbn,
+} from "@/lib/isbn";
+
+// Normalized metadata shape shared by all providers and returned to the client.
+// Mirrors the editable book fields so it can prefill the add form directly.
+export interface BookMetadata {
+  title: string;
+  subtitle?: string;
+  authors: string[];
+  description?: string;
+  publisher?: string;
+  publishedDate?: string;
+  isbn10?: string;
+  isbn13?: string;
+  language?: string;
+  pageCount?: number;
+  coverUrl?: string;
+  categories?: string[];
+  source: string; // which provider(s) supplied the data
+}
+
+// A partial result from a single provider before merging.
+type PartialMeta = Partial<BookMetadata> & { source: string };
+
+const FETCH_TIMEOUT_MS = 8000;
+
+async function fetchJsonOnce(url: string): Promise<unknown | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "BookTracker/0.1 (personal library app)" },
+    });
+    // 429 (rate limit) and 5xx are worth a retry; 404 is a definitive miss.
+    if (!res.ok) {
+      if (res.status === 429 || res.status >= 500) throw new Error("retryable");
+      return null;
+    }
+    return (await res.json()) as unknown;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Fetch with one retry on transient failure (timeout, network blip, 429/5xx),
+// so a momentary hiccup doesn't read as "book not found".
+async function fetchJson(url: string): Promise<unknown | null> {
+  try {
+    return await fetchJsonOnce(url);
+  } catch {
+    try {
+      await new Promise((r) => setTimeout(r, 350));
+      return await fetchJsonOnce(url);
+    } catch {
+      return null;
+    }
+  }
+}
+
+
+// --- Provider 1: Google Books (richest: description, categories, language) ----
+async function fromGoogleBooks(isbn: string): Promise<PartialMeta | null> {
+  const data = (await fetchJson(
+    `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`,
+  )) as GBResponse | null;
+  const info = data?.items?.[0]?.volumeInfo;
+  if (!info?.title) return null;
+
+  const ids = info.industryIdentifiers ?? [];
+  const cover =
+    info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail;
+  return {
+    title: info.title,
+    subtitle: info.subtitle,
+    authors: info.authors ?? [],
+    description: info.description,
+    publisher: info.publisher,
+    publishedDate: info.publishedDate,
+    isbn13: ids.find((i) => i.type === "ISBN_13")?.identifier,
+    isbn10: ids.find((i) => i.type === "ISBN_10")?.identifier,
+    language: info.language,
+    pageCount: info.pageCount,
+    coverUrl: cover ? cover.replace(/^http:/, "https:") : undefined,
+    categories: info.categories,
+    source: "GOOGLE_BOOKS",
+  };
+}
+
+interface GBResponse {
+  items?: {
+    volumeInfo?: {
+      title?: string;
+      subtitle?: string;
+      authors?: string[];
+      publisher?: string;
+      publishedDate?: string;
+      description?: string;
+      pageCount?: number;
+      categories?: string[];
+      language?: string;
+      imageLinks?: { thumbnail?: string; smallThumbnail?: string };
+      industryIdentifiers?: { type: string; identifier: string }[];
+    };
+  }[];
+}
+
+// --- Provider 2: Open Library "data" endpoint --------------------------------
+async function fromOpenLibraryData(isbn: string): Promise<PartialMeta | null> {
+  const data = (await fetchJson(
+    `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`,
+  )) as Record<string, OLBook> | null;
+  const entry = data?.[`ISBN:${isbn}`];
+  if (!entry?.title) return null;
+
+  const identifiers = entry.identifiers ?? {};
+  return {
+    title: entry.title,
+    subtitle: entry.subtitle,
+    authors: (entry.authors ?? []).map((a) => a.name).filter(Boolean),
+    publisher: entry.publishers?.[0]?.name,
+    publishedDate: entry.publish_date,
+    isbn13: identifiers.isbn_13?.[0],
+    isbn10: identifiers.isbn_10?.[0],
+    pageCount: entry.number_of_pages,
+    coverUrl: entry.cover?.large ?? entry.cover?.medium,
+    categories: (entry.subjects ?? []).map((s) => s.name).slice(0, 8),
+    source: "OPEN_LIBRARY",
+  };
+}
+
+interface OLBook {
+  title?: string;
+  subtitle?: string;
+  authors?: { name: string }[];
+  publishers?: { name: string }[];
+  publish_date?: string;
+  number_of_pages?: number;
+  cover?: { small?: string; medium?: string; large?: string };
+  subjects?: { name: string }[];
+  identifiers?: { isbn_10?: string[]; isbn_13?: string[] };
+}
+
+// --- Provider 3: Open Library Search (broadest catalog coverage) -------------
+async function fromOpenLibrarySearch(
+  isbn: string,
+): Promise<PartialMeta | null> {
+  const data = (await fetchJson(
+    `https://openlibrary.org/search.json?isbn=${isbn}&fields=title,subtitle,author_name,first_publish_year,publisher,number_of_pages_median,cover_i,language&limit=1`,
+  )) as OLSearchResponse | null;
+  const doc = data?.docs?.[0];
+  if (!doc?.title) return null;
+
+  return {
+    title: doc.title,
+    subtitle: doc.subtitle,
+    authors: doc.author_name ?? [],
+    publisher: doc.publisher?.[0],
+    publishedDate: doc.first_publish_year
+      ? String(doc.first_publish_year)
+      : undefined,
+    pageCount: doc.number_of_pages_median,
+    language: doc.language?.[0],
+    coverUrl: doc.cover_i
+      ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+      : undefined,
+    source: "OPEN_LIBRARY_SEARCH",
+  };
+}
+
+interface OLSearchResponse {
+  docs?: {
+    title?: string;
+    subtitle?: string;
+    author_name?: string[];
+    first_publish_year?: number;
+    publisher?: string[];
+    number_of_pages_median?: number;
+    cover_i?: number;
+    language?: string[];
+  }[];
+}
+
+// Merge partials in priority order: first non-empty value wins per field.
+function merge(parts: (PartialMeta | null)[]): BookMetadata | null {
+  const present = parts.filter((p): p is PartialMeta => p !== null);
+  if (present.length === 0) return null;
+
+  const pickStr = (key: keyof BookMetadata): string | undefined => {
+    for (const p of present) {
+      const v = p[key];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+    return undefined;
+  };
+  const pickNum = (key: keyof BookMetadata): number | undefined => {
+    for (const p of present) {
+      const v = p[key];
+      if (typeof v === "number" && v > 0) return v;
+    }
+    return undefined;
+  };
+  const pickArr = (key: "authors" | "categories"): string[] | undefined => {
+    for (const p of present) {
+      const v = p[key];
+      if (Array.isArray(v) && v.length > 0) return v;
+    }
+    return undefined;
+  };
+
+  const title = pickStr("title");
+  if (!title) return null;
+
+  return {
+    title,
+    subtitle: pickStr("subtitle"),
+    authors: pickArr("authors") ?? [],
+    description: pickStr("description"),
+    publisher: pickStr("publisher"),
+    publishedDate: pickStr("publishedDate"),
+    isbn10: pickStr("isbn10"),
+    isbn13: pickStr("isbn13"),
+    language: pickStr("language"),
+    pageCount: pickNum("pageCount"),
+    coverUrl: pickStr("coverUrl"),
+    categories: pickArr("categories"),
+    source: present.map((p) => p.source).join("+"),
+  };
+}
+
+/**
+ * Look up book metadata by ISBN. Queries Google Books and both Open Library
+ * endpoints in parallel and merges them — the providers have complementary
+ * coverage, so combining them resolves far more books than any one alone.
+ * Always backfills a cover image via Open Library's cover-by-ISBN endpoint when
+ * no provider supplied one. Returns null only if no provider has the book.
+ */
+export async function lookupByIsbn(
+  rawIsbn: string,
+): Promise<BookMetadata | null> {
+  const isbn = normalizeIsbn(rawIsbn);
+  if (!isValidIsbn(isbn)) return null;
+
+  const [gb, olData, olSearch] = await Promise.all([
+    fromGoogleBooks(isbn).catch(() => null),
+    fromOpenLibraryData(isbn).catch(() => null),
+    fromOpenLibrarySearch(isbn).catch(() => null),
+  ]);
+
+  const merged = merge([gb, olData, olSearch]);
+  if (!merged) return null;
+
+  // Ensure ISBN-13 is populated (helps dedupe + cover lookup).
+  if (!merged.isbn13) {
+    merged.isbn13 =
+      isbn.length === 13 ? isbn : (isbn10To13(isbn) ?? undefined);
+  }
+  if (!merged.isbn10 && isbn.length === 10) merged.isbn10 = isbn;
+
+  // Backfill cover by ISBN if none came from a provider.
+  if (!merged.coverUrl) {
+    merged.coverUrl = coverUrlForIsbn(merged.isbn13 ?? merged.isbn10 ?? isbn);
+  }
+
+  return merged;
+}
