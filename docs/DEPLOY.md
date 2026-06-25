@@ -20,28 +20,14 @@ use it like an app. The app is protected by a password you set.
 
 ---
 
-## One required code change: SQLite → Postgres
-Local development uses SQLite (a file). Vercel's servers can't keep a file, so production uses
-Postgres. The schema was written to be Postgres-compatible, so this is a **one-line change**.
+## Database: Postgres (already configured)
+The code is set to **PostgreSQL** (`prisma/schema.prisma`), using a pooled `DATABASE_URL` at
+runtime and a direct `DATABASE_URL_UNPOOLED` for creating tables. The build runs
+`prisma db push` automatically, so your tables are created/updated on every deploy — no manual
+database step needed.
 
-In `prisma/schema.prisma`, change:
-```prisma
-datasource db {
-  provider = "sqlite"        // ← change this
-  url      = env("DATABASE_URL")
-}
-```
-to:
-```prisma
-datasource db {
-  provider = "postgresql"    // ← to this
-  url      = env("DATABASE_URL")
-}
-```
-> Ask Claude to do this for you when you're ready — and to point your **local** `.env`
-> `DATABASE_URL` at the same Postgres database so local and cloud match. (Your current local
-> SQLite books won't copy over automatically — you can re-scan them, or ask for the CSV
-> import feature.)
+> Your earlier local SQLite books won't copy to the cloud database (it starts fresh) — re-scan
+> them on your phone, or ask for the CSV import feature.
 
 ---
 
@@ -80,14 +66,10 @@ git push -u origin main
    | `DATABASE_URL` | your Postgres connection string (skip if you used Vercel Postgres Option A, which sets it for you) |
 4. Click **Deploy**.
 
-## Step 4 — Create the database tables
-The database is empty until you create the tables from the schema. With your **production**
-`DATABASE_URL` set locally in `.env` (temporarily), run:
-```bash
-npx prisma db push
-```
-This creates all tables in the Postgres database. (Re-run it whenever the schema changes.)
-> No `prisma db seed` needed in production — your library starts empty and fills as you add books.
+## Step 4 — Tables are created automatically
+No action needed — the deploy's build step runs `prisma db push`, which creates all tables in
+your Neon database the first time (and keeps them in sync on later deploys). Your library starts
+empty and fills as you add books.
 
 ## Step 5 — Use it on your phone
 1. Open your Vercel URL (e.g. `https://book-tracker-you.vercel.app`) on your phone.
