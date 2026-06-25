@@ -2,6 +2,18 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Phase 3.3: Google Books API key for production coverage
+
+### Changed
+- `fromGoogleBooks` now sends Google's required `country` param and uses an optional
+  `GOOGLE_BOOKS_API_KEY` when set. Without a key, Google Books is rate-limited per shared
+  server IP (429 on Vercel), so books that only exist there (e.g. many UK editions like ISBN
+  `9780099545897`, which Open Library and Amazon lack) come back "not found". With a free key,
+  the quota is per-key and Google Books works reliably in production — greatly improving the
+  find rate.
+- New env vars: `GOOGLE_BOOKS_API_KEY` (free, no billing) and `GOOGLE_BOOKS_COUNTRY`
+  (default `US`; set to your country for better edition matching).
+
 ## [Unreleased] — Phase 3.2: Multi-source cover fallback chain
 
 ### Added / Changed

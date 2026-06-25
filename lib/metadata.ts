@@ -64,9 +64,17 @@ async function fetchJson(url: string): Promise<unknown | null> {
 
 
 // --- Provider 1: Google Books (richest: description, categories, language) ----
+// An API key makes the quota per-key instead of per-IP — essential on serverless
+// hosts (Vercel) whose shared IPs are otherwise rate-limited (429). The `country`
+// param is required by the API to return results in many cases.
 async function fromGoogleBooks(isbn: string): Promise<PartialMeta | null> {
+  const params = new URLSearchParams({ q: `isbn:${isbn}` });
+  params.set("country", process.env.GOOGLE_BOOKS_COUNTRY || "US");
+  const key = process.env.GOOGLE_BOOKS_API_KEY;
+  if (key) params.set("key", key);
+
   const data = (await fetchJson(
-    `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`,
+    `https://www.googleapis.com/books/v1/volumes?${params.toString()}`,
   )) as GBResponse | null;
   const info = data?.items?.[0]?.volumeInfo;
   if (!info?.title) return null;
