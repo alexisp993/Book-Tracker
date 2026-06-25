@@ -2,6 +2,34 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Design polish + "Start reading" fix
+
+### Fixed
+- **Timer dead-end**: the reading-timer picker only listed books already marked "Currently
+  Reading," but the library gave no way to set that status except a buried dropdown inside
+  Edit. Fixed two ways: (1) the picker now lists all unfinished books (Currently Reading, On
+  Hold, Want to Read) — starting a session on a Want to Read/On Hold book **auto-promotes its
+  status to Currently Reading** (`lib/sessions.ts startSession`), since starting a timer on a
+  book *is* the signal you're reading it; (2) added a one-tap **"Start reading"** quick action
+  directly on library cards for the same books, for discoverability outside the timer flow.
+
+### Changed — visual design
+- **Warmer palette**: replaced the cool gray background/foreground with a soft parchment/cream
+  light theme and a warm charcoal (not pure black) dark theme; added a `warm` (terracotta)
+  accent token used for the new quick-action button, breaking up the previous black/white/blue
+  monochrome.
+- **Real dark mode**: dark-mode CSS variables existed but nothing ever applied the `.dark`
+  class. Added a `ThemeToggle` (sun/moon button in the header) that toggles and persists to
+  `localStorage`, plus a blocking inline script in `app/layout.tsx` that applies the saved
+  preference (or OS preference) before paint — no flash of the wrong theme.
+- **Colorful stats**: `StatsView`'s `Stat` cards gained tinted icon chips (blue/emerald/amber/
+  violet/rose/teal by meaning) instead of plain muted-gray icons — much more visually distinct
+  at a glance, in both themes.
+- **Spacing**: bumped section spacing (`space-y-5` → `space-y-6`) across Library/Shelves/
+  Collections/Sessions/Stats, widened grid gaps on larger screens, increased top/bottom page
+  padding in `AppShell`, and moved the floating timer button up slightly for breathing room
+  above the 5-tab bottom nav.
+
 ## [Unreleased] — Bookmory Phase 1: Reading Timer & Sessions
 
 ### Added

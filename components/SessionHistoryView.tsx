@@ -121,7 +121,7 @@ export function SessionHistoryView() {
   const isEmpty = !loading && items.length === 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {loading && !data

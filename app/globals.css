@@ -2,46 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Refined, Apple-like palette: zinc neutrals, generous whitespace, single blue accent. */
+/* Warm, literary palette: a soft parchment neutral (not cool gray), a blue
+   primary for actions, and a terracotta secondary accent for warmth — used
+   sparingly (favorites, highlights, the "currently reading" quick action) so
+   the app doesn't read as flat black/white/blue. */
 :root {
-  --background: 240 10% 98%;
-  --foreground: 240 10% 4%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 4%;
+  --background: 36 28% 97%;
+  --foreground: 20 14% 11%;
+  --card: 36 33% 99%;
+  --card-foreground: 20 14% 11%;
   --primary: 221 83% 53%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 96%;
-  --secondary-foreground: 240 6% 10%;
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 4% 46%;
-  --accent: 240 5% 96%;
-  --accent-foreground: 240 6% 10%;
+  --secondary: 30 20% 93%;
+  --secondary-foreground: 20 14% 14%;
+  --muted: 30 20% 93%;
+  --muted-foreground: 25 10% 42%;
+  --accent: 30 20% 93%;
+  --accent-foreground: 20 14% 14%;
+  --warm: 18 75% 54%;
+  --warm-foreground: 0 0% 100%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 6% 90%;
-  --input: 240 6% 88%;
+  --border: 30 16% 88%;
+  --input: 30 16% 85%;
   --ring: 221 83% 53%;
   --radius: 0.85rem;
 }
 
 .dark {
-  --background: 240 10% 4%;
-  --foreground: 0 0% 98%;
-  --card: 240 8% 8%;
-  --card-foreground: 0 0% 98%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 14%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 5% 14%;
-  --muted-foreground: 240 5% 65%;
-  --accent: 240 5% 14%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 63% 51%;
+  --background: 22 16% 8%;
+  --foreground: 36 20% 96%;
+  --card: 22 14% 11%;
+  --card-foreground: 36 20% 96%;
+  --primary: 217 91% 64%;
+  --primary-foreground: 220 40% 10%;
+  --secondary: 22 12% 16%;
+  --secondary-foreground: 36 20% 96%;
+  --muted: 22 12% 16%;
+  --muted-foreground: 30 10% 65%;
+  --accent: 22 12% 16%;
+  --accent-foreground: 36 20% 96%;
+  --warm: 22 80% 62%;
+  --warm-foreground: 20 30% 10%;
+  --destructive: 0 70% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 5% 16%;
-  --input: 240 5% 18%;
-  --ring: 217 91% 60%;
+  --border: 22 12% 19%;
+  --input: 22 12% 22%;
+  --ring: 217 91% 64%;
 }
 
 * {

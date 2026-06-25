@@ -35,9 +35,24 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#fafafa",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fdfaf6" },
+    { media: "(prefers-color-scheme: dark)", color: "#16140f" },
+  ],
   viewportFit: "cover",
 };
+
+// Set the `dark` class before paint (from a saved preference, falling back to
+// the OS setting) so there's no flash of the wrong theme on load.
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var stored = localStorage.getItem("bt_theme");
+    var dark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", dark);
+  } catch (e) {}
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -46,6 +61,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen antialiased">
         <AppShell>{children}</AppShell>
       </body>

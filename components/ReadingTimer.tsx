@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { ApiRequestError, getActiveSession, listBooks, startSession, stopSession } from "@/lib/api";
-import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS } from "@/lib/constants";
+import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS, STATUS_LABELS } from "@/lib/constants";
 import type { ReadingMood } from "@/lib/constants";
 import type { LibraryBook, ReadingSessionDTO } from "@/lib/types";
 
@@ -50,22 +50,20 @@ export function ReadingTimer() {
     return () => clearInterval(t);
   }, [active]);
 
+  // Order: Currently Reading first, then On Hold, then Want to Read — starting a
+  // session on a not-yet-started book promotes it to Currently Reading automatically
+  // (see lib/sessions.ts startSession), so any unfinished book is a valid pick here.
+  const STATUS_ORDER = ["CURRENTLY_READING", "ON_HOLD", "WANT_TO_READ"] as const;
+
   async function openPicker() {
     setError(null);
     setPickerOpen(true);
-    const result = await listBooks({
-      status: "CURRENTLY_READING",
-      pageSize: 50,
-      sort: "createdAt",
-      order: "desc",
-    });
-    let items = result.items;
-    if (items.length === 0) {
-      // Fall back to On Hold books if nothing is actively being read.
-      const onHold = await listBooks({ status: "ON_HOLD", pageSize: 50 });
-      items = onHold.items;
-    }
-    setBooks(items);
+    const results = await Promise.all(
+      STATUS_ORDER.map((status) =>
+        listBooks({ status, pageSize: 50, sort: "createdAt", order: "desc" }),
+      ),
+    );
+    setBooks(results.flatMap((r) => r.items));
   }
 
   async function handleStart(userBookId: string) {
@@ -122,7 +120,7 @@ export function ReadingTimer() {
         <button
           type="button"
           onClick={openStop}
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-foreground px-4 py-3 text-background shadow-lg transition-transform hover:scale-105 sm:bottom-6"
+          className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-foreground px-4 py-3 text-background shadow-lg transition-transform hover:scale-105 sm:bottom-6"
         >
           <Pause className="h-4 w-4" />
           <span className="line-clamp-1 max-w-[140px] text-sm font-medium">
@@ -136,7 +134,7 @@ export function ReadingTimer() {
         <button
           type="button"
           onClick={openPicker}
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg transition-transform hover:scale-105 sm:bottom-6"
+          className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg transition-transform hover:scale-105 sm:bottom-6"
         >
           <Play className="h-4 w-4" />
           <span className="text-sm font-medium">Start reading</span>
@@ -153,7 +151,11 @@ export function ReadingTimer() {
           {books.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
               <BookOpen className="h-7 w-7 opacity-40" />
-              Mark a book as Currently Reading first.
+              <p>Add a book to your library first.</p>
+              <p className="text-xs">
+                Finished books won&rsquo;t show here — add a new one or check your
+                shelves.
+              </p>
             </div>
           ) : (
             <div className="max-h-80 space-y-1 overflow-y-auto">
@@ -175,10 +177,10 @@ export function ReadingTimer() {
                       />
                     ) : null}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="line-clamp-1 text-sm font-medium">{b.title}</p>
                     <p className="line-clamp-1 text-xs text-muted-foreground">
-                      Page {b.currentPage}
+                      {STATUS_LABELS[b.status]} · Page {b.currentPage}
                       {b.pageCount ? ` of ${b.pageCount}` : ""}
                     </p>
                   </div>

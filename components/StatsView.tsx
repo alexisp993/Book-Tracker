@@ -43,21 +43,23 @@ export function StatsView() {
   const maxRating = Math.max(1, ...stats.ratingDistribution.map((r) => r.count));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" value={stats.total} />
-        <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" value={stats.read} />
-        <Stat icon={<Flame className="h-4 w-4" />} label="Reading" value={stats.reading} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+        <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" tint="blue" value={stats.total} />
+        <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" tint="emerald" value={stats.read} />
+        <Stat icon={<Flame className="h-4 w-4" />} label="Reading" tint="amber" value={stats.reading} />
         <Stat
           icon={<BookOpen className="h-4 w-4" />}
           label="Pages read"
+          tint="violet"
           value={stats.pagesRead.toLocaleString()}
         />
-        <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" value={stats.favorites} />
+        <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" tint="rose" value={stats.favorites} />
         <Stat
           icon={<Star className="h-4 w-4" />}
           label="Avg rating"
+          tint="amber"
           value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
         />
       </div>
@@ -69,19 +71,21 @@ export function StatsView() {
             <Stat
               icon={<Clock className="h-4 w-4" />}
               label="Lifetime hours"
+              tint="teal"
               value={(sessionStats.totalMinutes / 60).toFixed(1)}
             />
             <Stat
               icon={<Timer className="h-4 w-4" />}
               label="Avg pace"
+              tint="violet"
               value={
                 sessionStats.avgPagesPerHour
                   ? `${sessionStats.avgPagesPerHour} pg/hr`
                   : "—"
               }
             />
-            <Stat icon={<Clock className="h-4 w-4" />} label="This week" value={`${sessionStats.hoursThisWeek}h`} />
-            <Stat icon={<Clock className="h-4 w-4" />} label="This month" value={`${sessionStats.hoursThisMonth}h`} />
+            <Stat icon={<Clock className="h-4 w-4" />} label="This week" tint="teal" value={`${sessionStats.hoursThisWeek}h`} />
+            <Stat icon={<Clock className="h-4 w-4" />} label="This month" tint="teal" value={`${sessionStats.hoursThisMonth}h`} />
           </div>
         </Card>
       ) : null}
@@ -177,22 +181,38 @@ export function StatsView() {
   );
 }
 
+const TINTS = {
+  blue: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+  amber: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+  violet: "bg-violet-500/15 text-violet-600 dark:text-violet-300",
+  rose: "bg-rose-500/15 text-rose-600 dark:text-rose-300",
+  teal: "bg-teal-500/15 text-teal-600 dark:text-teal-300",
+} as const;
+
 function Stat({
   icon,
   label,
   value,
+  tint = "blue",
 }: {
   icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
+  tint?: keyof typeof TINTS;
 }) {
   return (
     <div className="rounded-2xl border bg-card p-4">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
+      <span
+        className={cn(
+          "inline-flex h-8 w-8 items-center justify-center rounded-full",
+          TINTS[tint],
+        )}
+      >
         {icon}
-        <span className="text-xs">{label}</span>
-      </div>
-      <p className="mt-1 font-display text-2xl font-semibold">{value}</p>
+      </span>
+      <p className="mt-2.5 text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-display text-2xl font-semibold">{value}</p>
     </div>
   );
 }

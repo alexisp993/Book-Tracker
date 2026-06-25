@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Pencil, Trash2 } from "lucide-react";
+import { BookOpen, Heart, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -14,12 +14,16 @@ export function BookCard({
   compact = false,
   onEdit,
   onDelete,
+  onStartReading,
 }: {
   book: LibraryBook;
   compact?: boolean;
   onEdit: (book: LibraryBook) => void;
   onDelete: (book: LibraryBook) => void;
+  onStartReading?: (book: LibraryBook) => void;
 }) {
+  const canStart =
+    book.status === "WANT_TO_READ" || book.status === "ON_HOLD";
   const progress =
     book.pageCount && book.pageCount > 0
       ? Math.min(100, Math.round((book.currentPage / book.pageCount) * 100))
@@ -95,6 +99,17 @@ export function BookCard({
               {book.currentPage}/{book.pageCount} pages · {progress}%
             </p>
           </div>
+        ) : null}
+
+        {canStart && onStartReading ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 w-full border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
+            onClick={() => onStartReading(book)}
+          >
+            <BookOpen className="h-3.5 w-3.5" /> Start reading
+          </Button>
         ) : null}
 
         <div className="mt-1 flex items-center gap-1">

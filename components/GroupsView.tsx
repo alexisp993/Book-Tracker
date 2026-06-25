@@ -114,7 +114,7 @@ export function GroupsView({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex justify-end">
         <Button onClick={startCreate}>
           <Plus className="h-4 w-4" /> New {singular}

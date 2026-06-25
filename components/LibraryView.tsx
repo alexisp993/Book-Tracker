@@ -169,6 +169,16 @@ export function LibraryView() {
     }
   }
 
+  async function handleStartReading(book: LibraryBook) {
+    try {
+      await updateBook(book.id, { status: "CURRENTLY_READING" });
+      await load();
+    } catch {
+      // Surfacing this inline isn't critical — the book simply won't update;
+      // the user can still get there via Edit.
+    }
+  }
+
   async function handleSubmit(values: BookFormValues) {
     setSubmitting(true);
     setFormError(null);
@@ -217,7 +227,7 @@ export function LibraryView() {
   const isEmpty = !loading && items.length === 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between gap-3 sm:justify-start">
           <p className="text-sm text-muted-foreground">
@@ -303,13 +313,14 @@ export function LibraryView() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {items.map((book) => (
             <BookCard
               key={book.id}
               book={book}
               onEdit={openEdit}
               onDelete={setToDelete}
+              onStartReading={handleStartReading}
             />
           ))}
         </div>

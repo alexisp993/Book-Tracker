@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReadingTimer } from "@/components/ReadingTimer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { href: "/", label: "Library", icon: LibraryBig },
@@ -66,21 +67,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <form action="/api/auth/logout" method="post" className="ml-auto">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              title="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Log out</span>
-            </button>
-          </form>
+          <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle />
+            <form action="/api/auth/logout" method="post">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                title="Log out"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Log out</span>
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-12">
+      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-14 sm:pt-8">
         {children}
       </main>
 

@@ -204,17 +204,36 @@ export async function startSession(
   }
   const userBook = await assertOwnedUserBook(userId, userBookId);
 
-  const row = await prisma.readingSession.create({
-    data: {
-      userId,
-      userBookId,
-      date: new Date(),
-      startPage: userBook.currentPage,
-      minutes: null,
-    },
-    include: sessionInclude,
-  });
-  return serializeSession(row);
+  // Starting a session on a book that isn't already "Currently Reading" means
+  // exactly that — promote it automatically so the user never has to find a
+  // separate status control just to use the timer.
+  const shouldPromote =
+    userBook.status === "WANT_TO_READ" || userBook.status === "ON_HOLD";
+
+  const [row] = await prisma.$transaction([
+    prisma.readingSession.create({
+      data: {
+        userId,
+        userBookId,
+        date: new Date(),
+        startPage: userBook.currentPage,
+        minutes: null,
+      },
+      include: sessionInclude,
+    }),
+    ...(shouldPromote
+      ? [
+          prisma.userBook.update({
+            where: { id: userBookId },
+            data: {
+              status: "CURRENTLY_READING",
+              startDate: userBook.startDate ?? new Date(),
+            },
+          }),
+        ]
+      : []),
+  ]);
+  return serializeSession(row as SessionWithBook);
 }
 
 export async function stopSession(
