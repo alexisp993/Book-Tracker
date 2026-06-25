@@ -90,19 +90,20 @@ export function BookCard({
           </div>
         ) : null}
 
-        <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        {/* Always visible so Edit/Delete are tappable on touch devices. */}
+        <div className="mt-1 flex items-center gap-1">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-8 flex-1"
+            className="h-9 flex-1"
             onClick={() => onEdit(book)}
           >
             <Pencil className="h-3.5 w-3.5" /> Edit
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-8 text-destructive hover:text-destructive"
+            className="h-9 px-3 text-destructive hover:text-destructive"
             onClick={() => onDelete(book)}
             aria-label={`Delete ${book.title}`}
           >

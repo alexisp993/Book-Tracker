@@ -203,8 +203,8 @@ export function LibraryView() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-3 sm:justify-start">
           <p className="text-sm text-muted-foreground">
             {loading && !data
               ? "Loading…"
@@ -214,7 +214,7 @@ export function LibraryView() {
             <button
               onClick={handleEnrich}
               disabled={enriching}
-              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
               title="Fetch missing covers and details from Open Library / Google Books"
             >
               <RefreshCw
@@ -224,11 +224,15 @@ export function LibraryView() {
             </button>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setScannerOpen(true)}>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button
+            variant="outline"
+            onClick={() => setScannerOpen(true)}
+            className="w-full sm:w-auto"
+          >
             <ScanBarcode className="h-4 w-4" /> Scan
           </Button>
-          <Button onClick={openAdd}>
+          <Button onClick={openAdd} className="w-full sm:w-auto">
             <BookPlus className="h-4 w-4" /> Add book
           </Button>
         </div>

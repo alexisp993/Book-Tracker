@@ -2,6 +2,15 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Mobile polish
+
+### Fixed
+- **Card actions usable on touch:** Edit/Delete buttons on book cards were hover-only (invisible
+  on phones). They're now always visible with larger 36px tap targets.
+- **Header layout on small screens:** the count, "Refresh details", Scan, and Add book no longer
+  cram into one line. On mobile they stack — count + refresh on top, then Scan and Add book as
+  two equal full-width buttons; desktop keeps the single-row layout.
+
 ## [Unreleased] — Phase 3.3: Google Books API key for production coverage
 
 ### Changed
