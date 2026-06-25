@@ -18,7 +18,9 @@ import {
   type BookPrefill,
 } from "@/components/BookForm";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { BookRow } from "@/components/BookRow";
 import { LibraryToolbar, type LibraryFilters } from "@/components/LibraryToolbar";
+import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
 import {
   ApiRequestError,
   createBook,
@@ -39,7 +41,20 @@ const DEFAULT_FILTERS: LibraryFilters = {
 
 export function LibraryView() {
   const [filters, setFilters] = React.useState<LibraryFilters>(DEFAULT_FILTERS);
+  const [view, setView] = React.useState<LibraryViewMode>("comfortable");
   const [page, setPage] = React.useState(1);
+
+  // Persist the chosen view density across sessions.
+  React.useEffect(() => {
+    const saved = localStorage.getItem("bt_view");
+    if (saved === "comfortable" || saved === "compact" || saved === "list") {
+      setView(saved);
+    }
+  }, []);
+  function changeView(mode: LibraryViewMode) {
+    setView(mode);
+    localStorage.setItem("bt_view", mode);
+  }
   const [data, setData] = React.useState<Paginated<LibraryBook> | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [listError, setListError] = React.useState<string | null>(null);
@@ -238,7 +253,12 @@ export function LibraryView() {
         </div>
       </div>
 
-      <LibraryToolbar filters={filters} onChange={setFilters} />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex-1">
+          <LibraryToolbar filters={filters} onChange={setFilters} />
+        </div>
+        <ViewToggle value={view} onChange={changeView} />
+      </div>
 
       {listError ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -269,6 +289,18 @@ export function LibraryView() {
               <BookPlus className="h-4 w-4" /> Add book
             </Button>
           ) : null}
+        </div>
+      ) : view === "list" ? (
+        <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
+          {items.map((book) => (
+            <BookRow key={book.id} book={book} onEdit={openEdit} />
+          ))}
+        </div>
+      ) : view === "compact" ? (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+          {items.map((book) => (
+            <BookCard key={book.id} book={book} compact onEdit={openEdit} onDelete={setToDelete} />
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -327,6 +359,15 @@ export function LibraryView() {
           error={formError}
           onSubmit={handleSubmit}
           onCancel={() => setFormOpen(false)}
+          onDelete={
+            editing
+              ? () => {
+                  const target = editing;
+                  setFormOpen(false);
+                  setToDelete(target);
+                }
+              : undefined
+          }
         />
       </Dialog>
 

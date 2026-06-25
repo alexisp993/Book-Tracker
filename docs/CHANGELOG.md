@@ -2,6 +2,29 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Redesign + Shelves, Collections, Stats, View toggle
+
+### Added
+- **Visual redesign** (Apple-like, refined): Inter for UI + Cormorant Garamond serif for
+  titles/headings, a zinc + single-blue palette, hairline borders, generous whitespace,
+  rounded cards, `cursor-pointer`/focus rings, `prefers-reduced-motion`. Informed by the
+  `ui-ux-pro-max` skill's generated design system (`design-system/book-tracker/MASTER.md`).
+- **App navigation**: a shared `AppShell` with a top bar (desktop nav) and an iOS-style bottom
+  tab bar (mobile) across Library / Shelves / Collections / Stats.
+- **Library view toggle**: Large covers, Compact grid, and List (dense rows) — persisted in
+  `localStorage`. The list/compact views fit far more books per screen.
+- **Shelves & Collections**: full CRUD (`/api/shelves`, `/api/collections` + `[id]`), pages at
+  `/shelves` and `/collections` with cover-stack cards, create/rename/delete, and a detail
+  dialog. Books are assigned via chips in the book edit form (`shelfIds`/`collectionIds` now
+  flow through create/update). Shared `lib/groups.ts` + `lib/groupRoutes.ts` drive both.
+- **Stats dashboard** (`/api/stats`, `/stats`): totals, pages read, favorites, average rating,
+  books-finished-per-month chart, status breakdown, rating distribution, and most-read authors
+  — lightweight CSS/SVG charts (no chart dependency).
+
+### Changed
+- `LibraryBook` gains `shelfIds`/`collectionIds`; book create/update sync membership.
+- Cover rendering extracted to a shared `BookCover` used by cards, rows, and group previews.
+
 ## [Unreleased] — Mobile polish
 
 ### Fixed

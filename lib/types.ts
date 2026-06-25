@@ -26,6 +26,17 @@ export interface LibraryBook {
   finishDate: string | null;
   createdAt: string;
   updatedAt: string;
+  shelfIds: string[];
+  collectionIds: string[];
+}
+
+export interface BookGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  count: number;
+  // a few cover candidates for a preview stack
+  covers: string[];
 }
 
 export interface Paginated<T> {
@@ -39,4 +50,19 @@ export interface Paginated<T> {
 export interface ApiError {
   error: string;
   details?: unknown;
+}
+
+export interface LibraryStats {
+  total: number;
+  read: number;
+  reading: number;
+  wantToRead: number;
+  favorites: number;
+  pagesRead: number;
+  avgRating: number | null;
+  ratedCount: number;
+  byStatus: { status: string; label: string; count: number }[];
+  booksPerMonth: { month: string; label: string; count: number }[];
+  topAuthors: { name: string; count: number }[];
+  ratingDistribution: { rating: number; count: number }[];
 }

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { serializeLibraryBook, userBookInclude } from "@/lib/books";
+import {
+  serializeLibraryBook,
+  syncCollectionMembership,
+  syncShelfMembership,
+  userBookInclude,
+} from "@/lib/books";
 import { updateBookSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -127,6 +132,13 @@ export async function PATCH(
       );
     }
     throw err;
+  }
+
+  if (input.shelfIds) {
+    await syncShelfMembership(id, user.id, input.shelfIds);
+  }
+  if (input.collectionIds) {
+    await syncCollectionMembership(id, user.id, input.collectionIds);
   }
 
   const updated = await prisma.userBook.findUnique({

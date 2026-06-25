@@ -5,10 +5,50 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { StarRating } from "@/components/StarRating";
 import { READING_STATUSES, STATUS_LABELS } from "@/lib/constants";
+import { listGroups } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { CreateBookInput } from "@/lib/validation";
-import type { LibraryBook } from "@/lib/types";
+import type { BookGroup, LibraryBook } from "@/lib/types";
 
 export type BookFormValues = CreateBookInput;
+
+function ChipGroup({
+  label,
+  options,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  options: BookGroup[];
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          const on = selected.includes(o.id);
+          return (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onToggle(o.id)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                on
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {o.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // Controlled add/edit form. `initial` prefills for edit mode.
 // Prefill for "add" mode (e.g. from a barcode scan). authors is a comma-separated string.
@@ -31,6 +71,7 @@ export function BookForm({
   error,
   onSubmit,
   onCancel,
+  onDelete,
 }: {
   initial?: LibraryBook;
   prefill?: BookPrefill;
@@ -38,6 +79,7 @@ export function BookForm({
   error?: string | null;
   onSubmit: (values: BookFormValues) => void;
   onCancel: () => void;
+  onDelete?: () => void;
 }) {
   const [title, setTitle] = React.useState(
     initial?.title ?? prefill?.title ?? "",
@@ -72,6 +114,26 @@ export function BookForm({
     initial?.description ?? prefill?.description ?? "",
   );
 
+  // Shelf / collection membership.
+  const [shelves, setShelves] = React.useState<BookGroup[]>([]);
+  const [collections, setCollections] = React.useState<BookGroup[]>([]);
+  const [shelfIds, setShelfIds] = React.useState<string[]>(
+    initial?.shelfIds ?? [],
+  );
+  const [collectionIds, setCollectionIds] = React.useState<string[]>(
+    initial?.collectionIds ?? [],
+  );
+  React.useEffect(() => {
+    listGroups("shelves").then(setShelves).catch(() => {});
+    listGroups("collections").then(setCollections).catch(() => {});
+  }, []);
+
+  const toggle = (
+    ids: string[],
+    setIds: (v: string[]) => void,
+    id: string,
+  ) => setIds(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+
   const titleInvalid = title.trim().length === 0;
 
   function handleSubmit(e: React.FormEvent) {
@@ -90,6 +152,8 @@ export function BookForm({
       isbn13: isbn13.trim() || undefined,
       coverUrl: coverUrl.trim() || undefined,
       description: description.trim() || undefined,
+      shelfIds,
+      collectionIds,
     });
   }
 
@@ -215,6 +279,23 @@ export function BookForm({
         />
       </div>
 
+      {shelves.length > 0 ? (
+        <ChipGroup
+          label="Shelves"
+          options={shelves}
+          selected={shelfIds}
+          onToggle={(id) => toggle(shelfIds, setShelfIds, id)}
+        />
+      ) : null}
+      {collections.length > 0 ? (
+        <ChipGroup
+          label="Collections"
+          options={collections}
+          selected={collectionIds}
+          onToggle={(id) => toggle(collectionIds, setCollectionIds, id)}
+        />
+      ) : null}
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -231,7 +312,16 @@ export function BookForm({
         </p>
       ) : null}
 
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="flex items-center gap-2 pt-1">
+        {initial && onDelete ? (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="mr-auto text-sm font-medium text-destructive hover:underline"
+          >
+            Remove
+          </button>
+        ) : null}
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>

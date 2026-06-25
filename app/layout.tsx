@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/AppShell";
+
+// Clean sans for UI/body (Apple-like clarity) + elegant serif for titles (literary).
+const sans = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const serif = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Book Tracker",
@@ -20,7 +35,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#4f46e5",
+  themeColor: "#fafafa",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -29,8 +45,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+      <body className="min-h-screen antialiased">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }

@@ -14,6 +14,8 @@ export const userBookInclude = {
       },
     },
   },
+  shelves: { select: { shelfId: true } },
+  collections: { select: { collectionId: true } },
 } satisfies Prisma.UserBookInclude;
 
 type UserBookWithBook = Prisma.UserBookGetPayload<{
@@ -53,7 +55,47 @@ export function serializeLibraryBook(ub: UserBookWithBook): LibraryBook {
     finishDate: ub.finishDate ? ub.finishDate.toISOString() : null,
     createdAt: ub.createdAt.toISOString(),
     updatedAt: ub.updatedAt.toISOString(),
+    shelfIds: ub.shelves.map((s) => s.shelfId),
+    collectionIds: ub.collections.map((c) => c.collectionId),
   };
+}
+
+// Replace a library entry's shelf membership with the given shelf ids (scoped to user).
+export async function syncShelfMembership(
+  userBookId: string,
+  userId: string,
+  shelfIds: string[],
+) {
+  const owned = await prisma.shelf.findMany({
+    where: { userId, id: { in: shelfIds } },
+    select: { id: true },
+  });
+  const valid = owned.map((s) => s.id);
+  await prisma.shelfBook.deleteMany({ where: { userBookId } });
+  if (valid.length > 0) {
+    await prisma.shelfBook.createMany({
+      data: valid.map((shelfId) => ({ shelfId, userBookId })),
+    });
+  }
+}
+
+// Replace a library entry's collection membership with the given collection ids.
+export async function syncCollectionMembership(
+  userBookId: string,
+  userId: string,
+  collectionIds: string[],
+) {
+  const owned = await prisma.collection.findMany({
+    where: { userId, id: { in: collectionIds } },
+    select: { id: true },
+  });
+  const valid = owned.map((c) => c.id);
+  await prisma.collectionBook.deleteMany({ where: { userBookId } });
+  if (valid.length > 0) {
+    await prisma.collectionBook.createMany({
+      data: valid.map((collectionId) => ({ collectionId, userBookId })),
+    });
+  }
 }
 
 // Parse a comma-separated author string into a connectOrCreate payload.

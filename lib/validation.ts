@@ -58,6 +58,8 @@ export const createBookSchema = z.object({
   currentPage: optionalInt,
   startDate: optionalDate,
   finishDate: optionalDate,
+  shelfIds: z.array(z.string()).optional(),
+  collectionIds: z.array(z.string()).optional(),
 });
 
 export type CreateBookInput = z.infer<typeof createBookSchema>;
@@ -84,3 +86,16 @@ export const listBooksQuerySchema = z.object({
 });
 
 export type ListBooksQuery = z.infer<typeof listBooksQuerySchema>;
+
+// Shelves & collections (groups).
+export const groupCreateSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100),
+  description: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(500).optional(),
+  ),
+});
+
+export const groupUpdateSchema = groupCreateSchema.partial().extend({
+  name: z.string().trim().min(1).max(100).optional(),
+});

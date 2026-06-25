@@ -28,6 +28,15 @@ export const STATUS_STYLES: Record<ReadingStatus, string> = {
   ON_HOLD: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
 };
 
+// Solid dot colors per status (used in compact/list views).
+export const STATUS_DOT: Record<ReadingStatus, string> = {
+  WANT_TO_READ: "bg-blue-500",
+  CURRENTLY_READING: "bg-amber-500",
+  READ: "bg-emerald-500",
+  DID_NOT_FINISH: "bg-rose-500",
+  ON_HOLD: "bg-slate-400",
+};
+
 export const BOOK_SORTS = [
   "createdAt",
   "title",

@@ -1,5 +1,10 @@
 import type { CreateBookInput, UpdateBookInput } from "@/lib/validation";
-import type { LibraryBook, Paginated } from "@/lib/types";
+import type {
+  BookGroup,
+  LibraryBook,
+  LibraryStats,
+  Paginated,
+} from "@/lib/types";
 import type { BookMetadata } from "@/lib/metadata";
 
 // Typed client-side fetch wrappers around the /api/books endpoints.
@@ -104,6 +109,60 @@ export async function lookupIsbn(isbn: string): Promise<BookMetadata> {
     { cache: "no-store" },
   );
   return handle<BookMetadata>(res);
+}
+
+// --- Shelves & Collections (groups) ---
+export type GroupBasePath = "shelves" | "collections";
+
+export async function listGroups(base: GroupBasePath): Promise<BookGroup[]> {
+  const res = await fetch(`/api/${base}`, { cache: "no-store" });
+  return handle<BookGroup[]>(res);
+}
+
+export async function createGroup(
+  base: GroupBasePath,
+  input: { name: string; description?: string },
+): Promise<BookGroup> {
+  const res = await fetch(`/api/${base}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<BookGroup>(res);
+}
+
+export async function getGroup(
+  base: GroupBasePath,
+  id: string,
+): Promise<{ group: BookGroup; books: LibraryBook[] }> {
+  const res = await fetch(`/api/${base}/${id}`, { cache: "no-store" });
+  return handle<{ group: BookGroup; books: LibraryBook[] }>(res);
+}
+
+export async function updateGroup(
+  base: GroupBasePath,
+  id: string,
+  input: { name?: string; description?: string },
+): Promise<BookGroup> {
+  const res = await fetch(`/api/${base}/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<BookGroup>(res);
+}
+
+export async function deleteGroup(
+  base: GroupBasePath,
+  id: string,
+): Promise<void> {
+  const res = await fetch(`/api/${base}/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) await handle(res);
+}
+
+export async function getStats(): Promise<LibraryStats> {
+  const res = await fetch("/api/stats", { cache: "no-store" });
+  return handle<LibraryStats>(res);
 }
 
 export { ApiRequestError };

@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/user";
 import {
   authorsCreatePayload,
   serializeLibraryBook,
+  syncCollectionMembership,
+  syncShelfMembership,
   userBookInclude,
 } from "@/lib/books";
 import {
@@ -149,8 +151,18 @@ export async function POST(request: Request) {
       startDate: input.startDate,
       finishDate: input.finishDate,
     },
-    include: userBookInclude,
   });
 
-  return NextResponse.json(serializeLibraryBook(created), { status: 201 });
+  if (input.shelfIds) {
+    await syncShelfMembership(created.id, user.id, input.shelfIds);
+  }
+  if (input.collectionIds) {
+    await syncCollectionMembership(created.id, user.id, input.collectionIds);
+  }
+
+  const full = await prisma.userBook.findUnique({
+    where: { id: created.id },
+    include: userBookInclude,
+  });
+  return NextResponse.json(serializeLibraryBook(full!), { status: 201 });
 }
