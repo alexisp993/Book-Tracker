@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   BOOK_SORTS,
   MAX_PAGE_SIZE,
+  READING_MOODS,
   READING_STATUSES,
 } from "@/lib/constants";
 
@@ -99,3 +100,57 @@ export const groupCreateSchema = z.object({
 export const groupUpdateSchema = groupCreateSchema.partial().extend({
   name: z.string().trim().min(1).max(100).optional(),
 });
+
+// --- Reading sessions ---
+
+const optionalMood = z.preprocess(
+  emptyToUndefined,
+  z.enum(READING_MOODS).optional(),
+);
+
+// Manual/retroactive session creation: duration is provided directly.
+export const createSessionSchema = z.object({
+  userBookId: z.string().min(1, "Pick a book"),
+  date: optionalDate,
+  minutes: z.coerce.number().int().min(1).max(1440),
+  pagesRead: optionalInt,
+  startPage: optionalInt,
+  endPage: optionalInt,
+  mood: optionalMood,
+  note: optionalString,
+});
+
+export type CreateSessionInput = z.infer<typeof createSessionSchema>;
+
+export const updateSessionSchema = createSessionSchema.partial().extend({
+  userBookId: z.string().min(1).optional(),
+});
+
+export type UpdateSessionInput = z.infer<typeof updateSessionSchema>;
+
+// Stopping an active (timer-started) session.
+export const stopSessionSchema = z.object({
+  endPage: optionalInt,
+  pagesRead: optionalInt,
+  mood: optionalMood,
+  note: optionalString,
+});
+
+export type StopSessionInput = z.infer<typeof stopSessionSchema>;
+
+export const startSessionSchema = z.object({
+  userBookId: z.string().min(1, "Pick a book"),
+});
+
+export type StartSessionInput = z.infer<typeof startSessionSchema>;
+
+export const listSessionsQuerySchema = z.object({
+  userBookId: z.string().optional(),
+  mood: z.enum(READING_MOODS).optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(24),
+});
+
+export type ListSessionsQuery = z.infer<typeof listSessionsQuerySchema>;

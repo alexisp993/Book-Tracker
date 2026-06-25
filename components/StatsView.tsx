@@ -1,20 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { BookCheck, BookOpen, Flame, Heart, Star } from "lucide-react";
+import { BookCheck, BookOpen, Clock, Flame, Heart, Star, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getStats } from "@/lib/api";
+import { getSessionStats, getStats } from "@/lib/api";
 import { STATUS_DOT } from "@/lib/constants";
-import type { LibraryStats } from "@/lib/types";
+import type { LibraryStats, SessionStats } from "@/lib/types";
 
 export function StatsView() {
   const [stats, setStats] = React.useState<LibraryStats | null>(null);
+  const [sessionStats, setSessionStats] = React.useState<SessionStats | null>(
+    null,
+  );
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     getStats()
       .then(setStats)
       .finally(() => setLoading(false));
+    getSessionStats()
+      .then(setSessionStats)
+      .catch(() => {});
   }, []);
 
   if (loading) {
@@ -55,6 +61,30 @@ export function StatsView() {
           value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
         />
       </div>
+
+      {/* Reading activity (from logged sessions) */}
+      {sessionStats && sessionStats.sessionCount > 0 ? (
+        <Card title="Reading activity" subtitle={`${sessionStats.sessionCount} sessions logged`}>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat
+              icon={<Clock className="h-4 w-4" />}
+              label="Lifetime hours"
+              value={(sessionStats.totalMinutes / 60).toFixed(1)}
+            />
+            <Stat
+              icon={<Timer className="h-4 w-4" />}
+              label="Avg pace"
+              value={
+                sessionStats.avgPagesPerHour
+                  ? `${sessionStats.avgPagesPerHour} pg/hr`
+                  : "—"
+              }
+            />
+            <Stat icon={<Clock className="h-4 w-4" />} label="This week" value={`${sessionStats.hoursThisWeek}h`} />
+            <Stat icon={<Clock className="h-4 w-4" />} label="This month" value={`${sessionStats.hoursThisMonth}h`} />
+          </div>
+        </Card>
+      ) : null}
 
       {/* Books finished per month */}
       <Card title="Books finished" subtitle="Last 12 months">

@@ -2,6 +2,37 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Bookmory Phase 1: Reading Timer & Sessions
+
+### Added
+- `ReadingSession.mood` column (nullable string, app-validated set) — the only schema change;
+  the rest reuses the existing `ReadingSession` model that had no API/UI until now.
+- `lib/sessions.ts`: full data-access layer — list (paginated/filtered), get, create, update,
+  delete, plus active-timer lifecycle (`getActiveSession`, `startSession`, `stopSession`) and
+  `getSessionStats` (lifetime/weekly/monthly totals, avg pages/hour).
+- API: `GET/POST /api/sessions`, `GET/PATCH/DELETE /api/sessions/:id`,
+  `GET/POST/PATCH /api/sessions/active`, `GET /api/sessions/stats`.
+- `components/ReadingTimer.tsx`: floating start/stop widget mounted in `AppShell`, persists
+  across navigation; book picker (Currently Reading → On Hold fallback); completion sheet
+  captures end page, mood, and notes; live elapsed-time display.
+- `components/SessionHistoryView.tsx` + `/sessions` page: paginated, filterable (mood/date
+  range) session log with inline edit/delete; `components/SessionForm.tsx` for manual/
+  retroactive logging.
+- `AppShell.tsx` gains a 5th nav item ("Sessions"); `StatsView.tsx` gains a "Reading activity"
+  section (lifetime hours, avg pace, hours this week/month) fed by the new stats endpoint.
+- `lib/constants.ts`: `READING_MOODS`, `MOOD_LABELS`, `MOOD_EMOJI`.
+
+### Design notes
+- **Active timer needs no new field**: a session row with `minutes = null` represents "in
+  progress"; `date` doubles as the start timestamp. Only one active session per user is
+  enforced in app code (409 on a second start) — correct for a single local user.
+- Stopping a session derives `pagesRead` from `endPage - startPage` when not given directly,
+  and updates `UserBook.currentPage` in the same transaction, so library progress bars stay in
+  sync without extra user action.
+- This is Sub-phase 1 of a 5-part Bookmory-inspired expansion (see `docs/ROADMAP.md`); goals,
+  quotes, calendar/heatmap, milestones/certificates, and rule-based insights are deliberately
+  deferred to later passes since they all derive from session data that didn't exist before now.
+
 ## [Unreleased] — Redesign + Shelves, Collections, Stats, View toggle
 
 ### Added

@@ -246,6 +246,8 @@ model ReadingSession {
   startPage   Int?
   endPage     Int?
   note        String?
+  // constrained set validated in app code: RELAXED|EXCITED|EMOTIONAL|MOTIVATED|INSPIRED|SAD|HAPPY|NEUTRAL
+  mood        String?
   createdAt   DateTime @default(now())
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)

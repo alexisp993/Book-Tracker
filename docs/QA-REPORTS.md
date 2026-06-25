@@ -206,3 +206,59 @@ covers. · **Scope:** `lib/isbn.ts` (`coverCandidates`, `amazonCoverForIsbn10`, 
 | 2 | Low | Each fallback hop is a real image request (a coverless book may fetch OL-404 then Amazon-1px before placeholder). | Lazy-loaded, bounded to ≤3 hops/book; negligible. |
 
 ### QA STATUS: ✅ APPROVED
+
+---
+
+## QA-006 — Bookmory Phase 1: Reading Timer & Sessions
+
+**Reviewed:** 2026-06-25 · **Scope:** `ReadingSession.mood` schema change, `lib/sessions.ts`,
+4 new API routes, `ReadingTimer`/`SessionForm`/`SessionHistoryView` components, `/sessions`
+page, `AppShell` nav addition, `StatsView` "Reading activity" section.
+
+### Verification performed
+- ✅ `npx tsc --noEmit` clean (twice — once on SQLite, once after restoring Postgres).
+- ✅ `npm run build` — exit 0; new routes compiled (`/api/sessions`, `/api/sessions/[id]`,
+  `/api/sessions/active`, `/api/sessions/stats`, `/sessions`).
+- ✅ Live API cycle (curl): start → 201 with `minutes:null,isActive:true`; **double-start → 409**
+  with a clear message; active GET reflects in-progress session; stop → `minutes` computed from
+  elapsed wall-clock time, `pagesRead` auto-derived from `endPage - startPage` (0→42 produced
+  `pagesRead:42`); **`UserBook.currentPage` updated to 42 in the same call** (confirmed via
+  `GET /api/books/:id`); mood filter (`?mood=HAPPY` → 1, `?mood=SAD` → 0) correct; manual
+  create/delete and validation (missing `minutes` → 422, stop-with-nothing-active → 404) all
+  behaved as designed.
+- ✅ Full browser walkthrough (mobile viewport, logged in): empty-state picker when no book is
+  Currently Reading → set one via API → picker shows it with cover + current page → started →
+  floating pill shows live ticking elapsed time → **survived navigating to `/stats`** (mounted
+  once in `AppShell`, not per-page) → stopped with end page 58 + mood **Inspired** + a note →
+  `/stats` "Reading activity" card and `/sessions` history both reflected the new session
+  (auto-calculated 16 pages from 42→58) → mood filter on `/sessions` narrowed to 1 row → edit
+  dialog pre-filled every field correctly → **Remove** deleted it and the count dropped back to
+  the expected total → manual "Log session" form opened with the book picker populated.
+
+### Findings & resolutions
+| # | Severity | Finding | Resolution |
+|---|----------|---------|------------|
+| 1 | Low | `Stats` page's session-stats fetch doesn't auto-refresh after the timer is stopped from a *different* page (it fetched once on mount). | Acceptable for this phase — a manual revisit/refresh of `/stats` shows correct numbers (verified via API); a shared client-side cache/refetch-on-focus is a polish item, not a correctness bug, and is deferred rather than adding speculative state-management infrastructure now. |
+| 2 | Info | `hoursToday`/`hoursThisWeek` can display `0` for very short (1-minute) sessions due to rounding to one decimal place. | Expected and correct (1 min ≈ 0.017h rounds to 0.0); lifetime totals (`totalMinutes`) are exact, only the hour-rounded display fields are affected. No fix needed. |
+
+### Security & performance review
+- **Ownership:** every session read/write checks `userId` (via `assertOwnedUserBook` and direct
+  `existing.userId !== userId` checks) before acting — consistent with the existing
+  `findOwned()` pattern in `app/api/books/[id]/route.ts`. ✅
+- **Input validation:** all writes go through Zod (`createSessionSchema`,
+  `updateSessionSchema`, `stopSessionSchema`, `startSessionSchema`); mood is constrained to the
+  `READING_MOODS` enum-as-string set, rejecting arbitrary values. ✅
+- **Concurrency:** "only one active session" is enforced by an explicit existence check before
+  insert — correct for a single local user; documented as not safe for concurrent multi-writer
+  use without a DB-level constraint, which is consistent with this app's current single-user
+  scope (ADR-0002). ✅
+- **Pagination:** `/api/sessions` uses the same `page`/`pageSize`/`MAX_PAGE_SIZE` convention as
+  `/api/books`, so session history stays bounded as it grows into the thousands. ✅
+- **No new indexes required:** the existing `ReadingSession(userId, date)` index covers the new
+  list/filter query pattern; verified no slow-query risk at the reviewed data volumes. ✅
+
+### QA STATUS: ✅ APPROVED
+
+Scope matches the agreed Sub-phase 1 (timer, sessions, mood/journal, activity stats). Goals,
+quotes, calendar/heatmap, milestones/certificates, reminders, and rule-based insights remain
+explicitly out of scope for this pass — tracked in `docs/ROADMAP.md`.

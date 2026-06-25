@@ -19,16 +19,32 @@ _Owner: Agent 1. Status legend: ✅ done · ◑ partial · ☐ planned._
 - ✅ "Scan → auto-fill" flow that prefills the add form from an ISBN.
 
 ## Phase 4 — Progress, Reviews, Shelves, Collections ◑
-- ◑ Reading progress fields (status, currentPage, start/finish) — on the entry; needs UI for sessions/timeline.
-- ☐ Reviews & private notes UI (schema ready).
-- ☐ Shelves CRUD + many-to-many assignment UI (schema ready).
-- ☐ Collections CRUD (schema ready).
+- ✅ Shelves CRUD + many-to-many assignment UI (chips in the book edit form).
+- ✅ Collections CRUD (same pattern as Shelves).
+- ◑ Reading progress fields (status, currentPage, start/finish) — now also updated automatically
+  by reading sessions (see Bookmory Phase 1 below).
+- ☐ Reviews & private notes UI (schema ready, not yet built).
 
 ## Phase 5 — Analytics, Goals, AI ◑
-- ☐ Stats dashboard (Recharts): books/pages per month, streaks, genre/author breakdowns, pace.
-- ☐ Reading goals/challenges UI with auto-progress (schema ready).
-- ☐ Reading timeline visualization.
-- ◑ AI recommendations & insights — interfaces + stubs done; wire Claude API.
+- ✅ Stats dashboard (hand-rolled CSS/SVG charts, no chart dependency): books/pages per month,
+  status breakdown, rating distribution, top authors, reading-activity totals.
+- ☐ Reading goals/challenges UI with auto-progress (schema ready) — see Bookmory Phase 2 below.
+- ☐ Reading timeline visualization — see Bookmory Phase 3 below.
+- ◑ AI recommendations & insights — interfaces + stubs done; wire Claude API later.
+
+## Bookmory-inspired reading-activity features (5 sub-phases)
+Added on top of the phases above; see `docs/QA-REPORTS.md` for audits of each.
+
+- ✅ **Sub-phase 1 — Reading timer & sessions**: live start/stop timer (floating widget),
+  manual/retroactive session logging, mood + notes per session, session history with
+  filters (mood/date/book) and pagination, lifetime/weekly/monthly activity stats. Stopping a
+  session updates `UserBook.currentPage` automatically.
+- ☐ Sub-phase 2 — Goals (auto-progress), favorite quotes, full notes UI.
+- ☐ Sub-phase 3 — Reading calendar, memory timeline, streaks/pace habit stats, heatmap.
+- ☐ Sub-phase 4 — Milestones/badges, completion certificates (client-side PNG export), monthly
+  & annual reports.
+- ☐ Sub-phase 5 — Dashboard composition, smart in-app nudges, reminder settings (config only,
+  no push delivery), rule-based insights (`lib/insights.ts`, deterministic, no paid AI).
 
 ## Phase 6 — Import/Export & PWA ☐
 - ☐ Import Goodreads / StoryGraph / CSV.

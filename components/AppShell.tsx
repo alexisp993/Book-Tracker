@@ -8,11 +8,14 @@ import {
   FolderHeart,
   LibraryBig,
   LogOut,
+  Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ReadingTimer } from "@/components/ReadingTimer";
 
 const NAV = [
   { href: "/", label: "Library", icon: LibraryBig },
+  { href: "/sessions", label: "Sessions", icon: Timer },
   { href: "/shelves", label: "Shelves", icon: BookMarked },
   { href: "/collections", label: "Collections", icon: FolderHeart },
   { href: "/stats", label: "Stats", icon: BarChart3 },
@@ -103,6 +106,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+
+      <ReadingTimer />
     </div>
   );
 }

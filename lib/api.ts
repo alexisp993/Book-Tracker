@@ -1,9 +1,17 @@
-import type { CreateBookInput, UpdateBookInput } from "@/lib/validation";
+import type {
+  CreateBookInput,
+  CreateSessionInput,
+  StopSessionInput,
+  UpdateBookInput,
+  UpdateSessionInput,
+} from "@/lib/validation";
 import type {
   BookGroup,
   LibraryBook,
   LibraryStats,
   Paginated,
+  ReadingSessionDTO,
+  SessionStats,
 } from "@/lib/types";
 import type { BookMetadata } from "@/lib/metadata";
 
@@ -163,6 +171,92 @@ export async function deleteGroup(
 export async function getStats(): Promise<LibraryStats> {
   const res = await fetch("/api/stats", { cache: "no-store" });
   return handle<LibraryStats>(res);
+}
+
+// --- Reading sessions ---
+
+export interface ListSessionsParams {
+  userBookId?: string;
+  mood?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function listSessions(
+  params: ListSessionsParams = {},
+): Promise<Paginated<ReadingSessionDTO>> {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "" && value !== null) {
+      qs.set(key, String(value));
+    }
+  }
+  const res = await fetch(`/api/sessions?${qs.toString()}`, {
+    cache: "no-store",
+  });
+  return handle<Paginated<ReadingSessionDTO>>(res);
+}
+
+export async function createSession(
+  input: CreateSessionInput,
+): Promise<ReadingSessionDTO> {
+  const res = await fetch("/api/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<ReadingSessionDTO>(res);
+}
+
+export async function updateSession(
+  id: string,
+  input: UpdateSessionInput,
+): Promise<ReadingSessionDTO> {
+  const res = await fetch(`/api/sessions/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<ReadingSessionDTO>(res);
+}
+
+export async function deleteSession(id: string): Promise<void> {
+  const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) await handle(res);
+}
+
+export async function getActiveSession(): Promise<ReadingSessionDTO | null> {
+  const res = await fetch("/api/sessions/active", { cache: "no-store" });
+  return handle<ReadingSessionDTO | null>(res);
+}
+
+export async function startSession(
+  userBookId: string,
+): Promise<ReadingSessionDTO> {
+  const res = await fetch("/api/sessions/active", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userBookId }),
+  });
+  return handle<ReadingSessionDTO>(res);
+}
+
+export async function stopSession(
+  input: StopSessionInput,
+): Promise<ReadingSessionDTO> {
+  const res = await fetch("/api/sessions/active", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<ReadingSessionDTO>(res);
+}
+
+export async function getSessionStats(): Promise<SessionStats> {
+  const res = await fetch("/api/sessions/stats", { cache: "no-store" });
+  return handle<SessionStats>(res);
 }
 
 export { ApiRequestError };

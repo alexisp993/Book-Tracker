@@ -1,4 +1,4 @@
-import type { ReadingStatus } from "@/lib/constants";
+import type { ReadingMood, ReadingStatus } from "@/lib/constants";
 
 // Shape returned by the API for a library entry (UserBook joined with Book).
 // Flattened so the UI doesn't need to know the relational layout.
@@ -50,6 +50,34 @@ export interface Paginated<T> {
 export interface ApiError {
   error: string;
   details?: unknown;
+}
+
+// A logged or in-progress reading session.
+export interface ReadingSessionDTO {
+  id: string;
+  userBookId: string;
+  bookId: string;
+  title: string;
+  coverUrl: string | null;
+  date: string; // ISO — also the start time for an active session
+  minutes: number | null; // null while the timer is running
+  pagesRead: number | null;
+  startPage: number | null;
+  endPage: number | null;
+  mood: ReadingMood | null;
+  note: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface SessionStats {
+  sessionCount: number;
+  totalMinutes: number;
+  totalPagesRead: number;
+  avgPagesPerHour: number | null;
+  hoursToday: number;
+  hoursThisWeek: number;
+  hoursThisMonth: number;
 }
 
 export interface LibraryStats {

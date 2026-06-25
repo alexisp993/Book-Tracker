@@ -55,3 +55,39 @@ export const SORT_LABELS: Record<BookSort, string> = {
 
 export const DEFAULT_PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 100;
+
+// Reading-session mood tags.
+export const READING_MOODS = [
+  "RELAXED",
+  "EXCITED",
+  "EMOTIONAL",
+  "MOTIVATED",
+  "INSPIRED",
+  "SAD",
+  "HAPPY",
+  "NEUTRAL",
+] as const;
+
+export type ReadingMood = (typeof READING_MOODS)[number];
+
+export const MOOD_LABELS: Record<ReadingMood, string> = {
+  RELAXED: "Relaxed",
+  EXCITED: "Excited",
+  EMOTIONAL: "Emotional",
+  MOTIVATED: "Motivated",
+  INSPIRED: "Inspired",
+  SAD: "Sad",
+  HAPPY: "Happy",
+  NEUTRAL: "Neutral",
+};
+
+export const MOOD_EMOJI: Record<ReadingMood, string> = {
+  RELAXED: "😌",
+  EXCITED: "🤩",
+  EMOTIONAL: "🥹",
+  MOTIVATED: "💪",
+  INSPIRED: "✨",
+  SAD: "😢",
+  HAPPY: "😊",
+  NEUTRAL: "😐",
+};
