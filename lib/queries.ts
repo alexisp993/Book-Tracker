@@ -17,6 +17,7 @@ import type {
   UpdateSessionInput,
 } from "@/lib/validation";
 import type { AdminFeedbackListParams } from "@/lib/api";
+import type { LibraryBook, Paginated } from "@/lib/types";
 
 // Centralized query-key factories so every component matches the same keys
 // for both reading and invalidating — see docs/PERFORMANCE-AUDIT.md for the
@@ -66,12 +67,56 @@ export function useCreateBook() {
   });
 }
 
+// Entry-level fields that map 1:1 onto LibraryBook with no transformation,
+// safe to patch into the cache immediately. Book-level fields (title,
+// authors, etc.) need server-side parsing (e.g. comma-split authors) and are
+// left to the post-mutation refetch — the edit form's save button already
+// has its own pending state, so that round-trip isn't felt as "slow" the way
+// a single-tap status change (Start reading) is.
+function applyOptimisticEntryFields(
+  book: LibraryBook,
+  input: UpdateBookInput,
+): LibraryBook {
+  return {
+    ...book,
+    ...(input.status !== undefined && { status: input.status }),
+    ...(input.rating !== undefined && { rating: input.rating }),
+    ...(input.favorite !== undefined && { favorite: input.favorite }),
+    ...(input.currentPage !== undefined && { currentPage: input.currentPage }),
+    ...(input.startDate !== undefined && {
+      startDate: input.startDate ? new Date(input.startDate).toISOString() : null,
+    }),
+    ...(input.finishDate !== undefined && {
+      finishDate: input.finishDate ? new Date(input.finishDate).toISOString() : null,
+    }),
+  };
+}
+
 export function useUpdateBook() {
   const qc = useQueryClient();
   const invalidate = useInvalidateBooks();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateBookInput }) =>
       api.updateBook(id, input),
+    onMutate: async ({ id, input }) => {
+      const previous = qc.getQueriesData<Paginated<LibraryBook>>({
+        queryKey: queryKeys.booksAll,
+      });
+      qc.setQueriesData<Paginated<LibraryBook>>(
+        { queryKey: queryKeys.booksAll },
+        (old) =>
+          old && {
+            ...old,
+            items: old.items.map((b) =>
+              b.id === id ? applyOptimisticEntryFields(b, input) : b,
+            ),
+          },
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous?.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
     onSuccess: () => {
       invalidate();
       // Shelf/collection chips live in the book form; a save may have
