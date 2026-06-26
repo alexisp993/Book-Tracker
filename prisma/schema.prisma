@@ -9,11 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  // Pooled connection (used by the app at runtime on serverless).
-  url       = env("DATABASE_URL")
-  // Direct connection (used by `prisma db push`/migrations for DDL).
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------
