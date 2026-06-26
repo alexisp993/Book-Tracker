@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   BOOK_SORTS,
+  FEEDBACK_STATUSES,
+  FEEDBACK_TYPES,
   MAX_PAGE_SIZE,
   READING_MOODS,
   READING_STATUSES,
@@ -154,3 +156,58 @@ export const listSessionsQuerySchema = z.object({
 });
 
 export type ListSessionsQuery = z.infer<typeof listSessionsQuerySchema>;
+
+// --- Auth ---
+
+export const registerSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+});
+export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  password: z.string().min(1, "Enter your password"),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const migrateSchema = z.object({
+  appPassword: z.string().min(1, "Enter the current app password"),
+  name: z.string().trim().min(1, "Name is required").max(100),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+});
+export type MigrateInput = z.infer<typeof migrateSchema>;
+
+// --- Feedback ---
+
+export const createFeedbackSchema = z.object({
+  type: z.enum(FEEDBACK_TYPES),
+  subject: z.string().trim().min(1, "Subject is required").max(200),
+  description: z.string().trim().min(1, "Description is required").max(5000),
+  screenshotUrl: optionalShortString,
+  page: optionalShortString,
+  browser: optionalShortString,
+  deviceType: optionalShortString,
+  appVersion: optionalShortString,
+});
+export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
+
+export const updateFeedbackStatusSchema = z.object({
+  status: z.enum(FEEDBACK_STATUSES).optional(),
+  adminNotes: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(5000).optional(),
+  ),
+});
+export type UpdateFeedbackStatusInput = z.infer<typeof updateFeedbackStatusSchema>;
+
+export const adminFeedbackQuerySchema = z.object({
+  type: z.enum(FEEDBACK_TYPES).optional(),
+  status: z.enum(FEEDBACK_STATUSES).optional(),
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(24),
+});
+export type AdminFeedbackQuery = z.infer<typeof adminFeedbackQuerySchema>;

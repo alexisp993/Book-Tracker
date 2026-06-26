@@ -1,21 +1,36 @@
-// Lightweight single-password session for a personal, single-user deployment.
-// The session cookie holds an HMAC of a constant payload keyed by AUTH_SECRET, so
-// it can't be forged without the secret. This is intentionally simpler than full
-// multi-user auth (NextAuth) — appropriate while the app has one owner.
-// Uses Web Crypto so it runs in both the Edge middleware and Node route handlers.
+// Signed session cookie carrying a real userId. The cookie value is
+// `<base64url(JSON payload)>.<base64url(HMAC signature)>` — a minimal
+// hand-rolled JWT-shaped token (not the JWT library/format itself; no new
+// dependency, same Web Crypto primitives as before) so it works unmodified in
+// both Edge middleware and Node Route Handlers.
+//
+// Replaces the old constant-payload "is this the right shared password"
+// token now that the app has real per-user accounts (see ADR for the
+// migration from single shared APP_PASSWORD to per-user login).
 
 export const SESSION_COOKIE = "bt_session";
-const SESSION_PAYLOAD = "book-tracker-authenticated-v1";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days, matches the cookie's maxAge
+
+interface SessionPayload {
+  userId: string;
+  exp: number; // unix seconds
+}
 
 function getSecret(): string {
   return process.env.AUTH_SECRET || "dev-insecure-secret-change-me";
 }
 
-function base64url(bytes: ArrayBuffer): string {
-  const arr = new Uint8Array(bytes);
+function base64urlEncode(bytes: Uint8Array | ArrayBuffer): string {
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   let bin = "";
   for (const b of arr) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64urlDecode(value: string): string {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+  return atob(padded + pad);
 }
 
 async function hmac(data: string): Promise<string> {
@@ -31,23 +46,50 @@ async function hmac(data: string): Promise<string> {
     key,
     new TextEncoder().encode(data),
   );
-  return base64url(sig);
+  return base64urlEncode(sig);
 }
 
-export async function createSessionToken(): Promise<string> {
-  return hmac(SESSION_PAYLOAD);
-}
-
-export async function isValidSessionToken(
-  token: string | undefined | null,
-): Promise<boolean> {
-  if (!token) return false;
-  const expected = await createSessionToken();
-  // Length-then-value compare (tokens are fixed length here).
-  if (token.length !== expected.length) return false;
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   let diff = 0;
-  for (let i = 0; i < token.length; i++) {
-    diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+// Issue a signed token for this user, valid for SESSION_MAX_AGE_SECONDS.
+export async function createSessionToken(userId: string): Promise<string> {
+  const payload: SessionPayload = {
+    userId,
+    exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
+  };
+  const payloadB64 = base64urlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = await hmac(payloadB64);
+  return `${payloadB64}.${signature}`;
+}
+
+// Verify a token's signature and expiry, returning the carried userId or null.
+export async function verifySessionToken(
+  token: string | undefined | null,
+): Promise<{ userId: string } | null> {
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 0) return null;
+  const payloadB64 = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
+
+  const expectedSignature = await hmac(payloadB64);
+  if (!timingSafeEqual(signature, expectedSignature)) return null;
+
+  let payload: SessionPayload;
+  try {
+    payload = JSON.parse(base64urlDecode(payloadB64));
+  } catch {
+    return null;
+  }
+  if (typeof payload.userId !== "string" || typeof payload.exp !== "number") {
+    return null;
+  }
+  if (payload.exp < Math.floor(Date.now() / 1000)) return null; // expired
+
+  return { userId: payload.userId };
 }

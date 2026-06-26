@@ -1,12 +1,16 @@
 import type {
   CreateBookInput,
+  CreateFeedbackInput,
   CreateSessionInput,
   StopSessionInput,
   UpdateBookInput,
+  UpdateFeedbackStatusInput,
   UpdateSessionInput,
 } from "@/lib/validation";
 import type {
+  BetaStats,
   BookGroup,
+  CurrentUser,
   LibraryBook,
   LibraryStats,
   Paginated,
@@ -14,6 +18,7 @@ import type {
   SessionStats,
 } from "@/lib/types";
 import type { BookMetadata } from "@/lib/metadata";
+import type { AdminFeedbackDetail, AdminFeedbackRow, FeedbackDTO } from "@/lib/feedback";
 
 // Typed client-side fetch wrappers around the /api/books endpoints.
 
@@ -257,6 +262,88 @@ export async function stopSession(
 export async function getSessionStats(): Promise<SessionStats> {
   const res = await fetch("/api/sessions/stats", { cache: "no-store" });
   return handle<SessionStats>(res);
+}
+
+// --- Current user ---
+
+export async function getCurrentUserInfo(): Promise<CurrentUser> {
+  const res = await fetch("/api/me", { cache: "no-store" });
+  return handle<CurrentUser>(res);
+}
+
+// --- Feedback ---
+
+export async function listMyFeedback(): Promise<FeedbackDTO[]> {
+  const res = await fetch("/api/feedback", { cache: "no-store" });
+  return handle<FeedbackDTO[]>(res);
+}
+
+export async function submitFeedback(
+  input: CreateFeedbackInput,
+): Promise<FeedbackDTO> {
+  const res = await fetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<FeedbackDTO>(res);
+}
+
+export async function uploadFeedbackScreenshot(
+  file: File,
+): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.set("file", file);
+  const res = await fetch("/api/feedback/screenshot", {
+    method: "POST",
+    body: formData,
+  });
+  return handle<{ url: string }>(res);
+}
+
+export interface AdminFeedbackListParams {
+  type?: string;
+  status?: string;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function adminListFeedback(
+  params: AdminFeedbackListParams = {},
+): Promise<Paginated<AdminFeedbackRow>> {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "" && value !== null) {
+      qs.set(key, String(value));
+    }
+  }
+  const res = await fetch(`/api/admin/feedback?${qs.toString()}`, {
+    cache: "no-store",
+  });
+  return handle<Paginated<AdminFeedbackRow>>(res);
+}
+
+export async function adminGetFeedback(id: string): Promise<AdminFeedbackDetail> {
+  const res = await fetch(`/api/admin/feedback/${id}`, { cache: "no-store" });
+  return handle<AdminFeedbackDetail>(res);
+}
+
+export async function adminUpdateFeedback(
+  id: string,
+  input: UpdateFeedbackStatusInput,
+): Promise<AdminFeedbackDetail> {
+  const res = await fetch(`/api/admin/feedback/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<AdminFeedbackDetail>(res);
+}
+
+export async function getBetaStats(): Promise<BetaStats> {
+  const res = await fetch("/api/admin/stats", { cache: "no-store" });
+  return handle<BetaStats>(res);
 }
 
 export { ApiRequestError };

@@ -34,7 +34,7 @@ erDiagram
 
 | Entity | Purpose | Key fields |
 |--------|---------|-----------|
-| **User** | Account (single local user now) | `email` (unique), `name` |
+| **User** | Real per-user account (closed beta, capped) | `email` (unique), `name`, `passwordHash` (bcrypt), `isAdmin` |
 | **Book** | Shared, deduped catalog metadata | `title`, `isbn13` (unique), `pageCount`, `coverUrl`, `source`, `seriesId` |
 | **Author** | Distinct author | `name` (unique) |
 | **BookAuthor** | M:N book↔author with order | PK `(bookId, authorId)`, `order` |
@@ -47,6 +47,7 @@ erDiagram
 | **Note** | Private note, optional page anchor | `body`, `page` |
 | **ReadingSession** | A logged reading sitting | `date`, `minutes`, `pagesRead`, `startPage`, `endPage` |
 | **Goal** | Reading challenge | `type`, `target`, `year`, `metaKey/metaValue` |
+| **Feedback** | Beta tester feedback | `type` (BUG\|FEATURE_REQUEST\|GENERAL), `subject`, `description`, `screenshotUrl`, `status`, `adminNotes`; auto-captured `page`/`browser`/`deviceType`/`appVersion` |
 
 ## 3. Design rationale
 - **Shared `Book` vs per-user `UserBook`.** Metadata is global and deduped by `isbn13`; reading

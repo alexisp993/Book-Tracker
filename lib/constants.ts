@@ -54,6 +54,10 @@ export const SORT_LABELS: Record<BookSort, string> = {
 };
 
 export const DEFAULT_PAGE_SIZE = 24;
+
+// Closed-beta registration cap. Configurable via env so it can be raised
+// later without a code change.
+export const MAX_BETA_USERS = Number(process.env.MAX_BETA_USERS) || 30;
 export const MAX_PAGE_SIZE = 100;
 
 // Reading-session mood tags.
@@ -90,4 +94,40 @@ export const MOOD_EMOJI: Record<ReadingMood, string> = {
   SAD: "😢",
   HAPPY: "😊",
   NEUTRAL: "😐",
+};
+
+// Beta feedback.
+export const FEEDBACK_TYPES = ["BUG", "FEATURE_REQUEST", "GENERAL"] as const;
+export type FeedbackType = (typeof FEEDBACK_TYPES)[number];
+
+export const FEEDBACK_TYPE_LABELS: Record<FeedbackType, string> = {
+  BUG: "Bug Report",
+  FEATURE_REQUEST: "Feature Request",
+  GENERAL: "General Feedback",
+};
+
+export const FEEDBACK_STATUSES = [
+  "OPEN",
+  "IN_PROGRESS",
+  "PLANNED",
+  "FIXED",
+  "CLOSED",
+] as const;
+export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
+
+export const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  PLANNED: "Planned",
+  FIXED: "Fixed",
+  CLOSED: "Closed",
+};
+
+// Tailwind classes per feedback status, mirrors STATUS_STYLES above.
+export const FEEDBACK_STATUS_STYLES: Record<FeedbackStatus, string> = {
+  OPEN: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  IN_PROGRESS: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+  PLANNED: "bg-violet-500/15 text-violet-600 dark:text-violet-300",
+  FIXED: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+  CLOSED: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
 };

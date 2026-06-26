@@ -112,6 +112,67 @@ ISBN-10→13). Consumed by the in-app barcode scanner (`components/BarcodeScanne
 
 ---
 
+## Auth
+
+### `POST /api/auth/register`
+Body: `{ name, email, password }`. Creates a real account (bcrypt-hashed password), capped at
+`MAX_BETA_USERS`. **201** session cookie set · **403** `{error:"BETA_FULL", message}` once the
+cap is reached (existing users can still log in) · **409** email already registered · **422**
+validation failed.
+
+### `POST /api/auth/login`
+Body: `{ email, password }`. **200** session cookie set · **401** generic "incorrect email or
+password" (doesn't reveal which emails exist) · **422** validation failed. Re-syncs `isAdmin`
+against `ADMIN_EMAILS` on every successful login.
+
+### `POST /api/auth/migrate`
+One-time bridge from the old shared-password model. Body:
+`{ appPassword, name, email, password }`. **200** session cookie set, the bootstrapped account
+now has a real email/password · **401** wrong `appPassword` · **409** already migrated · **404**
+no account to migrate. Safe to leave deployed indefinitely — a no-op once migrated.
+
+### `POST /api/auth/logout`
+Clears the session cookie, redirects to `/login`. Unchanged.
+
+### `GET /api/me`
+Returns `{ id, name, email, isAdmin }` for the logged-in user — used by `AppShell`'s account
+menu to decide what to show.
+
+---
+
+## Feedback
+
+### `GET /api/feedback`
+The current user's own submissions only (no pagination — personal-volume scale).
+
+### `POST /api/feedback`
+Body: `CreateFeedbackInput` — `type` (BUG|FEATURE_REQUEST|GENERAL), `subject`, `description`,
+optional `screenshotUrl` (from the screenshot endpoint below), and auto-captured `page`/
+`browser`/`deviceType`/`appVersion` (client-captured, never user-entered). **201**.
+
+### `POST /api/feedback/screenshot`
+Multipart `file` upload → Vercel Blob → `{ url }`. Validates `Content-Type` (png/jpeg/webp) and
+size (≤2MB) server-side. **503** with a friendly message if no Blob store is connected yet
+(feedback can still be submitted without a screenshot).
+
+---
+
+## Admin (all routes require `requireAdmin()` — 403 otherwise)
+
+### `GET /api/admin/feedback`
+Query: `type`, `status`, `q` (search across subject/description/user name/email), `page`,
+`pageSize`. Paginated, newest first.
+
+### `GET /api/admin/feedback/:id` / `PATCH /api/admin/feedback/:id`
+Full detail (incl. screenshot, admin notes) / update `{ status?, adminNotes? }`.
+
+### `GET /api/admin/stats`
+Lightweight Beta Dashboard payload: registered users, remaining slots, total/weekly books,
+feedback totals + type/status breakdown, top-5 most-requested features and most common bugs
+(grouped by subject). All `count`/`groupBy` — no full-table loops.
+
+---
+
 ## Planned endpoints (designed, not yet built)
 | Endpoint | Purpose | Phase |
 |----------|---------|-------|

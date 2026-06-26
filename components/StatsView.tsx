@@ -168,7 +168,7 @@ export function StatsView() {
   );
 }
 
-const TINTS = {
+export const TINTS = {
   blue: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
   emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
   amber: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
@@ -177,7 +177,7 @@ const TINTS = {
   teal: "bg-teal-500/15 text-teal-600 dark:text-teal-300",
 } as const;
 
-function Stat({
+export function Stat({
   icon,
   label,
   value,
@@ -204,7 +204,7 @@ function Stat({
   );
 }
 
-function Card({
+export function Card({
   title,
   subtitle,
   children,

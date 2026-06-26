@@ -2,6 +2,54 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Beta Testing System: Real Auth, Feedback, Admin Dashboard
+
+Design decisions: `docs/adr/ADR-0004-real-multiuser-auth.md`. QA audit: `docs/QA-REPORTS.md`
+QA-008 (APPROVED, after catching and fixing a real `adminNotes` information-disclosure bug).
+
+### Added
+- **Real per-user accounts**, replacing the single shared `APP_PASSWORD`: registration
+  (name/email/bcrypt-hashed password), login, and a one-time `/migrate` page that bridges the
+  existing bootstrapped account (which already owns the live library) to a real email +
+  personal password. `APP_PASSWORD` is fully retired once migrated.
+- **Closed-beta cap** (`MAX_BETA_USERS`, default 30): registration is blocked with a friendly
+  "Beta Tester Registration Closed" message once reached; existing users can always still log
+  in. Admin status granted via `ADMIN_EMAILS` (comma-separated env var), re-synced on every
+  login.
+- **In-app feedback**: type (Bug/Feature/General), subject, description, optional screenshot
+  (PNG/JPG/WEBP, client-resized, uploaded to Vercel Blob, 2MB server-enforced cap). Context
+  (page, browser, device type, app version, timestamp) is captured automatically — never
+  user-entered.
+- **My Feedback** page: a user's own submissions, read-only, status pill per item.
+- **Admin Feedback dashboard**: cross-user list with type filter + search (user/subject/
+  description), a detail view with screenshot preview, status (Open/In Progress/Planned/
+  Fixed/Closed), and internal admin-only notes.
+- **Beta Dashboard** (admin-only): registered testers/remaining slots, total books, books
+  added this week, feedback totals + type breakdown, most-requested features and most common
+  bugs (grouped by subject) — all cheap `count`/`groupBy` queries, no full-table loops, no
+  charts/real-time/background jobs per the explicit "keep it lightweight" requirement.
+- An account menu (next to the theme toggle) holds Feedback/My Feedback/Log out for everyone,
+  plus Beta Dashboard/Admin Feedback only when the logged-in user is an admin.
+
+### Changed
+- `lib/session.ts`'s cookie now carries a signed `{ userId, exp }` payload instead of a
+  constant "is this the right shared password" string.
+- `lib/user.ts`'s `getCurrentUser()` resolves the real logged-in user from that cookie (its
+  signature is unchanged, so every existing call site needed zero changes — exactly the
+  migration ADR-0002 anticipated); added a sibling `requireAdmin()`.
+- Extracted the Postgres-vs-SQLite case-insensitive search helper (`ci()`) from
+  `app/api/books/route.ts` into `lib/prisma.ts` so `lib/feedback.ts`'s admin search could reuse
+  it instead of duplicating the runtime check.
+- Exported `Stat`/`Card`/`TINTS` from `StatsView.tsx` so the new Beta Dashboard reuses the same
+  tinted stat-card visual pattern instead of a duplicate implementation.
+
+### Security
+- Fixed a real bug caught during QA: a user's own feedback list was including admin-only
+  `adminNotes` in the API response (not rendered by the UI, but visible via devtools/Network).
+  Removed from the user-facing DTO entirely.
+- Every admin route/page is guarded server-side (`requireAdmin()`), verified by direct URL
+  navigation as a non-admin, not just a hidden nav link.
+
 ## [Unreleased] — Performance Optimization Sprint
 
 Full findings, before/after measurements, and methodology: `docs/PERFORMANCE-AUDIT.md`.

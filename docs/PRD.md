@@ -41,13 +41,15 @@ Initially single-user (the owner of the install); architected for multi-user lat
 | Barcode scanning (camera/upload/manual ISBN) | 3 | ✅ Built |
 | Metadata lookup (Open Library, Google Books) | 3 | ✅ Built |
 | Reviews & notes | 4 | ☐ Designed (schema ready) |
-| Shelves & collections | 4 | ☐ Designed (schema ready) |
-| Reading sessions | 5 | ☐ Designed (schema ready) |
-| Analytics dashboard | 5 | ☐ Designed |
+| Shelves & collections | 4 | ✅ Built |
+| Reading sessions & timer | 5 | ✅ Built |
+| Analytics dashboard & stats | 5 | ✅ Built |
 | Reading goals / challenges | 5 | ☐ Designed (schema ready) |
 | AI recommendations & insights | 5 | ◑ Stubbed (clean interfaces) |
 | Import / export (Goodreads, StoryGraph, CSV) | 6 | ☐ Designed |
-| Auth (email + Google) | 2 | ☐ Deferred (single-user now) |
+| **Real per-user auth + registration** | 2 | ✅ Built (replaces single shared password) |
+| **Closed-beta cap (30 testers)** | — | ✅ Built |
+| **In-app feedback + admin dashboard** | — | ✅ Built |
 | PWA / offline | 6 | ☐ Designed |
 
 ## 5. Core user stories (with acceptance criteria)

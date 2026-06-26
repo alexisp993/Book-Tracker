@@ -94,3 +94,25 @@ export interface LibraryStats {
   topAuthors: { name: string; count: number }[];
   ratingDistribution: { rating: number; count: number }[];
 }
+
+export interface CurrentUser {
+  id: string;
+  name: string | null;
+  email: string;
+  isAdmin: boolean;
+}
+
+export interface BetaStats {
+  totalUsers: number;
+  remainingSlots: number;
+  maxBetaUsers: number;
+  totalBooks: number;
+  booksThisWeek: number;
+  totalFeedback: number;
+  bugReports: number;
+  featureRequests: number;
+  generalFeedback: number;
+  feedbackByStatus: Record<string, number>;
+  mostRequestedFeatures: { subject: string; count: number }[];
+  mostCommonBugs: { subject: string; count: number }[];
+}

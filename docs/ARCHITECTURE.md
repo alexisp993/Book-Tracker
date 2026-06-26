@@ -31,7 +31,7 @@ Prisma Client  ─────────────────────�
 | DB (prod) | Postgres (Supabase/Railway) | Scales to the 100k+/user target | Requires migration when we switch providers |
 | Enums | Stored as `String` + validated in code | SQLite has no native enums; keeps schema portable | Validation lives in app, not DB constraint |
 | Lists (authors/genres) | Join tables, not scalar arrays | SQLite has no arrays; also enables querying/aggregation | More tables |
-| Auth | Single local user now | Fastest path to a usable app; `userId` FKs already everywhere | Real auth deferred |
+| Auth | Custom per-user (email + bcrypt password), not NextAuth | Extends the existing hand-rolled session cookie instead of adding a framework — consistent with every other build-it-simple choice in this app; see `docs/adr/ADR-0004-real-multiuser-auth.md` | No self-service password reset yet (mitigated: "email the admin") |
 | AI | Interface-first stubs | Build/test UI + API without an API key | No live recommendations yet |
 | Validation | Zod, shared client+server | Single source of truth for shapes | — |
 

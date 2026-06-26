@@ -1,25 +1,67 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-// Single-user mode (this phase). Every request resolves to one local user.
-// When real auth lands, replace getCurrentUser() with the session lookup —
-// the rest of the app already keys off the returned user id.
-export const LOCAL_USER_EMAIL = "local@booktracker.app";
+// The email of the single account auto-bootstrapped by the old shared-
+// password model, before real per-user registration existed. Used by the
+// one-time /api/auth/migrate route to find and upgrade that account.
+export const LOCAL_BOOTSTRAP_EMAIL = "local@booktracker.app";
 
-// Every API route calls this first. Production never runs `prisma db seed`
-// (it only seeds sample books for local dev — see docs/DEPLOY.md), so the user
-// row has always been bootstrapped by this function on its very first call
-// after a fresh deploy. An unconditional `upsert` here issued a write-path
-// query on EVERY request just to handle that one-time case. Fix: read first
-// (the steady-state path, after the row exists, is a single indexed read);
-// only fall through to `create` on a genuine cache miss — which happens
-// exactly once per fresh database, not once per request.
+export class UnauthorizedError extends Error {
+  constructor(message = "Unauthorized") {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
+// Comma-separated allowlist of admin emails. Checked fresh on every call (not
+// just at registration) so promoting/demoting an admin via the env var takes
+// effect immediately without a DB edit — the env var is the source of truth;
+// `User.isAdmin` is a denormalized cache kept in sync at registration/login.
+export function isAdminEmail(email: string): boolean {
+  const list = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(email.toLowerCase());
+}
+
+// Resolves the real logged-in user from the session cookie. Route Handlers
+// and Server Components have native access to `cookies()`, so no
+// middleware-to-handler identity-passing scheme is needed — middleware only
+// decides whether to let the request through at all; this is where identity
+// is actually resolved. By the time any protected route's handler runs,
+// middleware has already verified a valid session exists, so the
+// UnauthorizedError path here is a defensive fallback (e.g. a session for an
+// account deleted after the cookie was issued), not the common case.
 export async function getCurrentUser() {
-  const existing = await prisma.user.findUnique({
-    where: { email: LOCAL_USER_EMAIL },
-  });
-  if (existing) return existing;
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  const session = await verifySessionToken(token);
+  if (!session) throw new UnauthorizedError();
 
-  return prisma.user.create({
-    data: { email: LOCAL_USER_EMAIL, name: "You" },
-  });
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user) throw new UnauthorizedError();
+  return user;
+}
+
+// Sibling to getCurrentUser() for admin-only routes/pages — same call-first
+// convention used throughout the app.
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+  if (!user.isAdmin) throw new UnauthorizedError("Admin access required");
+  return user;
+}
+
+// Route-handler convenience: every admin API route needs the exact same
+// "is this user an admin, and if not, 403 instead of a raw 500" handling.
+// Centralizing it means that check can't be forgotten in a new admin route.
+// Returns the admin user, or a NextResponse to return immediately.
+export async function requireAdminOrResponse() {
+  try {
+    return await requireAdmin();
+  } catch {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 }

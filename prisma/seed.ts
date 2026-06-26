@@ -1,8 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 const LOCAL_USER_EMAIL = "local@booktracker.app";
+// Dev-only convenience password so local seeding produces a directly-loginable
+// account without going through the one-time /migrate flow. Never used in
+// production (this script never runs there — see docs/DEPLOY.md).
+const LOCAL_DEV_PASSWORD = "devpassword123";
 
 interface SeedBook {
   title: string;
@@ -59,10 +64,16 @@ const SAMPLE_BOOKS: SeedBook[] = [
 ];
 
 async function main() {
+  const passwordHash = await bcrypt.hash(LOCAL_DEV_PASSWORD, 10);
   const user = await prisma.user.upsert({
     where: { email: LOCAL_USER_EMAIL },
     update: {},
-    create: { email: LOCAL_USER_EMAIL, name: "You" },
+    create: {
+      email: LOCAL_USER_EMAIL,
+      name: "You",
+      passwordHash,
+      isAdmin: true,
+    },
   });
 
   for (const seed of SAMPLE_BOOKS) {
@@ -109,7 +120,8 @@ async function main() {
   }
 
   console.log(
-    `Seeded user ${user.email} with ${SAMPLE_BOOKS.length} sample books.`,
+    `Seeded user ${user.email} with ${SAMPLE_BOOKS.length} sample books.\n` +
+      `Local dev login: ${LOCAL_USER_EMAIL} / ${LOCAL_DEV_PASSWORD} (admin)`,
   );
 }
 

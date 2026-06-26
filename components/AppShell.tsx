@@ -7,12 +7,12 @@ import {
   BookMarked,
   FolderHeart,
   LibraryBig,
-  LogOut,
   Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReadingTimer } from "@/components/ReadingTimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccountMenu } from "@/components/AccountMenu";
 
 const NAV = [
   { href: "/", label: "Library", icon: LibraryBig },
@@ -29,8 +29,10 @@ function isActive(pathname: string, href: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // No chrome on the login screen.
-  if (pathname === "/login") return <>{children}</>;
+  // No chrome on the auth screens.
+  if (["/login", "/register", "/migrate"].includes(pathname)) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen">
@@ -69,16 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
-            <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                title="Log out"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Log out</span>
-              </button>
-            </form>
+            <AccountMenu />
           </div>
         </div>
       </header>

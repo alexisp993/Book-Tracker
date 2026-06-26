@@ -10,10 +10,13 @@ import type { ListParams, ListSessionsParams } from "@/lib/api";
 import type { GroupBasePath } from "@/lib/api";
 import type { CreateBookInput, UpdateBookInput } from "@/lib/validation";
 import type {
+  CreateFeedbackInput,
   CreateSessionInput,
   StopSessionInput,
+  UpdateFeedbackStatusInput,
   UpdateSessionInput,
 } from "@/lib/validation";
+import type { AdminFeedbackListParams } from "@/lib/api";
 
 // Centralized query-key factories so every component matches the same keys
 // for both reading and invalidating — see docs/PERFORMANCE-AUDIT.md for the
@@ -28,6 +31,12 @@ export const queryKeys = {
   sessions: (params: ListSessionsParams = {}) => ["sessions", params] as const,
   sessionsAll: ["sessions"] as const,
   activeSession: ["activeSession"] as const,
+  currentUser: ["currentUser"] as const,
+  myFeedback: ["feedback", "mine"] as const,
+  adminFeedbackList: (params: AdminFeedbackListParams = {}) =>
+    ["adminFeedback", "list", params] as const,
+  adminFeedbackDetail: (id: string) => ["adminFeedback", "detail", id] as const,
+  betaStats: ["betaStats"] as const,
 };
 
 // --- Books ---
@@ -245,5 +254,88 @@ export function useStopSession() {
       // endPage may have updated the book's currentPage.
       qc.invalidateQueries({ queryKey: queryKeys.booksAll });
     },
+  });
+}
+
+// --- Current user ---
+// staleTime: a few minutes — admin status rarely changes mid-session, and
+// this is fetched by AppShell on every page, so it should not be a
+// noisy/duplicate-fetch source itself.
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: () => api.getCurrentUserInfo(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+// --- Feedback (own submissions) ---
+
+export function useMyFeedback() {
+  return useQuery({
+    queryKey: queryKeys.myFeedback,
+    queryFn: () => api.listMyFeedback(),
+    staleTime: 15_000,
+  });
+}
+
+export function useCreateFeedback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateFeedbackInput) => api.submitFeedback(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.myFeedback });
+      // Affects the admin list/dashboard too, if an admin happens to have it open.
+      qc.invalidateQueries({ queryKey: ["adminFeedback"] });
+      qc.invalidateQueries({ queryKey: queryKeys.betaStats });
+    },
+  });
+}
+
+// --- Admin: feedback management ---
+
+export function useAdminFeedbackList(params: AdminFeedbackListParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.adminFeedbackList(params),
+    queryFn: () => api.adminListFeedback(params),
+    staleTime: 15_000,
+  });
+}
+
+export function useAdminFeedbackDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.adminFeedbackDetail(id ?? ""),
+    queryFn: () => api.adminGetFeedback(id!),
+    enabled: Boolean(id),
+    staleTime: 15_000,
+  });
+}
+
+export function useUpdateFeedbackStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateFeedbackStatusInput;
+    }) => api.adminUpdateFeedback(id, input),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["adminFeedback", "list"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminFeedbackDetail(vars.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.betaStats });
+    },
+  });
+}
+
+// --- Admin: beta dashboard ---
+
+export function useBetaStats() {
+  return useQuery({
+    queryKey: queryKeys.betaStats,
+    queryFn: () => api.getBetaStats(),
+    staleTime: 30_000,
   });
 }

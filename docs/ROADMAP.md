@@ -13,11 +13,23 @@ and full TanStack Query adoption across every data-fetching component. Full find
 before/after measurements: `docs/PERFORMANCE-AUDIT.md`. Redis, a service worker, and
 virtualized lists were evaluated and explicitly deferred (not a fit at current scale).
 
-## Phase 2 — Database, Auth, Accounts ◑
-- ✅ Prisma + SQLite schema and migrations.
-- ✅ Single local user (`getCurrentUser`) with `userId` FKs throughout.
-- ☐ NextAuth (email/password + password reset).
-- ☐ Google OAuth.
+## Phase 2 — Database, Auth, Accounts ✅
+- ✅ Prisma + SQLite (dev) / Postgres (prod) schema.
+- ✅ Real per-user accounts: registration (name/email/password, bcrypt-hashed), login,
+  a one-time migration page bridging the old shared-password account, admin role via
+  `ADMIN_EMAILS`. See `docs/adr/ADR-0004-real-multiuser-auth.md`.
+- ✅ Closed-beta cap (`MAX_BETA_USERS`, default 30), enforced server-side.
+- ☐ Google OAuth (not requested for the beta; custom email/password covers it).
+- ☐ Self-service password reset (deferred — "email the admin" for now, see ADR-0004).
+
+## Beta Testing System ✅
+Registration capped at `MAX_BETA_USERS`, in-app feedback (type/subject/description/optional
+screenshot via Vercel Blob, auto-captured page/browser/device/app-version context), a "My
+Feedback" page (own submissions only), an admin feedback dashboard (filter/search/status/
+internal notes), and a lightweight admin-only Beta Dashboard (registered testers, remaining
+slots, books added, feedback breakdown, most-requested features, most common bugs — all cheap
+`count`/`groupBy` queries, no full-table loops). See `docs/adr/ADR-0004-real-multiuser-auth.md`
+and the QA-008 entry in `docs/QA-REPORTS.md`.
 - ☐ Per-user data isolation hardening once multi-user is live.
 
 ## Phase 3 — Library, Barcode, Metadata ✅

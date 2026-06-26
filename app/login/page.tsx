@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookMarked, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Input, Label } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -20,7 +22,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -43,9 +45,11 @@ export default function LoginPage() {
           <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
             <BookMarked className="h-6 w-6" />
           </span>
-          <h1 className="text-xl font-bold tracking-tight">Book Tracker</h1>
+          <h1 className="font-display text-xl font-bold tracking-tight">
+            Book Tracker
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Enter your password to continue
+            Sign in to your account
           </p>
         </div>
 
@@ -54,13 +58,24 @@ export default function LoginPage() {
           className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm"
         >
           <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoFocus
               autoComplete="current-password"
             />
           </div>
@@ -74,7 +89,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={submitting || password.length === 0}
+            disabled={submitting || !email || !password}
           >
             {submitting ? (
               <>
@@ -84,7 +99,18 @@ export default function LoginPage() {
               "Sign in"
             )}
           </Button>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Forgot your password? Email the admin to reset it.
+          </p>
         </form>
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          New to the beta?{" "}
+          <Link href="/register" className="font-medium text-primary hover:underline">
+            Create an account
+          </Link>
+        </p>
       </div>
     </main>
   );

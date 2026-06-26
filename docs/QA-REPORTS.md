@@ -333,3 +333,81 @@ verified here. Redis, a service worker, and virtualized lists were evaluated and
 deferred with reasoning — see `docs/PERFORMANCE-AUDIT.md`.
 
 ### QA STATUS: ✅ APPROVED
+
+---
+
+## QA-008 — Beta Testing System: Real Auth, Feedback, Admin Dashboard
+
+**Reviewed:** 2026-06-26 · **Scope:** `lib/session.ts` (userId-carrying cookie), `middleware.ts`,
+`lib/user.ts` (`getCurrentUser`/`requireAdmin`), `lib/passwords.ts`, register/login/migrate
+routes + pages, `Feedback` model + `lib/feedback.ts`, feedback/screenshot/admin API routes,
+`lib/queries.ts`/`lib/api.ts` additions, all new components and pages. Design decisions and
+reasoning: `docs/adr/ADR-0004-real-multiuser-auth.md`.
+
+### Verification performed
+- ✅ Login (correct/wrong password, unknown email) — generic error message either way, doesn't
+  reveal which emails are registered.
+- ✅ Registration: succeeds under the cap; **blocked with a friendly message (not a raw error)**
+  exactly at the cap (tested with `MAX_BETA_USERS=2`: 1st seeded + 1 registered = cap reached,
+  3rd attempt → 403 `BETA_FULL` with the spec's exact tone); existing users can still log in
+  after the cap is reached; duplicate-email registration correctly returns "already exists"
+  (re-tested with the cap raised, since the cap check runs first and otherwise masks this path).
+- ✅ Migration: wrong app password rejected; correct one updates the bootstrapped account's
+  email/name/password and signs them in; **re-running migrate is idempotent** (409, not
+  double-processed); `isAdmin` correctly set from `ADMIN_EMAILS` on migration.
+- ✅ `isAdmin` re-syncs against `ADMIN_EMAILS` on every login (not just registration) — verified
+  by changing the env var and confirming a re-login flips the flag without a DB edit.
+- ✅ Old shared-password login format (`{password}` only, no email) now correctly fails
+  validation (422) rather than silently checking `APP_PASSWORD` — confirms `APP_PASSWORD` is
+  fully retired from the auth path, not a residual bypass.
+- ✅ **Full browser walkthrough**: registered a second real account through the UI → redirected
+  to an empty library (confirmed isolated from the admin's 3-book library, not shared/merged);
+  account menu showed no Admin links for this non-admin user; **direct URL navigation to
+  `/admin/dashboard` as a non-admin redirected to `/`** (server-side guard, not just a hidden
+  nav link); submitted feedback through the UI → exact spec thank-you message rendered →
+  appeared correctly in that user's own "My Feedback" with status "Open".
+- ✅ Logged in as admin: Beta Dashboard rendered correct live numbers (2/30 testers, 28
+  remaining, 3 books, 1 feedback item, 1 bug report, "Search is slow on large libraries" listed
+  under Most Common Bugs); Admin Feedback list showed the **other** user's submission (cross-
+  user visibility, admin-only); detail view showed full description + auto-captured context
+  (page, browser UA, device type "mobile", app version) — confirmed **none of this was user-
+  entered**, all captured client-side; updated status to "In Progress" + added internal notes
+  → saved and persisted.
+- ✅ Ownership isolation, explicitly tested both directions: each user's `GET /api/feedback`
+  (My Feedback) returns only their own rows; the admin's `GET /api/admin/feedback` correctly
+  aggregates across all users.
+- ✅ `npx tsc --noEmit` and `npm run build` clean on the final Postgres-targeted build (16 pages,
+  31 routes including all new auth/feedback/admin endpoints).
+
+### Findings & resolutions
+| # | Severity | Finding | Resolution |
+|---|----------|---------|------------|
+| 1 | **High** | `GET /api/feedback` (a user's own "My Feedback") leaked `adminNotes` in the JSON response — found by actually inspecting the live API response after an admin added a note, not assumed safe from reading the code. The UI component didn't render it, but the raw payload was visible via devtools/Network tab. | Removed `adminNotes` from the user-facing `FeedbackDTO` entirely; the admin-only `AdminFeedbackDetail` type (used by `/api/admin/feedback/:id`) is unaffected and still includes it. Re-verified: the field no longer appears in `GET /api/feedback`'s response while the status update remains visible. |
+| 2 | Medium | The browser eval tool's `location.pathname` check after a client-side redirect (`router.replace` + `router.refresh`) sometimes read stale state mid-navigation, initially appearing as a failed registration when it had actually succeeded. | Not a product bug — confirmed via screenshot that registration/login/logout all completed correctly each time; just a testing-tool timing quirk, noted so it isn't mistaken for a real issue. |
+| 3 | Low | Beta-cap race condition (simultaneous registrations right at the cap) is not fully eliminated by the `$transaction` wrap. | Accepted, documented residual risk per ADR-0004 — disproportionate to fix with full row-locking at 30-user scale. |
+
+### Security review
+- **Auth:** passwords hashed with bcrypt (never stored/logged in plaintext); session cookie is
+  HMAC-signed and `httpOnly`/`sameSite: lax`/`secure` in production; generic login error message
+  prevents email enumeration. ✅
+- **Authorization:** every admin route/page calls `requireAdmin()` (or the route-handler
+  `requireAdminOrResponse()` wrapper) first — verified server-side, not just hidden UI, via
+  direct URL navigation as a non-admin. ✅
+- **Ownership:** `listMyFeedback`/`createFeedback` always scope to the calling user's `userId`;
+  a user can never read another user's feedback through the non-admin endpoints. ✅
+- **Upload validation:** screenshot endpoint checks `Content-Type` against an allowlist
+  (png/jpeg/webp) and a 2MB size cap server-side, not just relying on the client. ✅
+- **Information disclosure:** the `adminNotes` leak (Finding #1) was caught and fixed before
+  sign-off — re-verified clean. ✅
+- **Input validation:** all new endpoints (register/login/migrate/feedback/admin) validate via
+  Zod schemas in `lib/validation.ts`, consistent with every existing route. ✅
+
+### Honest scope note
+Actual Vercel Blob screenshot upload could not be fully exercised in this sandboxed local-dev
+environment (no real Blob store token available here) — the route correctly returns a friendly
+503 ("not configured yet") when `BLOB_READ_WRITE_TOKEN` is absent, and feedback submission
+without a screenshot was fully verified end-to-end. The Blob upload path itself (file → `put()`
+→ public URL) should be smoke-tested once deployed with a real Blob store connected, per
+`docs/DEPLOY.md`.
+
+### QA STATUS: ✅ APPROVED

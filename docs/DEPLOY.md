@@ -61,19 +61,39 @@ git push -u origin main
 3. Before deploying, add **Environment Variables** (Settings → Environment Variables):
    | Name | Value |
    |------|-------|
-   | `APP_PASSWORD` | a strong password you'll type to log in |
-   | `AUTH_SECRET` | a long random string (generate with `openssl rand -base64 32`) |
+   | `APP_PASSWORD` | the OLD shared password — only needed once, for the one-time `/migrate` step below. Safe to leave set indefinitely (the migrate route becomes a no-op afterward), or remove it once you've migrated. |
+   | `AUTH_SECRET` | a long random string (generate with `openssl rand -base64 32`) — signs every user's session cookie |
+   | `ADMIN_EMAILS` | your real email (comma-separated if more than one) — whoever logs in/registers/migrates with a matching email becomes an admin |
+   | `MAX_BETA_USERS` | `30` (or your preferred cap) — optional, defaults to 30 |
+   | `BLOB_READ_WRITE_TOKEN` | optional — only needed for feedback screenshot uploads; see Step 5b |
    | `DATABASE_URL` | your Postgres connection string (skip if you used Vercel Postgres Option A, which sets it for you) |
 4. Click **Deploy**.
 
 ## Step 4 — Tables are created automatically
 No action needed — the deploy's build step runs `prisma db push`, which creates all tables in
-your Neon database the first time (and keeps them in sync on later deploys). Your library starts
-empty and fills as you add books.
+your Neon database the first time (and keeps them in sync on later deploys).
 
-## Step 5 — Use it on your phone
+## Step 5 — One-time account setup
+The app now uses **real per-user accounts**, not a single shared password. Your existing
+library (created under the old shared-password model) is owned by one bootstrapped account
+that needs to be upgraded once:
+1. Open your Vercel URL → `/migrate`.
+2. Enter the **old shared password** (`APP_PASSWORD`), your real name, your real email
+   (matching `ADMIN_EMAILS` above so you become admin), and a new personal password.
+3. From then on, log in normally with that email + password at `/login`. `APP_PASSWORD` is no
+   longer used for day-to-day access — it only matters if you ever need to re-run `/migrate`.
+
+Other beta testers register their own accounts at `/register` (capped at `MAX_BETA_USERS`).
+
+## Step 5b — (Optional) Screenshot uploads for feedback
+Feedback works fine without this — screenshots are just skipped with a friendly message until
+configured. To enable them: in your Vercel project, open **Storage → Create Database → Blob**,
+accept the defaults. This automatically adds `BLOB_READ_WRITE_TOKEN` to your project — redeploy
+and screenshot uploads start working.
+
+## Step 6 — Use it on your phone
 1. Open your Vercel URL (e.g. `https://book-tracker-you.vercel.app`) on your phone.
-2. Log in with `APP_PASSWORD`.
+2. Log in with your personal email + password (after Step 5).
 3. **Add to Home Screen** for an app-like icon:
    - **iPhone (Safari):** Share → *Add to Home Screen*.
    - **Android (Chrome):** menu (⋮) → *Install app* / *Add to Home Screen*.
@@ -86,9 +106,11 @@ Push changes to GitHub and Vercel redeploys automatically. If you changed the da
 run `npx prisma db push` against the production database again.
 
 ## Notes & limits
-- **Security:** access is gated by the single `APP_PASSWORD`. Keep it private. To rotate, change
-  `APP_PASSWORD` (and optionally `AUTH_SECRET`, which logs everyone out) in Vercel and redeploy.
-- **Free-tier limits:** generous for one person. If you ever exceed them, Vercel/your DB will
-  notify you before any charges — nothing auto-bills.
+- **Security:** each tester has their own bcrypt-hashed password; admin access is controlled by
+  the `ADMIN_EMAILS` env var, re-checked on every login. Registration is hard-capped at
+  `MAX_BETA_USERS`, enforced server-side (not just hidden UI).
+- **Free-tier limits:** generous for ~30 people. If you ever exceed them, Vercel/your DB will
+  notify you before any charges — nothing auto-bills. Vercel Blob (screenshots) also has a free
+  tier appropriate for occasional feedback uploads.
 - **Multi-user / real accounts** (NextAuth + Google) is a future phase; today it's single-user
   behind one password, which is right for a personal library.

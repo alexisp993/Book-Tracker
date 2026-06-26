@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { ci, prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import {
   authorsCreatePayload,
@@ -17,22 +17,6 @@ import type { Paginated } from "@/lib/types";
 import type { LibraryBook } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-// Case-insensitive `contains` filter. `mode: "insensitive"` is Postgres-only —
-// SQLite's query engine rejects the key outright at runtime ("Unknown argument
-// `mode`"), it's not just a missing TS type. SQLite's `contains` is already
-// case-insensitive for ASCII by default, so the key is only added when the
-// active datasource is actually Postgres (detected from DATABASE_URL, which is
-// "file:..." locally and "postgres(ql)://..." in production/CI).
-const IS_POSTGRES = !process.env.DATABASE_URL?.startsWith("file:");
-
-function ci(q: string): Prisma.StringFilter {
-  return (
-    IS_POSTGRES
-      ? { contains: q, mode: "insensitive" }
-      : { contains: q }
-  ) as unknown as Prisma.StringFilter;
-}
 
 // GET /api/books — list the current user's library with search/filter/sort/pagination.
 export async function GET(request: Request) {
