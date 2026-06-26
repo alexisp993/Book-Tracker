@@ -1,12 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Library, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
 import { ApiRequestError, type GroupBasePath } from "@/lib/api";
+import { colorForName, GROUP_TINTS } from "@/lib/colorHash";
+import { cn } from "@/lib/utils";
 import {
   useCreateGroup,
   useDeleteGroup,
@@ -94,58 +97,74 @@ export function GroupsView({
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : !groups || groups.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed py-16 text-center">
-          <BookOpen className="h-9 w-9 text-muted-foreground/40" />
-          <div>
-            <p className="font-medium">No {singular}s yet</p>
-            <p className="text-sm text-muted-foreground">
-              Create one, then add books to it from a book&rsquo;s edit screen.
-            </p>
-          </div>
-          <Button onClick={startCreate}>
-            <Plus className="h-4 w-4" /> New {singular}
-          </Button>
-        </div>
+        <EmptyState
+          icon={Library}
+          title={`No ${singular}s yet`}
+          description="Create one, then add books to it from a book's edit screen."
+          action={
+            <Button onClick={startCreate}>
+              <Plus className="h-4 w-4" /> New {singular}
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((g) => (
-            <div
-              key={g.id}
-              className="group flex items-center gap-3 rounded-2xl border bg-card p-3 transition-shadow hover:shadow-md"
-            >
-              <button
-                type="button"
-                onClick={() => setOpenId(g.id)}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          {groups.map((g) => {
+            const tint = colorForName(g.name);
+            return (
+              <div
+                key={g.id}
+                className="relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-card p-3 pt-4 transition-shadow hover:shadow-md"
               >
-                <CoverStack covers={g.covers} />
-                <div className="min-w-0">
-                  <p className="truncate font-display text-lg font-semibold">
-                    {g.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {g.count} book{g.count === 1 ? "" : "s"}
-                  </p>
+                <span
+                  className={cn(
+                    "absolute inset-x-0 top-0 h-1.5",
+                    GROUP_TINTS[tint].solid,
+                  )}
+                  aria-hidden
+                />
+                <button
+                  type="button"
+                  onClick={() => setOpenId(g.id)}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                  <CoverStack covers={g.covers} tint={tint} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display text-lg font-semibold">
+                      {g.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {g.count} book{g.count === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                      GROUP_TINTS[tint].badge,
+                    )}
+                  >
+                    <Library className="h-4 w-4" />
+                  </span>
+                </button>
+                <div className="flex shrink-0 flex-col gap-1">
+                  <button
+                    onClick={() => startRename(g)}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    aria-label={`Rename ${g.name}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => remove(g)}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
+                    aria-label={`Delete ${g.name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              </button>
-              <div className="flex shrink-0 flex-col gap-1">
-                <button
-                  onClick={() => startRename(g)}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  aria-label={`Rename ${g.name}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => remove(g)}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
-                  aria-label={`Delete ${g.name}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -205,10 +224,11 @@ export function GroupsView({
         {openLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !detail || detail.books.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No books here yet. Open a book in your library, tap Edit, and add it
-            to this {singular}.
-          </p>
+          <EmptyState
+            icon={BookOpen}
+            title="No books here yet"
+            description={`Open a book in your library, tap Edit, and add it to this ${singular}.`}
+          />
         ) : (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {detail.books.map((b) => (
@@ -229,11 +249,24 @@ export function GroupsView({
   );
 }
 
-function CoverStack({ covers }: { covers: string[] }) {
+function CoverStack({
+  covers,
+  tint,
+}: {
+  covers: string[];
+  tint: ReturnType<typeof colorForName>;
+}) {
   if (covers.length === 0) {
+    // Even an empty shelf/collection gets a colorful, intentional-looking
+    // illustration instead of a blank box.
     return (
-      <div className="flex h-16 w-12 shrink-0 items-center justify-center rounded-md border bg-muted">
-        <BookOpen className="h-5 w-5 text-muted-foreground/40" />
+      <div
+        className={cn(
+          "flex h-16 w-12 shrink-0 items-center justify-center rounded-md",
+          GROUP_TINTS[tint].badge,
+        )}
+      >
+        <BookOpen className="h-6 w-6" />
       </div>
     );
   }
