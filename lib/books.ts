@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { LibraryBook } from "@/lib/types";
 import type { ReadingStatus } from "@/lib/constants";
 import { coverCandidates } from "@/lib/isbn";
+import { toTitleCase } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
 // What we always include when reading a UserBook so it can be serialized.
@@ -105,7 +106,7 @@ export function authorsCreatePayload(
   if (!authors) return undefined;
   const names = authors
     .split(",")
-    .map((n) => n.trim())
+    .map((n) => toTitleCase(n.trim()))
     .filter(Boolean);
   if (names.length === 0) return undefined;
   return {

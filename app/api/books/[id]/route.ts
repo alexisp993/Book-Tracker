@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
+import { toTitleCase } from "@/lib/utils";
 import {
   serializeLibraryBook,
   syncCollectionMembership,
@@ -67,8 +68,9 @@ export async function PATCH(
 
   // Split incoming fields into book-level and entry-level updates.
   const bookData: Prisma.BookUpdateInput = {};
-  if (input.title !== undefined) bookData.title = input.title;
-  if (input.subtitle !== undefined) bookData.subtitle = input.subtitle;
+  if (input.title !== undefined) bookData.title = toTitleCase(input.title);
+  if (input.subtitle !== undefined)
+    bookData.subtitle = input.subtitle ? toTitleCase(input.subtitle) : input.subtitle;
   if (input.description !== undefined) bookData.description = input.description;
   if (input.publisher !== undefined) bookData.publisher = input.publisher;
   if (input.publishedDate !== undefined)
@@ -92,7 +94,7 @@ export async function PATCH(
     input.authors !== undefined
       ? input.authors
           .split(",")
-          .map((n) => n.trim())
+          .map((n) => toTitleCase(n.trim()))
           .filter(Boolean)
       : undefined;
 

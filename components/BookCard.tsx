@@ -67,31 +67,39 @@ export const BookCard = React.memo(function BookCard({
     );
   }
 
-  // Comfortable: full card with details and actions.
+  // Comfortable: full card with details and actions, kept deliberately lean
+  // — status moves onto the cover as an overlay pill, rating is inline and
+  // small, and actions collapse into a single row of icon buttons.
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground transition-shadow hover:shadow-md">
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
         <BookCover book={book} />
+        <StatusBadge
+          status={book.status}
+          overlay
+          className="absolute left-2 top-2 text-[11px]"
+        />
         {book.favorite ? (
-          <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 backdrop-blur">
+          <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 backdrop-blur-md">
             <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
           </span>
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         <div className="flex-1">
           <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-tight">
             {book.title}
           </h3>
-          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-            {book.authors.length > 0 ? book.authors.join(", ") : "Unknown author"}
-          </p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className="line-clamp-1 text-xs text-muted-foreground">
+              {book.authors.length > 0 ? book.authors.join(", ") : "Unknown author"}
+            </p>
+            {book.rating ? (
+              <StarRating value={book.rating} size={11} />
+            ) : null}
+          </div>
         </div>
-
-        <StatusBadge status={book.status} />
-
-        {book.rating ? <StarRating value={book.rating} /> : null}
 
         {progress !== null && book.status === "CURRENTLY_READING" ? (
           <div>
@@ -107,30 +115,31 @@ export const BookCard = React.memo(function BookCard({
           </div>
         ) : null}
 
-        {canStart && onStartReading ? (
+        <div className="mt-1 flex items-center gap-1.5">
+          {canStart && onStartReading ? (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
+              onClick={() => onStartReading(book)}
+              aria-label={`Start reading ${book.title}`}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
           <Button
             variant="outline"
-            size="sm"
-            className="h-9 w-full border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
-            onClick={() => onStartReading(book)}
-          >
-            <BookOpen className="h-3.5 w-3.5" /> Start reading
-          </Button>
-        ) : null}
-
-        <div className="mt-1 flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 flex-1"
+            size="icon"
+            className="h-8 w-8"
             onClick={() => onEdit(book)}
+            aria-label={`Edit ${book.title}`}
           >
-            <Pencil className="h-3.5 w-3.5" /> Edit
+            <Pencil className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="outline"
-            size="sm"
-            className="h-9 px-3 text-destructive hover:text-destructive"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
             onClick={() => onDelete(book)}
             aria-label={`Delete ${book.title}`}
           >

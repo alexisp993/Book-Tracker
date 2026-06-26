@@ -23,7 +23,7 @@ export function ViewToggle({
   onChange: (mode: LibraryViewMode) => void;
 }) {
   return (
-    <div className="inline-flex items-center rounded-xl border bg-card p-0.5">
+    <div className="inline-flex items-center rounded-xl border bg-card/80 p-0.5 backdrop-blur">
       {OPTIONS.map((opt) => {
         const Icon = opt.icon;
         const active = value === opt.mode;

@@ -9,6 +9,7 @@ import {
   Library,
   RefreshCw,
   ScanBarcode,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -74,6 +75,10 @@ export function LibraryView() {
 
   // delete confirm state
   const [toDelete, setToDelete] = React.useState<LibraryBook | null>(null);
+
+  // mobile-only filter sheet (search/status/sort collapse into this on small screens)
+  const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
+  const filtersActive = filters.q !== "" || filters.status !== "";
 
   // Debounce the search box; reset to page 1 whenever filters change.
   const [debouncedQ, setDebouncedQ] = React.useState(filters.q);
@@ -210,48 +215,78 @@ export function LibraryView() {
   const enriching = enrichMutation.isPending;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-between gap-3 sm:justify-start">
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-3 sm:space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <p className="shrink-0 text-sm text-muted-foreground">
             {loading && !data
               ? "Loading…"
-              : `${total} book${total === 1 ? "" : "s"} in your library`}
+              : `${total} book${total === 1 ? "" : "s"}`}
           </p>
           {total > 0 ? (
             <button
               onClick={handleEnrich}
               disabled={enriching}
-              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1 truncate text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
               title="Fetch missing covers and details from Open Library / Google Books"
             >
               <RefreshCw
-                className={`h-3.5 w-3.5 ${enriching ? "animate-spin" : ""}`}
+                className={`h-3.5 w-3.5 shrink-0 ${enriching ? "animate-spin" : ""}`}
               />
-              {enriching ? "Refreshing…" : enrichMsg ?? "Refresh details"}
+              <span className="hidden sm:inline">
+                {enriching ? "Refreshing…" : enrichMsg ?? "Refresh details"}
+              </span>
             </button>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
+            size="icon"
             onClick={() => setScannerOpen(true)}
-            className="w-full sm:w-auto"
+            className="w-9 sm:w-auto sm:px-3"
+            aria-label="Scan barcode"
           >
-            <ScanBarcode className="h-4 w-4" /> Scan
+            <ScanBarcode className="h-4 w-4" />
+            <span className="hidden sm:inline">Scan</span>
           </Button>
-          <Button onClick={openAdd} className="w-full sm:w-auto">
-            <BookPlus className="h-4 w-4" /> Add book
+          <Button
+            size="icon"
+            onClick={openAdd}
+            className="w-9 sm:w-auto sm:px-3"
+            aria-label="Add book"
+          >
+            <BookPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add book</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex-1">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFilterSheetOpen(true)}
+          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-card/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground sm:hidden"
+          aria-label="Search and filter"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {filtersActive ? (
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+          ) : null}
+        </button>
+        <div className="hidden flex-1 sm:flex">
           <LibraryToolbar filters={filters} onChange={setFilters} />
         </div>
         <ViewToggle value={view} onChange={changeView} />
       </div>
+
+      <Dialog
+        open={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        title="Search & filter"
+      >
+        <LibraryToolbar filters={filters} onChange={setFilters} />
+      </Dialog>
 
       {listError ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

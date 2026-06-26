@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
               <BookMarked className="h-4 w-4" />
             </span>
             <span className="font-display text-xl font-semibold tracking-tight">

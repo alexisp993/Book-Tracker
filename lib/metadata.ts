@@ -5,6 +5,7 @@ import {
   normalizeIsbn,
 } from "@/lib/isbn";
 import { prisma } from "@/lib/prisma";
+import { toTitleCase } from "@/lib/utils";
 
 // Normalized metadata shape shared by all providers and returned to the client.
 // Mirrors the editable book fields so it can prefill the add form directly.
@@ -223,11 +224,13 @@ function merge(parts: (PartialMeta | null)[]): BookMetadata | null {
 
   const title = pickStr("title");
   if (!title) return null;
+  const subtitle = pickStr("subtitle");
+  const authors = pickArr("authors") ?? [];
 
   return {
-    title,
-    subtitle: pickStr("subtitle"),
-    authors: pickArr("authors") ?? [],
+    title: toTitleCase(title),
+    subtitle: subtitle ? toTitleCase(subtitle) : subtitle,
+    authors: authors.map(toTitleCase),
     description: pickStr("description"),
     publisher: pickStr("publisher"),
     publishedDate: pickStr("publishedDate"),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { ci, prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
+import { toTitleCase } from "@/lib/utils";
 import {
   authorsCreatePayload,
   serializeLibraryBook,
@@ -123,8 +124,8 @@ export async function POST(request: Request) {
   } else {
     const book = await prisma.book.create({
       data: {
-        title: input.title,
-        subtitle: input.subtitle,
+        title: toTitleCase(input.title),
+        subtitle: input.subtitle ? toTitleCase(input.subtitle) : input.subtitle,
         description: input.description,
         publisher: input.publisher,
         publishedDate: input.publishedDate,
