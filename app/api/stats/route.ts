@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getCurrentUser();
 
-  const [statusGroups, ratingAgg, ratingGroups, favorites, readRows, topAuthors] =
+  const [statusGroups, ratingAgg, ratingGroups, favorites, readRows, topAuthors, genreBreakdown] =
     await Promise.all([
       prisma.userBook.groupBy({
         by: ["status"],
@@ -58,6 +58,19 @@ export async function GET() {
         GROUP BY a.name
         ORDER BY count DESC
         LIMIT 5
+      `,
+      // Favorite genres — same join-can't-groupBy situation as topAuthors
+      // above (UserBook → BookGenre → Genre), so it's the same raw-SQL
+      // pattern rather than N+1 application-side counting.
+      prisma.$queryRaw<{ name: string; count: bigint }[]>`
+        SELECT g.name as name, COUNT(*) as count
+        FROM "UserBook" ub
+        JOIN "BookGenre" bg ON bg."bookId" = ub."bookId"
+        JOIN "Genre" g ON g.id = bg."genreId"
+        WHERE ub."userId" = ${user.id}
+        GROUP BY g.name
+        ORDER BY count DESC
+        LIMIT 8
       `,
     ]);
 
@@ -119,6 +132,7 @@ export async function GET() {
       rating: r,
       count: ratingDist[r],
     })),
+    genreBreakdown: genreBreakdown.map((g) => ({ name: g.name, count: Number(g.count) })),
   };
 
   return NextResponse.json(stats);

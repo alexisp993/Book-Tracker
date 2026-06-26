@@ -343,6 +343,11 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
   // Local-date key (not toISOString, which is UTC and would drift the day
   // boundary away from the local-time `startOfToday` used above).
   const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  // Zero-padded local-date string — sorts lexicographically and parses back
+  // into the correct local-midnight Date, used by both the longest-streak
+  // walk below and the heatmap bucketing further down.
+  const isoLocalDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const sessionDays = new Set(recentDates.map((s) => dayKey(s.date)));
   let streakDays = 0;
   const cursor = new Date(startOfToday);
@@ -356,10 +361,29 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  // Zero-padded local-date string for the heatmap (a display value, unlike
-  // the internal dayKey above which only needs Set-membership uniqueness).
-  const isoLocalDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Longest streak anywhere in the fetched history (not just the one ending
+  // today/yesterday above) — walk the distinct session days oldest-to-newest
+  // and track the longest run of calendar-consecutive days. Pure JS over the
+  // same `recentDates` rows already in memory, no extra query.
+  const sortedDays = Array.from(
+    new Set(recentDates.map((s) => isoLocalDate(s.date))),
+  ).sort();
+  let longestStreakDays = 0;
+  let currentRun = 0;
+  let prevDay: Date | null = null;
+  for (const key of sortedDays) {
+    const day = new Date(key);
+    if (prevDay) {
+      const diffDays = Math.round((day.getTime() - prevDay.getTime()) / 86400000);
+      currentRun = diffDays === 1 ? currentRun + 1 : 1;
+    } else {
+      currentRun = 1;
+    }
+    longestStreakDays = Math.max(longestStreakDays, currentRun);
+    prevDay = day;
+  }
+  longestStreakDays = Math.max(longestStreakDays, streakDays);
+
   const ninetyDaysAgo = new Date(startOfToday);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
   const minutesByDay = new Map<string, number>();
@@ -385,6 +409,7 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     hoursThisWeek: Math.round(((week._sum.minutes ?? 0) / 60) * 10) / 10,
     hoursThisMonth: Math.round(((month._sum.minutes ?? 0) / 60) * 10) / 10,
     streakDays,
+    longestStreakDays,
     pagesToday: today._sum.pagesRead ?? 0,
     last90Days,
     moodBreakdown,

@@ -1,10 +1,12 @@
 "use client";
 
 import type * as React from "react";
-import { BookCheck, BookOpen, Clock, Flame, Heart, Star, Timer } from "lucide-react";
+import { BookCheck, BookOpen, Clock, Flame, Heart, Star, Timer, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSessionStats, useStats } from "@/lib/queries";
 import { STATUS_DOT } from "@/lib/constants";
+import { EmptyState } from "@/components/EmptyState";
+import { ReadingCalendar } from "@/components/ReadingCalendar";
 
 export function StatsView() {
   const { data: stats, isLoading: loading } = useStats();
@@ -15,19 +17,18 @@ export function StatsView() {
   }
   if (!stats || stats.total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed py-16 text-center">
-        <BookOpen className="h-9 w-9 text-muted-foreground/40" />
-        <p className="font-medium">No stats yet</p>
-        <p className="text-sm text-muted-foreground">
-          Add and finish some books to see your reading insights.
-        </p>
-      </div>
+      <EmptyState
+        icon={BookOpen}
+        title="No stats yet"
+        description="Add and finish some books to see your reading insights."
+      />
     );
   }
 
   const maxMonth = Math.max(1, ...stats.booksPerMonth.map((m) => m.count));
   const maxStatus = Math.max(1, ...stats.byStatus.map((s) => s.count));
   const maxRating = Math.max(1, ...stats.ratingDistribution.map((r) => r.count));
+  const maxGenre = Math.max(1, ...stats.genreBreakdown.map((g) => g.count));
 
   return (
     <div className="space-y-6">
@@ -73,9 +74,18 @@ export function StatsView() {
             />
             <Stat icon={<Clock className="h-4 w-4" />} label="This week" tint="teal" value={`${sessionStats.hoursThisWeek}h`} />
             <Stat icon={<Clock className="h-4 w-4" />} label="This month" tint="teal" value={`${sessionStats.hoursThisMonth}h`} />
+            <Stat
+              icon={<Trophy className="h-4 w-4" />}
+              label="Longest streak"
+              tint="amber"
+              value={`${sessionStats.longestStreakDays}d`}
+            />
           </div>
         </Card>
       ) : null}
+
+      {/* Reading calendar (last 13 weeks, GitHub-style heatmap) */}
+      <ReadingCalendar />
 
       {/* Books finished per month */}
       <Card title="Books finished" subtitle="Last 12 months">
@@ -144,6 +154,30 @@ export function StatsView() {
           </div>
         </Card>
       </div>
+
+      {/* Favorite genres */}
+      {stats.genreBreakdown.length > 0 ? (
+        <Card title="Favorite genres">
+          <div className="space-y-2.5">
+            {stats.genreBreakdown.map((g) => (
+              <div key={g.name} className="flex items-center gap-3">
+                <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
+                  {g.name}
+                </span>
+                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-violet-500"
+                    style={{ width: `${(g.count / maxGenre) * 100}%` }}
+                  />
+                </div>
+                <span className="w-6 shrink-0 text-right text-xs font-medium">
+                  {g.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {/* Top authors */}
       {stats.topAuthors.length > 0 ? (

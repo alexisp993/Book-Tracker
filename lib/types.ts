@@ -80,6 +80,9 @@ export interface SessionStats {
   hoursThisMonth: number;
   // Consecutive days (ending today or yesterday) with at least one session logged.
   streakDays: number;
+  // Longest consecutive run of days-with-a-session found anywhere in the
+  // fetched history (not necessarily the streak that's still active today).
+  longestStreakDays: number;
   pagesToday: number;
   // Sparse — only days with at least one session, local-date YYYY-MM-DD keys.
   last90Days: { date: string; minutes: number }[];
@@ -99,6 +102,7 @@ export interface LibraryStats {
   booksPerMonth: { month: string; label: string; count: number }[];
   topAuthors: { name: string; count: number }[];
   ratingDistribution: { rating: number; count: number }[];
+  genreBreakdown: { name: string; count: number }[];
 }
 
 export interface CurrentUser {
