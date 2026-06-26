@@ -78,6 +78,9 @@ export interface SessionStats {
   hoursToday: number;
   hoursThisWeek: number;
   hoursThisMonth: number;
+  // Consecutive days (ending today or yesterday) with at least one session logged.
+  streakDays: number;
+  pagesToday: number;
 }
 
 export interface LibraryStats {

@@ -300,7 +300,7 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
 
   const baseWhere = { userId, minutes: { not: null } } as const;
 
-  const [totals, today, week, month] = await Promise.all([
+  const [totals, today, week, month, recentDates] = await Promise.all([
     prisma.readingSession.aggregate({
       where: baseWhere,
       _sum: { minutes: true, pagesRead: true },
@@ -308,7 +308,7 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     }),
     prisma.readingSession.aggregate({
       where: { ...baseWhere, date: { gte: startOfToday } },
-      _sum: { minutes: true },
+      _sum: { minutes: true, pagesRead: true },
     }),
     prisma.readingSession.aggregate({
       where: { ...baseWhere, date: { gte: startOfWeek } },
@@ -318,10 +318,35 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
       where: { ...baseWhere, date: { gte: startOfMonth } },
       _sum: { minutes: true },
     }),
+    // Streak only needs which distinct days had a session, not every row —
+    // 800 rows comfortably covers years of daily reading on the existing
+    // [userId, date] index, far short of a full-table scan.
+    prisma.readingSession.findMany({
+      where: baseWhere,
+      select: { date: true },
+      orderBy: { date: "desc" },
+      take: 800,
+    }),
   ]);
 
   const totalMinutes = totals._sum.minutes ?? 0;
   const totalPagesRead = totals._sum.pagesRead ?? 0;
+
+  // Local-date key (not toISOString, which is UTC and would drift the day
+  // boundary away from the local-time `startOfToday` used above).
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const sessionDays = new Set(recentDates.map((s) => dayKey(s.date)));
+  let streakDays = 0;
+  const cursor = new Date(startOfToday);
+  // A streak ending yesterday still counts as "alive" even with nothing
+  // logged yet today; only break once we hit a day with zero sessions.
+  if (!sessionDays.has(dayKey(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (sessionDays.has(dayKey(cursor))) {
+    streakDays++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
 
   return {
     sessionCount: totals._count,
@@ -332,5 +357,7 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     hoursToday: Math.round(((today._sum.minutes ?? 0) / 60) * 10) / 10,
     hoursThisWeek: Math.round(((week._sum.minutes ?? 0) / 60) * 10) / 10,
     hoursThisMonth: Math.round(((month._sum.minutes ?? 0) / 60) * 10) / 10,
+    streakDays,
+    pagesToday: today._sum.pagesRead ?? 0,
   };
 }

@@ -22,6 +22,9 @@ import {
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { BookRow } from "@/components/BookRow";
 import { LibraryToolbar, type LibraryFilters } from "@/components/LibraryToolbar";
+import { EmptyState } from "@/components/EmptyState";
+import { ContinueReadingCard } from "@/components/ContinueReadingCard";
+import { StreakBanner } from "@/components/StreakBanner";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
 import { ApiRequestError } from "@/lib/api";
 import {
@@ -44,7 +47,7 @@ const DEFAULT_FILTERS: LibraryFilters = {
 
 export function LibraryView() {
   const [filters, setFilters] = React.useState<LibraryFilters>(DEFAULT_FILTERS);
-  const [view, setView] = React.useState<LibraryViewMode>("comfortable");
+  const [view, setView] = React.useState<LibraryViewMode>("list");
   const [page, setPage] = React.useState(1);
 
   // Persist the chosen view density across sessions.
@@ -216,6 +219,9 @@ export function LibraryView() {
 
   return (
     <div className="space-y-3 sm:space-y-6">
+      <StreakBanner />
+      <ContinueReadingCard onContinue={openEdit} />
+
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <p className="shrink-0 text-sm text-muted-foreground">
@@ -298,30 +304,35 @@ export function LibraryView() {
       ) : null}
 
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <Library className="h-10 w-10 text-muted-foreground/50" />
-          <div>
-            <p className="font-medium">
-              {filters.q || filters.status
-                ? "No books match your filters"
-                : "Your library is empty"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {filters.q || filters.status
-                ? "Try clearing the search or status filter."
-                : "Add your first book to get started."}
-            </p>
-          </div>
-          {!filters.q && !filters.status ? (
-            <Button onClick={openAdd}>
-              <BookPlus className="h-4 w-4" /> Add book
-            </Button>
-          ) : null}
-        </div>
+        <EmptyState
+          icon={Library}
+          title={
+            filters.q || filters.status
+              ? "No books match your filters"
+              : "Your library is waiting"
+          }
+          description={
+            filters.q || filters.status
+              ? "Try clearing the search or status filter."
+              : "Start building your personal reading collection."
+          }
+          action={
+            !filters.q && !filters.status ? (
+              <Button onClick={openAdd}>
+                <BookPlus className="h-4 w-4" /> Add book
+              </Button>
+            ) : undefined
+          }
+        />
       ) : view === "list" ? (
         <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
           {items.map((book) => (
-            <BookRow key={book.id} book={book} onEdit={openEdit} />
+            <BookRow
+              key={book.id}
+              book={book}
+              onEdit={openEdit}
+              onStartReading={handleStartReading}
+            />
           ))}
         </div>
       ) : view === "compact" ? (
