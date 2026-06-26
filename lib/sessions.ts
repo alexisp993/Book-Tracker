@@ -300,7 +300,7 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
 
   const baseWhere = { userId, minutes: { not: null } } as const;
 
-  const [totals, today, week, month, recentDates] = await Promise.all([
+  const [totals, today, week, month, recentDates, moodGroups] = await Promise.all([
     prisma.readingSession.aggregate({
       where: baseWhere,
       _sum: { minutes: true, pagesRead: true },
@@ -318,14 +318,22 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
       where: { ...baseWhere, date: { gte: startOfMonth } },
       _sum: { minutes: true },
     }),
-    // Streak only needs which distinct days had a session, not every row —
-    // 800 rows comfortably covers years of daily reading on the existing
+    // Streak (and the reading-calendar heatmap below) only need which days
+    // had a session and how many minutes, not every row — 800 rows
+    // comfortably covers years of daily reading on the existing
     // [userId, date] index, far short of a full-table scan.
     prisma.readingSession.findMany({
       where: baseWhere,
-      select: { date: true },
+      select: { date: true, minutes: true },
       orderBy: { date: "desc" },
       take: 800,
+    }),
+    // Hits the existing [userId, mood] index, same groupBy convention used
+    // by app/api/stats/route.ts and app/api/admin/stats/route.ts.
+    prisma.readingSession.groupBy({
+      by: ["mood"],
+      where: { ...baseWhere, mood: { not: null } },
+      _count: true,
     }),
   ]);
 
@@ -348,6 +356,25 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     cursor.setDate(cursor.getDate() - 1);
   }
 
+  // Zero-padded local-date string for the heatmap (a display value, unlike
+  // the internal dayKey above which only needs Set-membership uniqueness).
+  const isoLocalDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const ninetyDaysAgo = new Date(startOfToday);
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
+  const minutesByDay = new Map<string, number>();
+  for (const s of recentDates) {
+    if (s.date < ninetyDaysAgo) continue;
+    const key = isoLocalDate(s.date);
+    minutesByDay.set(key, (minutesByDay.get(key) ?? 0) + (s.minutes ?? 0));
+  }
+  const last90Days = Array.from(minutesByDay, ([date, minutes]) => ({ date, minutes }));
+
+  const moodBreakdown = moodGroups
+    .filter((g) => g.mood !== null)
+    .map((g) => ({ mood: g.mood as ReadingMood, count: g._count }))
+    .sort((a, b) => b.count - a.count);
+
   return {
     sessionCount: totals._count,
     totalMinutes,
@@ -359,5 +386,7 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     hoursThisMonth: Math.round(((month._sum.minutes ?? 0) / 60) * 10) / 10,
     streakDays,
     pagesToday: today._sum.pagesRead ?? 0,
+    last90Days,
+    moodBreakdown,
   };
 }

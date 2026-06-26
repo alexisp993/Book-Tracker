@@ -75,3 +75,11 @@ export function formatDate(value: string | Date | null | undefined): string {
     day: "numeric",
   });
 }
+
+export function formatDuration(minutes: number | null): string {
+  if (minutes === null) return "In progress";
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}

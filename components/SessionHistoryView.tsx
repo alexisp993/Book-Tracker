@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/input";
 import { SessionForm } from "@/components/SessionForm";
+import { EmptyState } from "@/components/EmptyState";
+import { SessionSummaryStats } from "@/components/SessionSummaryStats";
+import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { MoodBreakdown } from "@/components/MoodBreakdown";
 import { ApiRequestError } from "@/lib/api";
 import {
   useCreateSession,
@@ -14,24 +18,9 @@ import {
   useUpdateSession,
 } from "@/lib/queries";
 import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS } from "@/lib/constants";
+import { formatDate, formatDuration } from "@/lib/utils";
 import type { ReadingSessionDTO } from "@/lib/types";
 import type { CreateSessionInput } from "@/lib/validation";
-
-function formatDuration(minutes: number | null) {
-  if (minutes === null) return "In progress";
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function SessionHistoryView() {
   const [mood, setMood] = React.useState("");
@@ -103,6 +92,10 @@ export function SessionHistoryView() {
 
   return (
     <div className="space-y-6">
+      <SessionSummaryStats />
+      <ReadingCalendar />
+      <MoodBreakdown />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {loading && !data
@@ -154,26 +147,24 @@ export function SessionHistoryView() {
       ) : null}
 
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed py-16 text-center">
-          <NotebookPen className="h-9 w-9 text-muted-foreground/40" />
-          <div>
-            <p className="font-medium">No sessions yet</p>
-            <p className="text-sm text-muted-foreground">
-              Use the timer or log one manually to start tracking your reading.
-            </p>
-          </div>
-          <Button onClick={openAdd}>
-            <Plus className="h-4 w-4" /> Log session
-          </Button>
-        </div>
+        <EmptyState
+          icon={NotebookPen}
+          title="No sessions yet"
+          description="Use the timer or log one manually to start tracking your reading."
+          action={
+            <Button onClick={openAdd}>
+              <Plus className="h-4 w-4" /> Log session
+            </Button>
+          }
+        />
       ) : (
-        <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
+        <div className="space-y-2">
           {items.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => openEdit(s)}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+              className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
             >
               <div className="h-12 w-9 shrink-0 overflow-hidden rounded-md border bg-muted">
                 {s.coverUrl ? (
@@ -186,20 +177,15 @@ export function SessionHistoryView() {
                   {s.title}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {formatDate(s.date)} · {formatDuration(s.minutes)}
+                  📖 {formatDuration(s.minutes)}
                   {s.pagesRead ? ` · ${s.pagesRead} pages` : ""}
+                  {s.mood ? ` · ${MOOD_EMOJI[s.mood]} ${MOOD_LABELS[s.mood]}` : ""}
                 </p>
-                {s.note ? (
-                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                    {s.note}
-                  </p>
-                ) : null}
+                <p className="line-clamp-1 text-[11px] text-muted-foreground/80">
+                  {formatDate(s.date)}
+                  {s.note ? ` · ${s.note}` : ""}
+                </p>
               </div>
-              {s.mood ? (
-                <span className="shrink-0 text-lg" title={MOOD_LABELS[s.mood]}>
-                  {MOOD_EMOJI[s.mood]}
-                </span>
-              ) : null}
             </button>
           ))}
         </div>

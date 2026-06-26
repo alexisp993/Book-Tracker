@@ -81,6 +81,9 @@ export interface SessionStats {
   // Consecutive days (ending today or yesterday) with at least one session logged.
   streakDays: number;
   pagesToday: number;
+  // Sparse — only days with at least one session, local-date YYYY-MM-DD keys.
+  last90Days: { date: string; minutes: number }[];
+  moodBreakdown: { mood: ReadingMood; count: number }[];
 }
 
 export interface LibraryStats {
