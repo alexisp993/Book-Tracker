@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { StarRating } from "@/components/StarRating";
 import { READING_STATUSES, STATUS_LABELS } from "@/lib/constants";
-import { listGroups } from "@/lib/api";
+import { useGroups } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import type { CreateBookInput } from "@/lib/validation";
 import type { BookGroup, LibraryBook } from "@/lib/types";
@@ -114,19 +114,16 @@ export function BookForm({
     initial?.description ?? prefill?.description ?? "",
   );
 
-  // Shelf / collection membership.
-  const [shelves, setShelves] = React.useState<BookGroup[]>([]);
-  const [collections, setCollections] = React.useState<BookGroup[]>([]);
+  // Shelf / collection membership. Cached (60s staleTime) and shared with
+  // GroupsView, so this no longer re-fetches every time the dialog opens.
+  const { data: shelves = [] } = useGroups("shelves");
+  const { data: collections = [] } = useGroups("collections");
   const [shelfIds, setShelfIds] = React.useState<string[]>(
     initial?.shelfIds ?? [],
   );
   const [collectionIds, setCollectionIds] = React.useState<string[]>(
     initial?.collectionIds ?? [],
   );
-  React.useEffect(() => {
-    listGroups("shelves").then(setShelves).catch(() => {});
-    listGroups("collections").then(setCollections).catch(() => {});
-  }, []);
 
   const toggle = (
     ids: string[],

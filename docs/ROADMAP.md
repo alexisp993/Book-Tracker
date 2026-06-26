@@ -5,6 +5,14 @@ _Owner: Agent 1. Status legend: ✅ done · ◑ partial · ☐ planned._
 ## Phase 1 — Planning & Architecture ✅
 - PRD, user stories, architecture, ERD, API design, folder structure, ADRs. (See `/docs`.)
 
+## Performance Optimization Sprint ✅
+Done before further features, per explicit request. Two confirmed critical bugs fixed
+(`getCurrentUser` upsert-on-every-request; ISBN scans never checking the local DB first),
+DB-side aggregation for stats endpoints, 2 new indexes, a Postgres search case-sensitivity fix,
+and full TanStack Query adoption across every data-fetching component. Full findings and
+before/after measurements: `docs/PERFORMANCE-AUDIT.md`. Redis, a service worker, and
+virtualized lists were evaluated and explicitly deferred (not a fit at current scale).
+
 ## Phase 2 — Database, Auth, Accounts ◑
 - ✅ Prisma + SQLite schema and migrations.
 - ✅ Single local user (`getCurrentUser`) with `userId` FKs throughout.

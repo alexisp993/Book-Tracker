@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BookPlus,
   ChevronLeft,
@@ -21,15 +22,16 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { BookRow } from "@/components/BookRow";
 import { LibraryToolbar, type LibraryFilters } from "@/components/LibraryToolbar";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
+import { ApiRequestError } from "@/lib/api";
 import {
-  ApiRequestError,
-  createBook,
-  deleteBook,
-  enrichBooks,
-  listBooks,
-  updateBook,
-} from "@/lib/api";
-import type { LibraryBook, Paginated } from "@/lib/types";
+  queryKeys,
+  useBooks,
+  useCreateBook,
+  useDeleteBook,
+  useEnrichBooks,
+  useUpdateBook,
+} from "@/lib/queries";
+import type { LibraryBook } from "@/lib/types";
 import type { BookMetadata } from "@/lib/metadata";
 
 const DEFAULT_FILTERS: LibraryFilters = {
@@ -55,9 +57,6 @@ export function LibraryView() {
     setView(mode);
     localStorage.setItem("bt_view", mode);
   }
-  const [data, setData] = React.useState<Paginated<LibraryBook> | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [listError, setListError] = React.useState<string | null>(null);
 
   // dialog state
   const [formOpen, setFormOpen] = React.useState(false);
@@ -65,19 +64,16 @@ export function LibraryView() {
   const [prefill, setPrefill] = React.useState<BookPrefill | undefined>(
     undefined,
   );
-  const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   // barcode scanner state
   const [scannerOpen, setScannerOpen] = React.useState(false);
 
   // metadata enrichment state
-  const [enriching, setEnriching] = React.useState(false);
   const [enrichMsg, setEnrichMsg] = React.useState<string | null>(null);
 
   // delete confirm state
   const [toDelete, setToDelete] = React.useState<LibraryBook | null>(null);
-  const [deleting, setDeleting] = React.useState(false);
 
   // Debounce the search box; reset to page 1 whenever filters change.
   const [debouncedQ, setDebouncedQ] = React.useState(filters.q);
@@ -90,44 +86,40 @@ export function LibraryView() {
     setPage(1);
   }, [debouncedQ, filters.status, filters.sort, filters.order]);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setListError(null);
-    try {
-      const result = await listBooks({
-        q: debouncedQ || undefined,
-        status: filters.status || undefined,
-        sort: filters.sort,
-        order: filters.order,
-        page,
-      });
-      setData(result);
-    } catch (err) {
-      setListError(
-        err instanceof Error ? err.message : "Failed to load your library.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQ, filters.status, filters.sort, filters.order, page]);
+  const queryParams = {
+    q: debouncedQ || undefined,
+    status: filters.status || undefined,
+    sort: filters.sort,
+    order: filters.order,
+    page,
+  };
+  const { data, isLoading: loading, isError, error, refetch } =
+    useBooks(queryParams);
+  const listError = isError
+    ? error instanceof Error
+      ? error.message
+      : "Failed to load your library."
+    : null;
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  const qc = useQueryClient();
+  const createMutation = useCreateBook();
+  const updateMutation = useUpdateBook();
+  const deleteMutation = useDeleteBook();
+  const enrichMutation = useEnrichBooks();
 
-  function openAdd() {
+  const openAdd = React.useCallback(() => {
     setEditing(null);
     setPrefill(undefined);
     setFormError(null);
     setFormOpen(true);
-  }
+  }, []);
 
-  function openEdit(book: LibraryBook) {
+  const openEdit = React.useCallback((book: LibraryBook) => {
     setEditing(book);
     setPrefill(undefined);
     setFormError(null);
     setFormOpen(true);
-  }
+  }, []);
 
   // A barcode scan resolved metadata → open the add form prefilled with it.
   function handleScanResolved(metadata: BookMetadata) {
@@ -149,11 +141,9 @@ export function LibraryView() {
   }
 
   async function handleEnrich() {
-    setEnriching(true);
     setEnrichMsg(null);
     try {
-      const result = await enrichBooks();
-      await load();
+      const result = await enrichMutation.mutateAsync();
       setEnrichMsg(
         result.updated > 0
           ? `Updated ${result.updated} book${result.updated === 1 ? "" : "s"}${
@@ -164,60 +154,50 @@ export function LibraryView() {
     } catch {
       setEnrichMsg("Couldn't refresh details. Try again.");
     } finally {
-      setEnriching(false);
       setTimeout(() => setEnrichMsg(null), 5000);
     }
   }
 
-  async function handleStartReading(book: LibraryBook) {
-    try {
-      await updateBook(book.id, { status: "CURRENTLY_READING" });
-      await load();
-    } catch {
-      // Surfacing this inline isn't critical — the book simply won't update;
-      // the user can still get there via Edit.
-    }
-  }
+  // Depend on `.mutate` itself (stable across renders) rather than the whole
+  // mutation result object (whose identity TanStack Query may recreate every
+  // render), so this callback's identity stays stable for React.memo below.
+  const updateBookMutate = updateMutation.mutate;
+  const handleStartReading = React.useCallback(
+    (book: LibraryBook) => {
+      updateBookMutate({
+        id: book.id,
+        input: { status: "CURRENTLY_READING" },
+      });
+    },
+    [updateBookMutate],
+  );
 
   async function handleSubmit(values: BookFormValues) {
-    setSubmitting(true);
     setFormError(null);
     try {
       if (editing) {
-        await updateBook(editing.id, values);
+        await updateMutation.mutateAsync({ id: editing.id, input: values });
       } else {
-        await createBook(values);
+        await createMutation.mutateAsync(values);
       }
       setFormOpen(false);
       setEditing(null);
-      await load();
     } catch (err) {
       setFormError(
         err instanceof ApiRequestError
           ? err.message
           : "Something went wrong. Please try again.",
       );
-    } finally {
-      setSubmitting(false);
     }
   }
 
   async function handleDelete() {
     if (!toDelete) return;
-    setDeleting(true);
     try {
-      await deleteBook(toDelete.id);
+      await deleteMutation.mutateAsync(toDelete.id);
       setToDelete(null);
-      // If we just emptied the last page, step back one.
-      if (data && data.items.length === 1 && page > 1) {
-        setPage((p) => p - 1);
-      } else {
-        await load();
-      }
     } catch {
       // keep dialog open on failure
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -225,6 +205,9 @@ export function LibraryView() {
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
   const isEmpty = !loading && items.length === 0;
+  const submitting = createMutation.isPending || updateMutation.isPending;
+  const deleting = deleteMutation.isPending;
+  const enriching = enrichMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -273,7 +256,7 @@ export function LibraryView() {
       {listError ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {listError}{" "}
-          <button onClick={load} className="font-medium underline">
+          <button onClick={() => refetch()} className="font-medium underline">
             Retry
           </button>
         </div>
@@ -386,7 +369,10 @@ export function LibraryView() {
         open={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onResolved={handleScanResolved}
-        onAdded={load}
+        onAdded={() => {
+          qc.invalidateQueries({ queryKey: queryKeys.booksAll });
+          qc.invalidateQueries({ queryKey: queryKeys.stats });
+        }}
       />
 
       <Dialog

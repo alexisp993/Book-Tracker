@@ -1,27 +1,14 @@
 "use client";
 
-import * as React from "react";
+import type * as React from "react";
 import { BookCheck, BookOpen, Clock, Flame, Heart, Star, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getSessionStats, getStats } from "@/lib/api";
+import { useSessionStats, useStats } from "@/lib/queries";
 import { STATUS_DOT } from "@/lib/constants";
-import type { LibraryStats, SessionStats } from "@/lib/types";
 
 export function StatsView() {
-  const [stats, setStats] = React.useState<LibraryStats | null>(null);
-  const [sessionStats, setSessionStats] = React.useState<SessionStats | null>(
-    null,
-  );
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    getStats()
-      .then(setStats)
-      .finally(() => setLoading(false));
-    getSessionStats()
-      .then(setSessionStats)
-      .catch(() => {});
-  }, []);
+  const { data: stats, isLoading: loading } = useStats();
+  const { data: sessionStats } = useSessionStats();
 
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;

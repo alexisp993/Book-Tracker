@@ -6,15 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ApiRequestError, type GroupBasePath } from "@/lib/api";
 import {
-  ApiRequestError,
-  createGroup,
-  deleteGroup,
-  getGroup,
-  listGroups,
-  updateGroup,
-  type GroupBasePath,
-} from "@/lib/api";
+  useCreateGroup,
+  useDeleteGroup,
+  useGroup,
+  useGroups,
+  useUpdateGroup,
+} from "@/lib/queries";
 import type { BookGroup, LibraryBook } from "@/lib/types";
 
 export function GroupsView({
@@ -24,32 +23,23 @@ export function GroupsView({
   base: GroupBasePath;
   singular: string;
 }) {
-  const [groups, setGroups] = React.useState<BookGroup[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { data: groups, isLoading: loading } = useGroups(base);
+  const createMutation = useCreateGroup(base);
+  const updateMutation = useUpdateGroup(base);
+  const deleteMutation = useDeleteGroup(base);
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<BookGroup | null>(null);
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [open, setOpen] = React.useState<BookGroup | null>(null);
-  const [openBooks, setOpenBooks] = React.useState<LibraryBook[]>([]);
-  const [openLoading, setOpenLoading] = React.useState(false);
-
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      setGroups(await listGroups(base));
-    } finally {
-      setLoading(false);
-    }
-  }, [base]);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  const [openId, setOpenId] = React.useState<string | null>(null);
+  const openMeta = groups?.find((g) => g.id === openId) ?? null;
+  const { data: detail, isLoading: openLoading } = useGroup(
+    base,
+    openId ?? undefined,
+  );
 
   function startCreate() {
     setEditing(null);
@@ -69,49 +59,29 @@ export function GroupsView({
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    setSaving(true);
     setError(null);
+    const input = { name: name.trim(), description: description.trim() || undefined };
     try {
       if (editing) {
-        await updateGroup(base, editing.id, {
-          name: name.trim(),
-          description: description.trim() || undefined,
-        });
+        await updateMutation.mutateAsync({ id: editing.id, input });
       } else {
-        await createGroup(base, {
-          name: name.trim(),
-          description: description.trim() || undefined,
-        });
+        await createMutation.mutateAsync(input);
       }
       setCreateOpen(false);
-      await load();
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Something went wrong.",
       );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function openGroup(g: BookGroup) {
-    setOpen(g);
-    setOpenLoading(true);
-    try {
-      const result = await getGroup(base, g.id);
-      setOpenBooks(result.books);
-      setOpen(result.group);
-    } finally {
-      setOpenLoading(false);
     }
   }
 
   async function remove(g: BookGroup) {
     if (!confirm(`Delete “${g.name}”? The books stay in your library.`)) return;
-    await deleteGroup(base, g.id);
-    setOpen(null);
-    await load();
+    await deleteMutation.mutateAsync(g.id);
+    setOpenId(null);
   }
+
+  const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -123,7 +93,7 @@ export function GroupsView({
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : groups.length === 0 ? (
+      ) : !groups || groups.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed py-16 text-center">
           <BookOpen className="h-9 w-9 text-muted-foreground/40" />
           <div>
@@ -145,7 +115,7 @@ export function GroupsView({
             >
               <button
                 type="button"
-                onClick={() => openGroup(g)}
+                onClick={() => setOpenId(g.id)}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
                 <CoverStack covers={g.covers} />
@@ -227,21 +197,21 @@ export function GroupsView({
 
       {/* Group detail dialog */}
       <Dialog
-        open={Boolean(open)}
-        onClose={() => setOpen(null)}
-        title={open?.name ?? ""}
-        description={open?.description ?? undefined}
+        open={Boolean(openId)}
+        onClose={() => setOpenId(null)}
+        title={detail?.group.name ?? openMeta?.name ?? ""}
+        description={detail?.group.description ?? openMeta?.description ?? undefined}
       >
         {openLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : openBooks.length === 0 ? (
+        ) : !detail || detail.books.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No books here yet. Open a book in your library, tap Edit, and add it
             to this {singular}.
           </p>
         ) : (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {openBooks.map((b) => (
+            {detail.books.map((b) => (
               <div key={b.id} className="space-y-1">
                 <div className="aspect-[2/3] overflow-hidden rounded-lg border bg-muted">
                   <MiniCover book={b} />

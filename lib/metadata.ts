@@ -4,6 +4,7 @@ import {
   isValidIsbn,
   normalizeIsbn,
 } from "@/lib/isbn";
+import { prisma } from "@/lib/prisma";
 
 // Normalized metadata shape shared by all providers and returned to the client.
 // Mirrors the editable book fields so it can prefill the add form directly.
@@ -240,12 +241,50 @@ function merge(parts: (PartialMeta | null)[]): BookMetadata | null {
   };
 }
 
+// Check the local Book table before hitting any external provider. Books are
+// deduped by `isbn13 @unique`, so a 10-digit scan is normalized to 13 first.
+// Used by the scan/lookup API route (app/api/metadata/isbn/[isbn]/route.ts) —
+// NOT by `lookupByIsbn` itself, because `app/api/books/enrich` also calls
+// `lookupByIsbn` directly, specifically for books that ARE already in the
+// local DB but missing fields; if the local check lived inside `lookupByIsbn`,
+// enrich would short-circuit to the same incomplete row it's trying to fix and
+// "Refresh details" would become a no-op. So: the scan path checks local
+// first (fast path for a book you already own), while `lookupByIsbn` always
+// queries the external providers (which enrich relies on to fill gaps).
+export async function findLocalBook(isbn: string): Promise<BookMetadata | null> {
+  const isbn13 = isbn.length === 13 ? isbn : isbn10To13(isbn);
+  if (!isbn13) return null;
+
+  const book = await prisma.book.findUnique({
+    where: { isbn13 },
+    include: { authors: { include: { author: true }, orderBy: { order: "asc" } } },
+  });
+  if (!book) return null;
+
+  return {
+    title: book.title,
+    subtitle: book.subtitle ?? undefined,
+    authors: book.authors.map((ba) => ba.author.name),
+    description: book.description ?? undefined,
+    publisher: book.publisher ?? undefined,
+    publishedDate: book.publishedDate ?? undefined,
+    isbn10: book.isbn10 ?? undefined,
+    isbn13: book.isbn13 ?? undefined,
+    language: book.language ?? undefined,
+    pageCount: book.pageCount ?? undefined,
+    coverUrl: book.coverUrl ?? coverUrlForIsbn(isbn13),
+    source: "LOCAL",
+  };
+}
+
 /**
- * Look up book metadata by ISBN. Queries Google Books and both Open Library
- * endpoints in parallel and merges them — the providers have complementary
- * coverage, so combining them resolves far more books than any one alone.
- * Always backfills a cover image via Open Library's cover-by-ISBN endpoint when
- * no provider supplied one. Returns null only if no provider has the book.
+ * Look up book metadata by ISBN from external providers (always — does not
+ * check the local DB; see `findLocalBook` for the cache-first path used by
+ * the scan route). Queries Google Books and both Open Library endpoints in
+ * parallel and merges them — the providers have complementary coverage, so
+ * combining them resolves far more books than any one alone. Always
+ * backfills a cover image via Open Library's cover-by-ISBN endpoint when no
+ * provider supplied one. Returns null only if no provider has the book.
  */
 export async function lookupByIsbn(
   rawIsbn: string,

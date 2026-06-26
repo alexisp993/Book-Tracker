@@ -5,10 +5,15 @@ import { BookOpen, Pause, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { ApiRequestError, getActiveSession, listBooks, startSession, stopSession } from "@/lib/api";
+import { ApiRequestError } from "@/lib/api";
+import {
+  useActiveSession,
+  useBooks,
+  useStartSession,
+  useStopSession,
+} from "@/lib/queries";
 import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS, STATUS_LABELS } from "@/lib/constants";
 import type { ReadingMood } from "@/lib/constants";
-import type { LibraryBook, ReadingSessionDTO } from "@/lib/types";
 
 function elapsedLabel(startIso: string, nowMs: number): string {
   const start = new Date(startIso).getTime();
@@ -22,27 +27,52 @@ function elapsedLabel(startIso: string, nowMs: number): string {
 
 // Floating reading-timer widget, mounted once in AppShell so it survives
 // route navigation (a timer shouldn't reset just because the user switches tabs).
+//
+// IMPORTANT: the 1-second elapsed-time tick below is plain local state
+// (`now`) re-rendering a clock from data already in memory — it must NOT
+// become a query refetch loop. Only "is a session active" is a query
+// (`useActiveSession`, staleTime 0), fetched once and on mutation
+// invalidation; the ticking clock stays local, exactly as before.
 export function ReadingTimer() {
-  const [active, setActive] = React.useState<ReadingSessionDTO | null>(null);
-  const [loaded, setLoaded] = React.useState(false);
+  const { data: active, isLoading: loadingActive } = useActiveSession();
   const [now, setNow] = React.useState(Date.now());
 
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const [books, setBooks] = React.useState<LibraryBook[]>([]);
-  const [starting, setStarting] = React.useState(false);
-
   const [stopOpen, setStopOpen] = React.useState(false);
   const [endPage, setEndPage] = React.useState("");
   const [mood, setMood] = React.useState("");
   const [note, setNote] = React.useState("");
-  const [stopping, setStopping] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    getActiveSession()
-      .then(setActive)
-      .finally(() => setLoaded(true));
-  }, []);
+  const startMutation = useStartSession();
+  const stopMutation = useStopSession();
+
+  // Each status is its own query (cacheable and shared with LibraryView when
+  // filters match) — three explicit calls, not a `.map()` over a status list,
+  // because hooks can't be called in a loop/array-map (Rules of Hooks). Order:
+  // Currently Reading first, then On Hold, then Want to Read — starting a
+  // session on a not-yet-started book promotes it to Currently Reading
+  // automatically (see lib/sessions.ts startSession), so any unfinished book
+  // is a valid pick here.
+  //
+  // Deliberately NOT gated by `enabled: pickerOpen`: toggling a query's
+  // `enabled` flag off then back on makes TanStack Query treat re-enabling
+  // like a fresh mount and refetch immediately, even with data still well
+  // within staleTime — confirmed via testing (the picker re-fetched on every
+  // reopen despite a 20s staleTime). ReadingTimer is a persistent global
+  // widget (mounted once in AppShell for the app's lifetime) anyway, so
+  // there's no real cost to letting these run as ordinary always-enabled
+  // queries — staleTime alone then governs refetch frequency, and reopening
+  // the picker within that window genuinely serves from cache.
+  const baseParams = { pageSize: 50, sort: "createdAt", order: "desc" } as const;
+  const currentlyReading = useBooks({ ...baseParams, status: "CURRENTLY_READING" });
+  const onHold = useBooks({ ...baseParams, status: "ON_HOLD" });
+  const wantToRead = useBooks({ ...baseParams, status: "WANT_TO_READ" });
+  const books = [
+    ...(currentlyReading.data?.items ?? []),
+    ...(onHold.data?.items ?? []),
+    ...(wantToRead.data?.items ?? []),
+  ];
 
   React.useEffect(() => {
     if (!active) return;
@@ -50,36 +80,16 @@ export function ReadingTimer() {
     return () => clearInterval(t);
   }, [active]);
 
-  // Order: Currently Reading first, then On Hold, then Want to Read — starting a
-  // session on a not-yet-started book promotes it to Currently Reading automatically
-  // (see lib/sessions.ts startSession), so any unfinished book is a valid pick here.
-  const STATUS_ORDER = ["CURRENTLY_READING", "ON_HOLD", "WANT_TO_READ"] as const;
-
-  async function openPicker() {
-    setError(null);
-    setPickerOpen(true);
-    const results = await Promise.all(
-      STATUS_ORDER.map((status) =>
-        listBooks({ status, pageSize: 50, sort: "createdAt", order: "desc" }),
-      ),
-    );
-    setBooks(results.flatMap((r) => r.items));
-  }
-
   async function handleStart(userBookId: string) {
-    setStarting(true);
     setError(null);
     try {
-      const session = await startSession(userBookId);
-      setActive(session);
+      await startMutation.mutateAsync(userBookId);
       setNow(Date.now());
       setPickerOpen(false);
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Couldn't start the timer.",
       );
-    } finally {
-      setStarting(false);
     }
   }
 
@@ -93,26 +103,25 @@ export function ReadingTimer() {
 
   async function handleStop(e: React.FormEvent) {
     e.preventDefault();
-    setStopping(true);
     setError(null);
     try {
-      await stopSession({
+      await stopMutation.mutateAsync({
         endPage: endPage ? Number(endPage) : undefined,
         mood: (mood as ReadingMood) || undefined,
         note: note.trim() || undefined,
       });
-      setActive(null);
       setStopOpen(false);
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Couldn't stop the timer.",
       );
-    } finally {
-      setStopping(false);
     }
   }
 
-  if (!loaded) return null;
+  if (loadingActive) return null;
+
+  const starting = startMutation.isPending;
+  const stopping = stopMutation.isPending;
 
   return (
     <>
@@ -133,7 +142,7 @@ export function ReadingTimer() {
       ) : (
         <button
           type="button"
-          onClick={openPicker}
+          onClick={() => setPickerOpen(true)}
           className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg transition-transform hover:scale-105 sm:bottom-6"
         >
           <Play className="h-4 w-4" />

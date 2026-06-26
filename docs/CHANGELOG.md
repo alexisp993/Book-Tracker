@@ -2,6 +2,49 @@
 
 All notable changes are recorded here. Format loosely follows Keep a Changelog.
 
+## [Unreleased] — Performance Optimization Sprint
+
+Full findings, before/after measurements, and methodology: `docs/PERFORMANCE-AUDIT.md`.
+QA audit: `docs/QA-REPORTS.md` QA-007.
+
+### Fixed (confirmed bugs, not just optimizations)
+- **`getCurrentUser()` ran a database write on every single API request** — every route calls
+  it first; it issued an `upsert` even though the user row never changes after initial setup.
+  Now a plain read, falling through to create only on a genuine first-run miss (preserves the
+  production bootstrap path, which has no separate seed step).
+- **ISBN scans never checked the local database before calling 3 external APIs** — rescanning a
+  book you already own now resolves from a single indexed read instead of re-hitting Google
+  Books + Open Library every time. Scoped to the scan route only — `app/api/books/enrich`
+  ("Refresh details") still always reaches external providers, since it depends on that for
+  filling in fields on books that exist locally but are incomplete.
+- **Postgres search was case-sensitive** (`contains` without `mode: "insensitive"`) — a real
+  production bug, masked by SQLite's different default in local dev. Fixed with a runtime
+  check (SQLite's query engine rejects the `mode` key outright; a type-only fix wasn't enough).
+
+### Changed (scale & responsiveness)
+- `/api/stats` and `getSessionStats()` rewritten from full-table `findMany` + JS-loop
+  aggregation to `groupBy`/`aggregate`/`count` queries — verified byte-for-byte identical output
+  on existing data; the real benefit is avoiding a full table transfer as the library scales,
+  not a dramatic speedup at the current ~20-book size.
+- Added `Book.publishedDate` and `ReadingSession([userId, mood])` indexes.
+- **Adopted TanStack Query** across every data-fetching component (`GroupsView`, `StatsView`,
+  `LibraryView`, `BookForm`, `SessionForm`, `ReadingTimer`, `SessionHistoryView`) via a new
+  `lib/queries.ts` with consistent query keys, `staleTime`, and mutation invalidations. Fixes
+  confirmed duplicate fetches: `BookForm` no longer re-fetches shelves/collections on every
+  dialog open; `ReadingTimer`'s picker no longer fires 3 fresh calls every time it opens.
+  Editing a book's shelf/collection membership now reflects immediately in `GroupsView` with no
+  manual reload.
+- `BookCard`/`BookRow` wrapped in `React.memo`, paired with `useCallback` on the handlers
+  `LibraryView` passes them (otherwise the memoization is a no-op).
+
+### Notes
+- Lighthouse scores and true TTI/LCP/CLS were not measured — not reliably producible in this
+  sandboxed dev environment. Verified instead via curl timing, real network-request capture, and
+  output diffing — see the audit doc for exactly what was (and wasn't) measured.
+- Redis/shared server cache, a service worker, and virtualized/infinite-scroll lists were
+  evaluated and explicitly deferred (reasoning in the audit doc) — not a fit for this app's
+  current single-user, ~20-book, serverless-Postgres deployment shape.
+
 ## [Unreleased] — Design polish + "Start reading" fix
 
 ### Fixed

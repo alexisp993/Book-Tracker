@@ -67,6 +67,7 @@ model Book {
   @@index([title])
   @@index([isbn10])
   @@index([seriesId])
+  @@index([publishedDate])
 }
 
 model Author {
@@ -254,6 +255,7 @@ model ReadingSession {
   userBook UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+  @@index([userId, mood])
   @@index([userBookId])
 }
 

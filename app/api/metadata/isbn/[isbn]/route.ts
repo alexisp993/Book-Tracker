@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { lookupByIsbn } from "@/lib/metadata";
+import { findLocalBook, lookupByIsbn } from "@/lib/metadata";
 import { isValidIsbn, normalizeIsbn } from "@/lib/isbn";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,10 @@ export async function GET(
     );
   }
 
-  const metadata = await lookupByIsbn(isbn);
+  // Cache-first: a book already in the local database (e.g. owned by any
+  // user, or scanned before) resolves with a single indexed read and zero
+  // external calls — only a genuine miss falls through to the 3 providers.
+  const metadata = (await findLocalBook(isbn)) ?? (await lookupByIsbn(isbn));
   if (!metadata) {
     return NextResponse.json(
       {

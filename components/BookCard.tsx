@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { BookOpen, Heart, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,12 @@ import { BookCover } from "@/components/BookCover";
 import { STATUS_DOT } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
 
-export function BookCard({
+// Rendered once per book in grid views (up to ~100/page) — memoized so a
+// parent re-render (e.g. another card's mutation settling) doesn't re-render
+// every card. Only effective because LibraryView passes stable callback
+// references (useCallback / raw useState setters), not fresh inline
+// functions, for onEdit/onDelete/onStartReading.
+export const BookCard = React.memo(function BookCard({
   book,
   compact = false,
   onEdit,
@@ -134,4 +140,4 @@ export function BookCard({
       </div>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { ChevronRight, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BookCover } from "@/components/BookCover";
@@ -7,8 +8,10 @@ import { StarRating } from "@/components/StarRating";
 import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
 
-// Dense list row — fits many titles on screen. Tapping opens edit.
-export function BookRow({
+// Dense list row — fits many titles on screen. Tapping opens edit. Memoized
+// (same reasoning as BookCard); effective only because LibraryView passes a
+// stable `onEdit` (useCallback), not a fresh inline function.
+export const BookRow = React.memo(function BookRow({
   book,
   onEdit,
 }: {
@@ -47,4 +50,4 @@ export function BookRow({
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
     </button>
   );
-}
+});

@@ -262,3 +262,74 @@ page, `AppShell` nav addition, `StatsView` "Reading activity" section.
 Scope matches the agreed Sub-phase 1 (timer, sessions, mood/journal, activity stats). Goals,
 quotes, calendar/heatmap, milestones/certificates, reminders, and rule-based insights remain
 explicitly out of scope for this pass — tracked in `docs/ROADMAP.md`.
+
+---
+
+## QA-007 — Performance Optimization Sprint
+
+**Reviewed:** 2026-06-26 · **Scope:** `lib/user.ts`, `lib/metadata.ts`, `app/api/stats/route.ts`,
+`lib/sessions.ts`, `app/api/books/route.ts`, `prisma/schema.prisma` (2 indexes), full TanStack
+Query adoption (`lib/queries.ts` + 7 components), `React.memo` on `BookCard`/`BookRow`. Full
+findings, before/after measurements, and methodology caveats: `docs/PERFORMANCE-AUDIT.md`.
+
+### Verification performed
+- ✅ Two critical bugs confirmed **by reading the code directly**, not estimated:
+  `getCurrentUser()` upserted on every request; ISBN scans never checked the local DB before 3
+  external calls.
+- ✅ `getCurrentUser` fix: verified the bootstrap-on-fresh-DB path still works (deleted the user
+  row, confirmed a request auto-recreates it, 200 not 500) — this matters because production
+  never runs `prisma db seed` and has only ever relied on this function to create the user row.
+- ✅ Case-insensitive search: the type-only fix didn't work — SQLite's query engine rejects
+  `mode` at runtime, not just at the TS type level. Fixed with a runtime check on `DATABASE_URL`;
+  confirmed working (no 500) on SQLite and confirmed the branch resolves correctly for Postgres.
+- ✅ ISBN cache-first: verified fast path (~0.03-0.04s warm) for a known ISBN vs. external lookup
+  for an unknown one (`source` field confirms which path was taken). Caught and fixed a real
+  regression risk before it shipped: the cache-first check was initially inside `lookupByIsbn()`,
+  which `app/api/books/enrich` also calls for books that exist locally but are incomplete —
+  would have made "Refresh details" a silent no-op. Re-tested enrich against a deliberately
+  incomplete book after the fix: it correctly filled in authors/publisher/pages/language.
+- ✅ Stats aggregation rewrites: output diffed against manually-recomputed values from the raw
+  list endpoints on identical data — exact match on every field (topAuthors order differs only
+  on ties, expected).
+- ✅ TanStack Query adoption verified via real network capture (`preview_network`), not assumed:
+  shelves/collections fetch only once across multiple dialog opens (was: every open); timer
+  picker fires 3 calls once, zero on repeated reopens within the same page load (was: every
+  open) — caught and fixed a real bug here too: gating the picker queries with
+  `enabled: pickerOpen` caused TanStack Query to refetch on every re-enable regardless of
+  staleTime; fixed by removing the gate (the widget is global/persistent anyway).
+- ✅ Shelf-membership invalidation: toggled a chip in `BookForm`, saved, navigated to `/shelves`
+  — count updated with no manual reload, confirming the `['groups']` invalidation fires.
+- ✅ Full timer cycle re-verified through the new mutation hooks end-to-end: start (status
+  auto-promotion confirmed via API), idle tick confirmed zero network requests, stop with end
+  page (currentPage updated, session recorded).
+- ✅ `npx tsc --noEmit` and `npm run build` clean on the final Postgres-targeted build.
+
+### Findings & resolutions
+| # | Severity | Finding | Resolution |
+|---|----------|---------|------------|
+| 1 | High | Plan assumed `prisma db seed` bootstraps the production user row; it doesn't (production only runs `db push`, never seed — confirmed in `docs/DEPLOY.md`). A hard `findUnique`-or-throw would have broken fresh deploys. | Caught before shipping; changed to find-then-create-on-miss, preserving the bootstrap behavior while still removing the per-request write in steady state. |
+| 2 | High | `mode: "insensitive"` type-cast workaround compiled fine but crashed at runtime on SQLite ("Unknown argument `mode`") — the query engine validates independently of TypeScript. | Added a runtime `DATABASE_URL`-based branch instead of a type-only cast; verified no crash on either provider. |
+| 3 | High | Cache-first ISBN check placed inside `lookupByIsbn()` would have silently broken the existing "Refresh details" (enrich) feature, which depends on that function always reaching external providers for incomplete local books. | Moved the cache-first check to the scan route's call site only; `lookupByIsbn()` itself is unchanged. Re-tested enrich to confirm. |
+| 4 | Medium | `enabled: pickerOpen` gating on `ReadingTimer`'s queries caused a refetch on every reopen (TanStack Query treats disabled→enabled like a fresh mount), defeating the caching goal — confirmed via network capture, not assumed. | Removed the `enabled` gate; the widget is a persistent global component anyway, so always-enabled queries governed by `staleTime` alone work correctly (re-verified: zero refetches on reopen). |
+| 5 | Low | Calling a hook (`useBooks`) inside `.map()` over a fixed-length status array violates the Rules of Hooks even though the array length never changes. | Rewritten as 3 explicit hook calls. |
+
+### Security & correctness review
+- **Bootstrap safety:** the `getCurrentUser` fix was specifically checked against the
+  production deploy flow (no seed step) rather than assumed safe — see Finding #1. ✅
+- **No new injection surface:** the raw SQL in `/api/stats` (`topAuthors`) uses Prisma's
+  parameterized `$queryRaw` tagged-template (the `userId` value is bound, not interpolated). ✅
+- **Cache correctness:** every aggregation rewrite was diffed against the previous
+  implementation's output on the same data before being accepted, not just assumed equivalent
+  from reading the code. ✅
+- **No regression in existing security posture:** ownership checks, Zod validation, and the
+  auth middleware are untouched by this sprint. ✅
+
+### Honest scope note
+Lighthouse scores, true TTI/LCP/CLS, and React render-count profiling were **not** measured —
+this sandboxed environment has no persistent real-Chrome devtools profiler access. What's
+reported above (curl timing, request-count via real network capture, bundle sizes via `next
+build`, correctness via output diffing) are the metrics that could actually be produced and
+verified here. Redis, a service worker, and virtualized lists were evaluated and explicitly
+deferred with reasoning — see `docs/PERFORMANCE-AUDIT.md`.
+
+### QA STATUS: ✅ APPROVED

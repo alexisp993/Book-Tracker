@@ -7,29 +7,74 @@ import type { LibraryStats } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 // GET /api/stats — aggregate reading statistics for the current user.
+//
+// Pushed to the database via groupBy/aggregate instead of `findMany`-the-
+// whole-table-then-loop-in-JS, so the work stays cheap as a library grows
+// toward 100k+ books: each query below is a small, indexed read, not a full
+// table + nested-author transfer. The one piece that stays a narrow
+// `findMany` is the 12-month bucket (finishDate-keyed counts) — true SQL
+// date-bucketing would need raw SQL for no real benefit at this scale, so a
+// `select`-only, READ-status-only query feeds a JS reduction instead.
 export async function GET() {
   const user = await getCurrentUser();
 
-  const userBooks = await prisma.userBook.findMany({
-    where: { userId: user.id },
-    include: {
-      book: {
-        include: { authors: { include: { author: true } } },
-      },
-    },
-  });
+  const [statusGroups, ratingAgg, ratingGroups, favorites, readRows, topAuthors] =
+    await Promise.all([
+      prisma.userBook.groupBy({
+        by: ["status"],
+        where: { userId: user.id },
+        _count: true,
+      }),
+      prisma.userBook.aggregate({
+        where: { userId: user.id, rating: { not: null } },
+        _avg: { rating: true },
+        _count: { rating: true },
+      }),
+      prisma.userBook.groupBy({
+        by: ["rating"],
+        where: { userId: user.id, rating: { not: null } },
+        _count: true,
+      }),
+      prisma.userBook.count({ where: { userId: user.id, favorite: true } }),
+      prisma.userBook.findMany({
+        where: { userId: user.id, status: "READ" },
+        select: {
+          finishDate: true,
+          updatedAt: true,
+          book: { select: { pageCount: true } },
+        },
+      }),
+      // Top 5 most-read authors for this user — a 3-table join (UserBook →
+      // BookAuthor → Author) that Prisma's groupBy can't express directly
+      // since it only groups on one model's own fields, so it's plain
+      // parameterized SQL (standard syntax, works unchanged on Postgres and
+      // SQLite) rather than N+1 application-side counting.
+      prisma.$queryRaw<{ name: string; count: bigint }[]>`
+        SELECT a.name as name, COUNT(*) as count
+        FROM "UserBook" ub
+        JOIN "BookAuthor" ba ON ba."bookId" = ub."bookId"
+        JOIN "Author" a ON a.id = ba."authorId"
+        WHERE ub."userId" = ${user.id}
+        GROUP BY a.name
+        ORDER BY count DESC
+        LIMIT 5
+      `,
+    ]);
 
   const byStatusCount: Record<string, number> = {};
   for (const s of READING_STATUSES) byStatusCount[s] = 0;
+  let total = 0;
+  for (const g of statusGroups) {
+    byStatusCount[g.status] = g._count;
+    total += g._count;
+  }
 
-  let pagesRead = 0;
-  let favorites = 0;
-  let ratingSum = 0;
-  let ratedCount = 0;
-  const authorCount = new Map<string, number>();
   const ratingDist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const g of ratingGroups) {
+    if (g.rating != null) ratingDist[g.rating] = g._count;
+  }
 
-  // Last 12 months buckets (oldest → newest).
+  // Last 12 months buckets (oldest → newest), reduced from the narrow READ-only fetch.
   const now = new Date();
   const months: { key: string; label: string; count: number }[] = [];
   const monthIndex = new Map<string, number>();
@@ -41,43 +86,24 @@ export async function GET() {
     months.push({ key, label, count: 0 });
   }
 
-  for (const ub of userBooks) {
-    byStatusCount[ub.status] = (byStatusCount[ub.status] ?? 0) + 1;
-    if (ub.favorite) favorites++;
-    if (ub.rating) {
-      ratingSum += ub.rating;
-      ratedCount++;
-      ratingDist[ub.rating] = (ratingDist[ub.rating] ?? 0) + 1;
-    }
-    if (ub.status === "READ") {
-      pagesRead += ub.book.pageCount ?? 0;
-      const fin = ub.finishDate ?? ub.updatedAt;
-      const key = `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, "0")}`;
-      const idx = monthIndex.get(key);
-      if (idx !== undefined) months[idx].count++;
-    }
-    for (const ba of ub.book.authors) {
-      authorCount.set(
-        ba.author.name,
-        (authorCount.get(ba.author.name) ?? 0) + 1,
-      );
-    }
+  let pagesRead = 0;
+  for (const ub of readRows) {
+    pagesRead += ub.book.pageCount ?? 0;
+    const fin = ub.finishDate ?? ub.updatedAt;
+    const key = `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, "0")}`;
+    const idx = monthIndex.get(key);
+    if (idx !== undefined) months[idx].count++;
   }
 
-  const topAuthors = [...authorCount.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
   const stats: LibraryStats = {
-    total: userBooks.length,
+    total,
     read: byStatusCount["READ"] ?? 0,
     reading: byStatusCount["CURRENTLY_READING"] ?? 0,
     wantToRead: byStatusCount["WANT_TO_READ"] ?? 0,
     favorites,
     pagesRead,
-    avgRating: ratedCount > 0 ? ratingSum / ratedCount : null,
-    ratedCount,
+    avgRating: ratingAgg._avg.rating,
+    ratedCount: ratingAgg._count.rating,
     byStatus: READING_STATUSES.map((s: ReadingStatus) => ({
       status: s,
       label: STATUS_LABELS[s],
@@ -88,7 +114,7 @@ export async function GET() {
       label: m.label,
       count: m.count,
     })),
-    topAuthors,
+    topAuthors: topAuthors.map((a) => ({ name: a.name, count: Number(a.count) })),
     ratingDistribution: [1, 2, 3, 4, 5].map((r) => ({
       rating: r,
       count: ratingDist[r],

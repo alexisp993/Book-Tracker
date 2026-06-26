@@ -287,41 +287,50 @@ export async function stopSession(
 
 // --- Aggregate stats ---
 
+// Pushed to the database via `aggregate` instead of fetching every completed
+// session and summing in JS — at scale this is 4 small indexed queries
+// (hitting the existing `[userId, date]` index for the 3 period filters)
+// instead of one full-table transfer.
 export async function getSessionStats(userId: string): Promise<SessionStats> {
-  const sessions = await prisma.readingSession.findMany({
-    where: { userId, minutes: { not: null } },
-    select: { minutes: true, pagesRead: true, date: true },
-  });
-
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  let totalMinutes = 0;
-  let totalPagesRead = 0;
-  let minutesToday = 0;
-  let minutesThisWeek = 0;
-  let minutesThisMonth = 0;
+  const baseWhere = { userId, minutes: { not: null } } as const;
 
-  for (const s of sessions) {
-    const mins = s.minutes ?? 0;
-    totalMinutes += mins;
-    totalPagesRead += s.pagesRead ?? 0;
-    if (s.date >= startOfMonth) minutesThisMonth += mins;
-    if (s.date >= startOfWeek) minutesThisWeek += mins;
-    if (s.date >= startOfToday) minutesToday += mins;
-  }
+  const [totals, today, week, month] = await Promise.all([
+    prisma.readingSession.aggregate({
+      where: baseWhere,
+      _sum: { minutes: true, pagesRead: true },
+      _count: true,
+    }),
+    prisma.readingSession.aggregate({
+      where: { ...baseWhere, date: { gte: startOfToday } },
+      _sum: { minutes: true },
+    }),
+    prisma.readingSession.aggregate({
+      where: { ...baseWhere, date: { gte: startOfWeek } },
+      _sum: { minutes: true },
+    }),
+    prisma.readingSession.aggregate({
+      where: { ...baseWhere, date: { gte: startOfMonth } },
+      _sum: { minutes: true },
+    }),
+  ]);
+
+  const totalMinutes = totals._sum.minutes ?? 0;
+  const totalPagesRead = totals._sum.pagesRead ?? 0;
 
   return {
-    sessionCount: sessions.length,
+    sessionCount: totals._count,
     totalMinutes,
     totalPagesRead,
     avgPagesPerHour:
       totalMinutes > 0 ? Math.round((totalPagesRead / totalMinutes) * 60 * 10) / 10 : null,
-    hoursToday: Math.round((minutesToday / 60) * 10) / 10,
-    hoursThisWeek: Math.round((minutesThisWeek / 60) * 10) / 10,
-    hoursThisMonth: Math.round((minutesThisMonth / 60) * 10) / 10,
+    hoursToday: Math.round(((today._sum.minutes ?? 0) / 60) * 10) / 10,
+    hoursThisWeek: Math.round(((week._sum.minutes ?? 0) / 60) * 10) / 10,
+    hoursThisMonth: Math.round(((month._sum.minutes ?? 0) / 60) * 10) / 10,
   };
 }

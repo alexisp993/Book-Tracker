@@ -3,9 +3,9 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { listBooks } from "@/lib/api";
+import { useBooks } from "@/lib/queries";
 import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS } from "@/lib/constants";
-import type { LibraryBook, ReadingSessionDTO } from "@/lib/types";
+import type { ReadingSessionDTO } from "@/lib/types";
 import type { CreateSessionInput } from "@/lib/validation";
 
 export function SessionForm({
@@ -23,7 +23,14 @@ export function SessionForm({
   onCancel: () => void;
   onDelete?: () => void;
 }) {
-  const [books, setBooks] = React.useState<LibraryBook[]>([]);
+  // Shared cache with LibraryView/ReadingTimer — no longer refetches every
+  // time this dialog opens.
+  const { data: booksPage } = useBooks({
+    pageSize: 100,
+    sort: "createdAt",
+    order: "desc",
+  });
+  const books = booksPage?.items ?? [];
   const [userBookId, setUserBookId] = React.useState(initial?.userBookId ?? "");
   const [date, setDate] = React.useState(
     initial ? initial.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -40,12 +47,6 @@ export function SessionForm({
   );
   const [mood, setMood] = React.useState(initial?.mood ?? "");
   const [note, setNote] = React.useState(initial?.note ?? "");
-
-  React.useEffect(() => {
-    listBooks({ pageSize: 100, sort: "createdAt", order: "desc" }).then((r) =>
-      setBooks(r.items),
-    );
-  }, []);
 
   const invalid = !userBookId || !minutes || Number(minutes) <= 0;
 

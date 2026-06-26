@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/input";
 import { SessionForm } from "@/components/SessionForm";
+import { ApiRequestError } from "@/lib/api";
 import {
-  ApiRequestError,
-  createSession,
-  deleteSession,
-  listSessions,
-  updateSession,
-} from "@/lib/api";
+  useCreateSession,
+  useDeleteSession,
+  useSessions,
+  useUpdateSession,
+} from "@/lib/queries";
 import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS } from "@/lib/constants";
-import type { Paginated, ReadingSessionDTO } from "@/lib/types";
+import type { ReadingSessionDTO } from "@/lib/types";
 import type { CreateSessionInput } from "@/lib/validation";
 
 function formatDuration(minutes: number | null) {
@@ -39,42 +39,27 @@ export function SessionHistoryView() {
   const [dateTo, setDateTo] = React.useState("");
   const [page, setPage] = React.useState(1);
 
-  const [data, setData] = React.useState<Paginated<ReadingSessionDTO> | null>(
-    null,
-  );
-  const [loading, setLoading] = React.useState(true);
-  const [listError, setListError] = React.useState<string | null>(null);
-
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ReadingSessionDTO | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   React.useEffect(() => setPage(1), [mood, dateFrom, dateTo]);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setListError(null);
-    try {
-      const result = await listSessions({
-        mood: mood || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-        page,
-      });
-      setData(result);
-    } catch (err) {
-      setListError(
-        err instanceof Error ? err.message : "Failed to load your sessions.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [mood, dateFrom, dateTo, page]);
+  const { data, isLoading: loading, isError, error, refetch } = useSessions({
+    mood: mood || undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    page,
+  });
+  const listError = isError
+    ? error instanceof Error
+      ? error.message
+      : "Failed to load your sessions."
+    : null;
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  const createMutation = useCreateSession();
+  const updateMutation = useUpdateSession();
+  const deleteMutation = useDeleteSession();
 
   function openAdd() {
     setEditing(null);
@@ -88,37 +73,33 @@ export function SessionHistoryView() {
   }
 
   async function handleSubmit(values: CreateSessionInput) {
-    setSubmitting(true);
     setFormError(null);
     try {
       if (editing) {
-        await updateSession(editing.id, values);
+        await updateMutation.mutateAsync({ id: editing.id, input: values });
       } else {
-        await createSession(values);
+        await createMutation.mutateAsync(values);
       }
       setFormOpen(false);
       setEditing(null);
-      await load();
     } catch (err) {
       setFormError(
         err instanceof ApiRequestError ? err.message : "Something went wrong.",
       );
-    } finally {
-      setSubmitting(false);
     }
   }
 
   async function handleDelete() {
     if (!editing) return;
-    await deleteSession(editing.id);
+    await deleteMutation.mutateAsync(editing.id);
     setFormOpen(false);
     setEditing(null);
-    await load();
   }
 
   const items = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
   const isEmpty = !loading && items.length === 0;
+  const submitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -166,7 +147,7 @@ export function SessionHistoryView() {
       {listError ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {listError}{" "}
-          <button onClick={load} className="font-medium underline">
+          <button onClick={() => refetch()} className="font-medium underline">
             Retry
           </button>
         </div>
