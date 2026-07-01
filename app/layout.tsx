@@ -43,14 +43,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-// Set the `dark` class before paint (from a saved preference, falling back to
-// the OS setting) so there's no flash of the wrong theme on load.
+// Set the correct theme class before paint (from a saved preference, falling
+// back to the OS color-scheme) so there's no flash of the wrong theme on load.
+// Supported values in localStorage["bt_theme"]: "light" | "dark" | "forest"
 const THEME_INIT_SCRIPT = `
 (function () {
   try {
     var stored = localStorage.getItem("bt_theme");
     var dark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    document.documentElement.classList.toggle("dark", dark);
+    var forest = stored === "forest";
+    document.documentElement.classList.toggle("dark", dark && !forest);
+    document.documentElement.classList.toggle("forest", forest);
   } catch (e) {}
 })();
 `;

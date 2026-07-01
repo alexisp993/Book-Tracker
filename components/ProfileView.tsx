@@ -1,16 +1,21 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import Link from "next/link";
 import {
+  Leaf,
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  Moon,
   ShieldCheck,
+  Sun,
   Timer,
 } from "lucide-react";
 import { StatsView } from "@/components/StatsView";
+import { applyTheme } from "@/components/ThemeToggle";
 import { useCurrentUser } from "@/lib/queries";
+import type { Theme } from "@/components/ThemeToggle";
 
 export function ProfileView() {
   const { data: me } = useCurrentUser();
@@ -70,6 +75,12 @@ export function ProfileView() {
         </Link>
       </section>
 
+      {/* Appearance */}
+      <section className="space-y-2">
+        <SectionHeader title="Appearance" />
+        <AppearancePicker />
+      </section>
+
       {/* Settings & Links */}
       <section className="space-y-2">
         <SectionHeader title="Settings" />
@@ -126,6 +137,74 @@ function SectionHeader({ title }: { title: string }) {
     <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
       {title}
     </h2>
+  );
+}
+
+const THEMES: { value: Theme; label: string; icon: React.ReactNode; description: string }[] = [
+  {
+    value: "light",
+    label: "Light",
+    icon: <Sun className="h-4 w-4" />,
+    description: "Warm parchment",
+  },
+  {
+    value: "dark",
+    label: "Dark",
+    icon: <Moon className="h-4 w-4" />,
+    description: "Midnight ink",
+  },
+  {
+    value: "forest",
+    label: "Forest",
+    icon: <Leaf className="h-4 w-4" />,
+    description: "Deep woodland green",
+  },
+];
+
+function AppearancePicker() {
+  const [current, setCurrent] = React.useState<Theme>("light");
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("bt_theme") as Theme | null;
+      if (stored === "dark" || stored === "forest" || stored === "light") {
+        setCurrent(stored);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function select(theme: Theme) {
+    applyTheme(theme);
+    setCurrent(theme);
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {THEMES.map((t) => (
+        <button
+          key={t.value}
+          type="button"
+          onClick={() => select(t.value)}
+          className={[
+            "flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors",
+            current === t.value
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border bg-card hover:bg-secondary",
+          ].join(" ")}
+          aria-pressed={current === t.value}
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background shadow-sm">
+            {t.icon}
+          </span>
+          <div>
+            <p className="text-xs font-semibold">{t.label}</p>
+            <p className="text-[10px] text-muted-foreground">{t.description}</p>
+          </div>
+        </button>
+      ))}
+    </div>
   );
 }
 
