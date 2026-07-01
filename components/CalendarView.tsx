@@ -357,26 +357,55 @@ export function CalendarView() {
             const b = bucket(data?.totalMinutes ?? 0);
             const hasData = (data?.sessions.length ?? 0) > 0;
 
+            const cover = data?.sessions.find((s) => s.coverUrl)?.coverUrl;
+
             return (
               <button
                 key={key}
                 type="button"
                 onClick={() => setSelectedDate(isSelected ? null : key)}
                 className={[
-                  "relative flex aspect-square w-full flex-col items-center justify-center rounded-xl border text-sm transition-all",
+                  "relative flex aspect-[2/3] w-full flex-col overflow-hidden rounded-xl border transition-all",
                   isSelected
-                    ? "border-primary ring-1 ring-primary"
-                    : "border-transparent hover:border-border",
-                  b > 0 ? BUCKET_BG[b] : "bg-muted/30",
-                  isToday && !isSelected ? "font-bold" : "",
+                    ? "border-primary ring-2 ring-primary"
+                    : hasData
+                    ? "border-border/40 hover:border-border"
+                    : "border-transparent hover:border-border/40",
+                  !cover && b > 0 ? BUCKET_BG[b] : !hasData ? "bg-muted/20" : "",
                 ].join(" ")}
                 aria-label={`${key}${data ? `, ${data.totalMinutes} min` : ""}`}
               >
-                <span className="relative z-10 text-xs leading-none">
+                {/* Book cover fills the cell */}
+                {cover ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={cover}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                    {/* Gradient so the date number is always legible */}
+                    <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-black/50 to-transparent" />
+                  </>
+                ) : null}
+
+                {/* Day number */}
+                <span
+                  className={[
+                    "relative z-10 px-1 pt-0.5 text-[10px] font-semibold leading-none self-start",
+                    cover
+                      ? "text-white drop-shadow-sm"
+                      : isToday
+                      ? "text-primary"
+                      : "text-foreground",
+                  ].join(" ")}
+                >
                   {day}
                 </span>
-                {hasData ? (
-                  <span className="relative z-10 mt-0.5 h-1 w-1 rounded-full bg-primary" />
+
+                {/* No-cover heatmap: center dot when there's reading data */}
+                {!cover && hasData ? (
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
                 ) : null}
               </button>
             );
