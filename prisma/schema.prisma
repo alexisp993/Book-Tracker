@@ -232,12 +232,16 @@ model Note {
   userBookId String
   body       String
   page       Int?
+  // HIGHLIGHT | QUOTE | THOUGHT | REVIEW | BOOKMARK, validated in app code
+  type       String   @default("THOUGHT")
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userBook UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
 
   @@index([userBookId])
+  @@index([userId, type])
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   BookOpen,
   Heart,
-  NotebookPen,
   Pencil,
   Timer,
 } from "lucide-react";
@@ -27,6 +26,7 @@ import {
   useSessions,
   useDeleteBook,
 } from "@/lib/queries";
+import { NotesView } from "@/components/NotesView";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/utils";
 
@@ -172,7 +172,7 @@ export function BookDetailView({ id }: { id: string }) {
       {/* Tab content */}
       {tab === "info" && <InfoTab book={book} />}
       {tab === "sessions" && <SessionsTab userBookId={book.id} />}
-      {tab === "notes" && <NotesTab />}
+      {tab === "notes" && <NotesTab userBookId={book.id} />}
 
       {/* Edit modal */}
       <Dialog
@@ -302,12 +302,6 @@ function SessionsTab({ userBookId }: { userBookId: string }) {
 
 // --- Notes tab ---
 
-function NotesTab() {
-  return (
-    <EmptyState
-      icon={NotebookPen}
-      title="Notes coming soon"
-      description="Highlights, quotes, and thoughts will live here in a future update."
-    />
-  );
+function NotesTab({ userBookId }: { userBookId: string }) {
+  return <NotesView userBookId={userBookId} />;
 }

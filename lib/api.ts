@@ -1,10 +1,12 @@
 import type {
   CreateBookInput,
   CreateFeedbackInput,
+  CreateNoteInput,
   CreateSessionInput,
   StopSessionInput,
   UpdateBookInput,
   UpdateFeedbackStatusInput,
+  UpdateNoteInput,
   UpdateSessionInput,
 } from "@/lib/validation";
 import type {
@@ -13,6 +15,7 @@ import type {
   CurrentUser,
   LibraryBook,
   LibraryStats,
+  NoteDTO,
   Paginated,
   ReadingSessionDTO,
   SessionStats,
@@ -349,6 +352,55 @@ export async function adminUpdateFeedback(
 export async function getBetaStats(): Promise<BetaStats> {
   const res = await fetch("/api/admin/stats", { cache: "no-store" });
   return handle<BetaStats>(res);
+}
+
+// --- Notes ---
+
+export interface ListNotesParams {
+  userBookId?: string;
+  type?: string;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function listNotes(
+  params: ListNotesParams = {},
+): Promise<Paginated<NoteDTO>> {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") qs.set(key, String(value));
+  }
+  const res = await fetch(`/api/notes?${qs.toString()}`, { cache: "no-store" });
+  return handle<Paginated<NoteDTO>>(res);
+}
+
+export async function createNote(
+  input: CreateNoteInput,
+): Promise<NoteDTO> {
+  const res = await fetch("/api/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<NoteDTO>(res);
+}
+
+export async function updateNote(
+  id: string,
+  input: UpdateNoteInput,
+): Promise<NoteDTO> {
+  const res = await fetch(`/api/notes/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<NoteDTO>(res);
+}
+
+export async function deleteNote(id: string): Promise<void> {
+  const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) await handle<void>(res);
 }
 
 export { ApiRequestError };

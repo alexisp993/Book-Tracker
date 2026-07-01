@@ -4,6 +4,7 @@ import {
   FEEDBACK_STATUSES,
   FEEDBACK_TYPES,
   MAX_PAGE_SIZE,
+  NOTE_TYPES,
   READING_MOODS,
   READING_STATUSES,
 } from "@/lib/constants";
@@ -211,3 +212,29 @@ export const adminFeedbackQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(24),
 });
 export type AdminFeedbackQuery = z.infer<typeof adminFeedbackQuerySchema>;
+
+// --- Notes ---
+
+export const createNoteSchema = z.object({
+  userBookId: z.string().cuid(),
+  body: z.string().trim().min(1, "Note body is required").max(10000),
+  page: z.coerce.number().int().nonnegative().optional().nullable(),
+  type: z.enum(NOTE_TYPES).default("THOUGHT"),
+});
+export type CreateNoteInput = z.infer<typeof createNoteSchema>;
+
+export const updateNoteSchema = z.object({
+  body: z.string().trim().min(1).max(10000).optional(),
+  page: z.coerce.number().int().nonnegative().optional().nullable(),
+  type: z.enum(NOTE_TYPES).optional(),
+});
+export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+
+export const listNotesQuerySchema = z.object({
+  userBookId: z.string().cuid().optional(),
+  type: z.enum(NOTE_TYPES).optional(),
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(50),
+});
+export type ListNotesQuery = z.infer<typeof listNotesQuerySchema>;

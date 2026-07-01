@@ -1,4 +1,4 @@
-import type { ReadingMood, ReadingStatus } from "@/lib/constants";
+import type { NoteType, ReadingMood, ReadingStatus } from "@/lib/constants";
 
 // Shape returned by the API for a library entry (UserBook joined with Book).
 // Flattened so the UI doesn't need to know the relational layout.
@@ -37,6 +37,19 @@ export interface BookGroup {
   count: number;
   // a few cover candidates for a preview stack
   covers: string[];
+}
+
+export interface NoteDTO {
+  id: string;
+  userBookId: string;
+  bookId: string;
+  bookTitle: string;
+  coverUrl: string | null;
+  body: string;
+  page: number | null;
+  type: NoteType;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Paginated<T> {

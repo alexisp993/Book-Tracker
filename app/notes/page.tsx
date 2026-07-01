@@ -1,3 +1,5 @@
+import { NotesView } from "@/components/NotesView";
+
 export default function NotesPage() {
   return (
     <div className="space-y-6">
@@ -9,7 +11,7 @@ export default function NotesPage() {
           Your reading notebook — highlights, quotes, and thoughts.
         </p>
       </div>
-      <p className="text-sm text-muted-foreground">Coming soon.</p>
+      <NotesView />
     </div>
   );
 }

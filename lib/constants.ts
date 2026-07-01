@@ -96,6 +96,32 @@ export const MOOD_EMOJI: Record<ReadingMood, string> = {
   NEUTRAL: "😐",
 };
 
+// Note types for the Reading Notebook.
+export const NOTE_TYPES = [
+  "HIGHLIGHT",
+  "QUOTE",
+  "THOUGHT",
+  "REVIEW",
+  "BOOKMARK",
+] as const;
+export type NoteType = (typeof NOTE_TYPES)[number];
+
+export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
+  HIGHLIGHT: "Highlight",
+  QUOTE: "Quote",
+  THOUGHT: "Thought",
+  REVIEW: "Review",
+  BOOKMARK: "Bookmark",
+};
+
+export const NOTE_TYPE_EMOJI: Record<NoteType, string> = {
+  HIGHLIGHT: "🌟",
+  QUOTE: "💬",
+  THOUGHT: "💭",
+  REVIEW: "⭐",
+  BOOKMARK: "🔖",
+};
+
 // Beta feedback.
 export const FEEDBACK_TYPES = ["BUG", "FEATURE_REQUEST", "GENERAL"] as const;
 export type FeedbackType = (typeof FEEDBACK_TYPES)[number];

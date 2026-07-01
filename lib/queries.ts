@@ -11,9 +11,11 @@ import type { GroupBasePath } from "@/lib/api";
 import type { CreateBookInput, UpdateBookInput } from "@/lib/validation";
 import type {
   CreateFeedbackInput,
+  CreateNoteInput,
   CreateSessionInput,
   StopSessionInput,
   UpdateFeedbackStatusInput,
+  UpdateNoteInput,
   UpdateSessionInput,
 } from "@/lib/validation";
 import type { AdminFeedbackListParams } from "@/lib/api";
@@ -26,6 +28,8 @@ export const queryKeys = {
   books: (params: ListParams = {}) => ["books", params] as const,
   book: (id: string) => ["book", id] as const,
   booksAll: ["books"] as const,
+  notes: (params: api.ListNotesParams = {}) => ["notes", params] as const,
+  notesAll: ["notes"] as const,
   groups: (base: GroupBasePath) => ["groups", base] as const,
   group: (base: GroupBasePath, id: string) => ["group", base, id] as const,
   stats: ["stats"] as const,
@@ -392,5 +396,45 @@ export function useBetaStats() {
     queryKey: queryKeys.betaStats,
     queryFn: () => api.getBetaStats(),
     staleTime: 30_000,
+  });
+}
+
+// --- Notes ---
+
+export function useNotes(params: api.ListNotesParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.notes(params),
+    queryFn: () => api.listNotes(params),
+    staleTime: 20_000,
+  });
+}
+
+function useInvalidateNotes() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: queryKeys.notesAll });
+}
+
+export function useCreateNote() {
+  const invalidate = useInvalidateNotes();
+  return useMutation({
+    mutationFn: (input: CreateNoteInput) => api.createNote(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateNote() {
+  const invalidate = useInvalidateNotes();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateNoteInput }) =>
+      api.updateNote(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteNote() {
+  const invalidate = useInvalidateNotes();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteNote(id),
+    onSuccess: invalidate,
   });
 }
