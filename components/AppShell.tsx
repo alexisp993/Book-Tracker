@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
   BookMarked,
   FolderHeart,
-  LibraryBig,
-  Timer,
+  House,
+  NotebookPen,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReadingTimer } from "@/components/ReadingTimer";
@@ -15,11 +15,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/AccountMenu";
 
 const NAV = [
-  { href: "/", label: "Library", icon: LibraryBig },
-  { href: "/sessions", label: "Sessions", icon: Timer },
-  { href: "/shelves", label: "Shelves", icon: BookMarked },
+  { href: "/", label: "Home", icon: House },
+  { href: "/notes", label: "Notes", icon: NotebookPen },
   { href: "/collections", label: "Collections", icon: FolderHeart },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
+  { href: "/profile", label: "Profile", icon: User },
 ] as const;
 
 function isActive(pathname: string, href: string) {
