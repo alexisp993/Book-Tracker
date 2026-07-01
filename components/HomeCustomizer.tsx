@@ -121,10 +121,10 @@ export function HomeCustomizer({ open, onClose }: Props) {
                 type="button"
                 onClick={() => toggleVisible(section.key)}
                 className={[
-                  "relative h-5 w-9 shrink-0 rounded-full border transition-colors",
+                  "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
                   section.visible
-                    ? "border-primary bg-primary"
-                    : "border-border bg-muted",
+                    ? "bg-primary"
+                    : "bg-muted-foreground/25",
                 ].join(" ")}
                 role="switch"
                 aria-checked={section.visible}
@@ -132,8 +132,8 @@ export function HomeCustomizer({ open, onClose }: Props) {
               >
                 <span
                   className={[
-                    "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                    section.visible ? "translate-x-4" : "translate-x-0.5",
+                    "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
+                    section.visible ? "translate-x-5" : "translate-x-0",
                   ].join(" ")}
                 />
               </button>
