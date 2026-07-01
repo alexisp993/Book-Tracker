@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { useCalendar } from "@/lib/queries";
 import type { CalendarDay } from "@/lib/api";
@@ -30,6 +30,16 @@ const BUCKET_BG = [
   "bg-primary",
 ];
 
+// Hardcoded canvas colors — independent of CSS variables so the share card
+// always looks great regardless of the user's chosen theme.
+const CANVAS_BUCKET_FILL = [
+  "#1a2e1e", // 0 — empty cell
+  "#1e4d2b", // 1 — light
+  "#2d7a47", // 2 — medium
+  "#3aaa60", // 3 — strong
+  "#4eca78", // 4 — full
+];
+
 function formatDuration(minutes: number | null): string {
   if (!minutes) return "";
   if (minutes < 60) return `${minutes}m`;
@@ -38,11 +48,198 @@ function formatDuration(minutes: number | null): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+// ---------------------------------------------------------------------------
+// Canvas-based social share card (1080×1080, no external dependencies)
+// ---------------------------------------------------------------------------
+async function downloadCalendarImage(
+  year: number,
+  month: number,
+  calData: CalendarDay[],
+  daysInMonth: number,
+  startDow: number,
+) {
+  const W = 1080;
+  const PAD = 72;
+  const CELL = 116;
+  const GAP = 10;
+  const HEADER_H = 160;
+  const LABEL_H = 48;
+  const FOOTER_H = 100;
+
+  // How many rows needed
+  const totalCells = startDow + daysInMonth;
+  const rows = Math.ceil(totalCells / 7);
+  const gridH = rows * CELL + (rows - 1) * GAP;
+  const H = HEADER_H + LABEL_H + gridH + FOOTER_H + PAD * 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const byDay = new Map(calData.map((d) => [d.date, d]));
+
+  // Background
+  ctx.fillStyle = "#0b1a10";
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid texture (very faint)
+  ctx.strokeStyle = "#ffffff08";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  // Card rect
+  const CARD_PAD = 40;
+  ctx.fillStyle = "#102018";
+  roundRect(ctx, CARD_PAD, CARD_PAD, W - CARD_PAD * 2, H - CARD_PAD * 2, 32);
+  ctx.fill();
+
+  // "Book Tracker" brand
+  ctx.font = "600 28px -apple-system, system-ui, sans-serif";
+  ctx.fillStyle = "#4eca78";
+  ctx.textAlign = "left";
+  ctx.fillText("📚 Book Tracker", PAD, PAD + 52);
+
+  // Month + Year
+  ctx.font = `700 64px -apple-system, system-ui, sans-serif`;
+  ctx.fillStyle = "#eaf5ed";
+  ctx.textAlign = "center";
+  ctx.fillText(`${MONTH_NAMES[month - 1]} ${year}`, W / 2, PAD + 136);
+
+  // Day-of-week labels
+  const labelY = PAD + HEADER_H + 28;
+  ctx.font = "600 24px -apple-system, system-ui, sans-serif";
+  ctx.fillStyle = "#6bbd8a";
+  ctx.textAlign = "center";
+  for (let d = 0; d < 7; d++) {
+    const x = PAD + d * (CELL + GAP) + CELL / 2;
+    ctx.fillText(DAY_LABELS[d], x, labelY);
+  }
+
+  // Calendar grid
+  const gridY = PAD + HEADER_H + LABEL_H;
+  for (let i = 0; i < rows * 7; i++) {
+    const col = i % 7;
+    const row = Math.floor(i / 7);
+    const day = i - startDow + 1;
+    const x = PAD + col * (CELL + GAP);
+    const y = gridY + row * (CELL + GAP);
+
+    if (i < startDow || day > daysInMonth) {
+      // Empty cell
+      ctx.fillStyle = "#0d1f14";
+      roundRect(ctx, x, y, CELL, CELL, 16);
+      ctx.fill();
+      continue;
+    }
+
+    const key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const data = byDay.get(key);
+    const b = bucket(data?.totalMinutes ?? 0);
+
+    // Cell background
+    ctx.fillStyle = CANVAS_BUCKET_FILL[b];
+    roundRect(ctx, x, y, CELL, CELL, 16);
+    ctx.fill();
+
+    // If a book cover exists, draw it clipped to the cell
+    const cover = data?.sessions.find((s) => s.coverUrl)?.coverUrl;
+    if (cover && data && data.sessions.length > 0) {
+      try {
+        const img = await loadImage(cover);
+        ctx.save();
+        roundRect(ctx, x, y, CELL, CELL, 16);
+        ctx.clip();
+        // Draw cover at 30% opacity
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(img, x, y, CELL, CELL);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      } catch {
+        // Cover failed to load — just use the heatmap color
+      }
+    }
+
+    // Day number
+    ctx.font = `${b >= 3 ? "700" : "500"} 30px -apple-system, system-ui, sans-serif`;
+    ctx.fillStyle = b >= 2 ? "#ffffff" : "#a8c9b0";
+    ctx.textAlign = "center";
+    ctx.fillText(String(day), x + CELL / 2, y + CELL / 2 + 10);
+
+    // Activity dot for days with sessions
+    if (data && data.sessions.length > 0) {
+      ctx.beginPath();
+      ctx.arc(x + CELL / 2, y + CELL - 16, 4, 0, Math.PI * 2);
+      ctx.fillStyle = b >= 3 ? "#ffffff99" : "#4eca78";
+      ctx.fill();
+    }
+  }
+
+  // Stats footer
+  const totalDays = calData.length;
+  const totalMinutes = calData.reduce((s, d) => s + d.totalMinutes, 0);
+  const totalPages = calData.reduce((s, d) => s + d.totalPages, 0);
+
+  const statsY = gridY + gridH + 48;
+  ctx.font = "500 26px -apple-system, system-ui, sans-serif";
+  ctx.fillStyle = "#a8c9b0";
+  ctx.textAlign = "center";
+  const parts = [
+    `${totalDays} day${totalDays === 1 ? "" : "s"} read`,
+    totalMinutes > 0 ? formatDuration(totalMinutes) : null,
+    totalPages > 0 ? `${totalPages} pages` : null,
+  ].filter(Boolean);
+  ctx.fillText(parts.join("  ·  "), W / 2, statsY);
+
+  // Download
+  const a = document.createElement("a");
+  a.download = `reading-calendar-${year}-${String(month).padStart(2, "0")}.png`;
+  a.href = canvas.toDataURL("image/png");
+  a.click();
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 export function CalendarView() {
   const today = new Date();
   const [year, setYear] = React.useState(today.getFullYear());
-  const [month, setMonth] = React.useState(today.getMonth() + 1); // 1-indexed
+  const [month, setMonth] = React.useState(today.getMonth() + 1);
   const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
+  const [downloading, setDownloading] = React.useState(false);
 
   const { data: calData = [], isLoading } = useCalendar(year, month);
 
@@ -59,20 +256,18 @@ export function CalendarView() {
     setSelectedDate(null);
   }
   function canGoNext() {
-    return year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1);
+    return year < today.getFullYear() ||
+      (year === today.getFullYear() && month < today.getMonth() + 1);
   }
 
-  // Build a grid that starts on the correct weekday
   const firstOfMonth = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
-  const startDow = firstOfMonth.getDay(); // 0=Sun
+  const startDow = firstOfMonth.getDay();
 
-  // Cells: null for leading empty slots, then 1..daysInMonth
   const cells: (number | null)[] = [
     ...Array.from({ length: startDow }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  // Pad to full rows
   while (cells.length % 7 !== 0) cells.push(null);
 
   function dateKey(day: number): string {
@@ -81,9 +276,18 @@ export function CalendarView() {
 
   const selectedDay = selectedDate ? byDay.get(selectedDate) : null;
 
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      await downloadCalendarImage(year, month, calData, daysInMonth, startDow);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {/* Month navigation */}
+      {/* Month navigation + download */}
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -93,18 +297,36 @@ export function CalendarView() {
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
+
         <p className="font-display text-base font-semibold">
           {MONTH_NAMES[month - 1]} {year}
         </p>
-        <button
-          type="button"
-          onClick={nextMonth}
-          disabled={!canGoNext()}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
-          aria-label="Next month"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading || calData.length === 0}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
+            aria-label="Download calendar image"
+            title="Download as image"
+          >
+            {downloading ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={nextMonth}
+            disabled={!canGoNext()}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Day-of-week headers */}
@@ -134,7 +356,6 @@ export function CalendarView() {
             const isSelected = selectedDate === key;
             const b = bucket(data?.totalMinutes ?? 0);
             const hasData = (data?.sessions.length ?? 0) > 0;
-            const cover = data?.sessions.find((s) => s.coverUrl)?.coverUrl;
 
             return (
               <button
@@ -151,12 +372,6 @@ export function CalendarView() {
                 ].join(" ")}
                 aria-label={`${key}${data ? `, ${data.totalMinutes} min` : ""}`}
               >
-                {cover && hasData ? (
-                  <div className="absolute inset-0 overflow-hidden rounded-[10px] opacity-25">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={cover} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ) : null}
                 <span className="relative z-10 text-xs leading-none">
                   {day}
                 </span>

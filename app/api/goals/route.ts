@@ -20,11 +20,16 @@ function computeProgress(goal: {
 async function booksReadInYear(userId: string, year: number): Promise<number> {
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+  const currentYear = new Date().getFullYear();
   return prisma.userBook.count({
     where: {
       userId,
       status: "READ",
-      finishDate: { gte: start, lt: end },
+      OR: [
+        { finishDate: { gte: start, lt: end } },
+        // Books marked READ without a finish date count toward the current year's goal
+        ...(year === currentYear ? [{ finishDate: null }] : []),
+      ],
     },
   });
 }
