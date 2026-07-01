@@ -25,6 +25,7 @@ import type {
 } from "@/lib/types";
 import type { BookMetadata } from "@/lib/metadata";
 import type { AdminFeedbackDetail, AdminFeedbackRow, FeedbackDTO } from "@/lib/feedback";
+import type { HomeSection } from "@/lib/homeConfig";
 
 // Typed client-side fetch wrappers around the /api/books endpoints.
 
@@ -480,6 +481,22 @@ export interface SuggestionItem {
 export async function getSuggestions(): Promise<SuggestionItem[]> {
   const res = await fetch("/api/suggestions", { cache: "no-store" });
   return handle<SuggestionItem[]>(res);
+}
+
+// --- Home config ---
+
+export async function getHomeConfig(): Promise<HomeSection[]> {
+  const res = await fetch("/api/home-config", { cache: "no-store" });
+  return handle<HomeSection[]>(res);
+}
+
+export async function putHomeConfig(config: HomeSection[]): Promise<HomeSection[]> {
+  const res = await fetch("/api/home-config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  return handle<HomeSection[]>(res);
 }
 
 export { ApiRequestError };

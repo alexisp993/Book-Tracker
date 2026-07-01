@@ -496,3 +496,24 @@ export function useSuggestions() {
     staleTime: 5 * 60_000,
   });
 }
+
+// --- Home config ---
+
+export function useHomeConfig() {
+  return useQuery({
+    queryKey: ["homeConfig"],
+    queryFn: () => api.getHomeConfig(),
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateHomeConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (config: import("@/lib/homeConfig").HomeSection[]) =>
+      api.putHomeConfig(config),
+    onSuccess: (data) => {
+      qc.setQueryData(["homeConfig"], data);
+    },
+  });
+}

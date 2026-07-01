@@ -30,6 +30,8 @@ model User {
   // lib/user.ts requireAdmin(). The env var is the source of truth; this
   // column is a denormalized cache for fast `WHERE isAdmin` queries.
   isAdmin      Boolean  @default(false)
+  // JSON: [{key,visible,order}] — user's home dashboard layout config.
+  homeConfig   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
