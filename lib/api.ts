@@ -439,4 +439,30 @@ export async function deleteGoal(id: string): Promise<void> {
   if (!res.ok && res.status !== 204) await handle<void>(res);
 }
 
+// --- Calendar ---
+
+export interface CalendarDay {
+  date: string;
+  totalMinutes: number;
+  totalPages: number;
+  sessions: {
+    bookTitle: string;
+    coverUrl: string | null;
+    minutes: number | null;
+    pagesRead: number | null;
+    mood: string | null;
+  }[];
+}
+
+export async function getCalendar(
+  year: number,
+  month: number,
+): Promise<CalendarDay[]> {
+  const res = await fetch(
+    `/api/calendar?year=${year}&month=${month}`,
+    { cache: "no-store" },
+  );
+  return handle<CalendarDay[]>(res);
+}
+
 export { ApiRequestError };

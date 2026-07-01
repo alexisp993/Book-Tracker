@@ -476,3 +476,13 @@ export function useDeleteGoal() {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.goals }),
   });
 }
+
+// --- Calendar ---
+
+export function useCalendar(year: number, month: number) {
+  return useQuery({
+    queryKey: ["calendar", year, month],
+    queryFn: () => api.getCalendar(year, month),
+    staleTime: 60_000,
+  });
+}
