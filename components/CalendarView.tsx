@@ -40,6 +40,29 @@ const CANVAS_BUCKET_FILL = [
   "#4eca78", // 4 — full
 ];
 
+// Separate component so each cell's error state is isolated — if one URL
+// fails the rest aren't affected. The <span> wrapper (not the <button>) owns
+// overflow:hidden + border-radius, avoiding a long-standing iOS Safari bug
+// where absolutely-positioned children aren't clipped by their button parent.
+function CellCover({ src }: { src: string }) {
+  const [failed, setFailed] = React.useState(false);
+  if (failed) return null;
+  return (
+    <span
+      className="absolute inset-0 block overflow-hidden rounded-xl"
+      style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className="h-full w-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    </span>
+  );
+}
+
 function formatDuration(minutes: number | null): string {
   if (!minutes) return "";
   if (minutes < 60) return `${minutes}m`;
@@ -364,19 +387,8 @@ export function CalendarView() {
                 key={key}
                 type="button"
                 onClick={() => setSelectedDate(isSelected ? null : key)}
-                // Use background-image instead of <img> — position:absolute inside
-                // a <button> with overflow:hidden is unreliable on mobile Safari.
-                style={
-                  cover
-                    ? {
-                        backgroundImage: `url(${JSON.stringify(cover)})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }
-                    : undefined
-                }
                 className={[
-                  "relative flex aspect-[2/3] w-full flex-col overflow-hidden rounded-xl border transition-all",
+                  "relative flex aspect-[2/3] w-full flex-col rounded-xl border transition-all",
                   isSelected
                     ? "border-primary ring-2 ring-primary"
                     : hasData
@@ -386,20 +398,20 @@ export function CalendarView() {
                 ].join(" ")}
                 aria-label={`${key}${data ? `, ${data.totalMinutes} min` : ""}`}
               >
-                {/* Gradient so the day number is legible over any cover */}
+                {/* Cover image — clipped by <span>, not by the button, to avoid
+                    the iOS Safari overflow:hidden+border-radius button bug */}
+                {cover ? <CellCover src={cover} /> : null}
+
+                {/* Gradient so the day number stays readable over any cover */}
                 {cover ? (
-                  <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/60 to-transparent" />
+                  <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 rounded-t-xl bg-gradient-to-b from-black/60 to-transparent" />
                 ) : null}
 
                 {/* Day number */}
                 <span
                   className={[
-                    "relative z-10 px-1 pt-0.5 text-[10px] font-semibold leading-none self-start",
-                    cover
-                      ? "text-white drop-shadow-sm"
-                      : isToday
-                      ? "text-primary"
-                      : "text-foreground",
+                    "relative z-20 px-1 pt-0.5 text-[10px] font-semibold leading-none self-start",
+                    cover ? "text-white drop-shadow-sm" : isToday ? "text-primary" : "text-foreground",
                   ].join(" ")}
                 >
                   {day}

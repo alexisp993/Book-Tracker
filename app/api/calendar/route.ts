@@ -21,6 +21,13 @@ function isoLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Google Books API returns http:// URLs; force https:// to avoid mixed-content
+// blocking on the deployed site.
+function toHttps(url: string | null): string | null {
+  if (!url) return null;
+  return url.replace(/^http:\/\//i, "https://");
+}
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   const { searchParams } = new URL(request.url);
@@ -71,7 +78,7 @@ export async function GET(request: Request) {
     day.totalPages += s.pagesRead ?? 0;
     day.sessions.push({
       bookTitle: s.userBook.book.title,
-      coverUrl: s.userBook.book.coverUrl,
+      coverUrl: toHttps(s.userBook.book.coverUrl),
       minutes: s.minutes,
       pagesRead: s.pagesRead,
       mood: s.mood,
