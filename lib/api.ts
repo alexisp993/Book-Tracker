@@ -75,6 +75,11 @@ export async function listBooks(
   return handle<Paginated<LibraryBook>>(res);
 }
 
+export async function getBook(id: string): Promise<LibraryBook> {
+  const res = await fetch(`/api/books/${id}`, { cache: "no-store" });
+  return handle<LibraryBook>(res);
+}
+
 export async function createBook(
   input: CreateBookInput,
 ): Promise<LibraryBook> {

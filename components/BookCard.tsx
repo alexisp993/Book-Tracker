@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { BookOpen, Heart, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,12 +36,11 @@ export const BookCard = React.memo(function BookCard({
       ? Math.min(100, Math.round((book.currentPage / book.pageCount) * 100))
       : null;
 
-  // Compact: a lean, tappable card (whole card opens edit).
+  // Compact: a lean, tappable card — tapping navigates to detail.
   if (compact) {
     return (
-      <button
-        type="button"
-        onClick={() => onEdit(book)}
+      <Link
+        href={`/books/${book.id}`}
         className="group flex flex-col gap-2 text-left"
       >
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border bg-muted transition-shadow group-hover:shadow-md">
@@ -63,16 +63,15 @@ export const BookCard = React.memo(function BookCard({
             {book.authors[0] ?? "Unknown"}
           </p>
         </div>
-      </button>
+      </Link>
     );
   }
 
-  // Comfortable: full card with details and actions, kept deliberately lean
-  // — status moves onto the cover as an overlay pill, rating is inline and
-  // small, and actions collapse into a single row of icon buttons.
+  // Comfortable: full card with details and actions. The cover and text area
+  // link to the detail page; the action buttons stay as separate tap targets.
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground transition-shadow hover:shadow-md">
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
+      <Link href={`/books/${book.id}`} className="relative aspect-[2/3] w-full overflow-hidden bg-muted block">
         <BookCover book={book} />
         <StatusBadge
           status={book.status}
@@ -84,10 +83,10 @@ export const BookCard = React.memo(function BookCard({
             <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
           </span>
         ) : null}
-      </div>
+      </Link>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <div className="flex-1">
+        <Link href={`/books/${book.id}`} className="flex-1">
           <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-tight">
             {book.title}
           </h3>
@@ -99,7 +98,7 @@ export const BookCard = React.memo(function BookCard({
               <StarRating value={book.rating} size={11} />
             ) : null}
           </div>
-        </div>
+        </Link>
 
         {progress !== null && book.status === "CURRENTLY_READING" ? (
           <div>

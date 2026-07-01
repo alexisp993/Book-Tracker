@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, ChevronRight, Heart } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BookCover } from "@/components/BookCover";
@@ -9,19 +10,17 @@ import { StarRating } from "@/components/StarRating";
 import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
 
-// The default Library row — denser than the card grid but progress-forward
-// (current/total pages + a bar for whatever's currently being read), in the
-// spirit of Apple Books' list view. Tapping the row opens edit; "Start" is
-// its own tap target so it doesn't also trigger edit. Memoized (same
-// reasoning as BookCard); effective only because LibraryView passes stable
-// callbacks (useCallback), not fresh inline functions.
+// The default Library row — denser than the card grid but progress-forward.
+// Tapping the row navigates to the book's detail page; "Start" is a separate
+// tap target that doesn't also trigger navigation. Memoized (same reasoning
+// as BookCard); effective only because LibraryView passes stable callbacks.
 export const BookRow = React.memo(function BookRow({
   book,
-  onEdit,
+  onEdit: _onEdit,
   onStartReading,
 }: {
   book: LibraryBook;
-  onEdit: (book: LibraryBook) => void;
+  onEdit?: (book: LibraryBook) => void;
   onStartReading?: (book: LibraryBook) => void;
 }) {
   const canStart = book.status === "WANT_TO_READ" || book.status === "ON_HOLD";
@@ -31,19 +30,16 @@ export const BookRow = React.memo(function BookRow({
       : null;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onEdit(book)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onEdit(book);
-      }}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-secondary"
-    >
-      <div className="h-14 w-10 shrink-0 overflow-hidden rounded-md border bg-muted">
+    <div className="relative flex w-full items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-secondary">
+      <Link
+        href={`/books/${book.id}`}
+        className="absolute inset-0 rounded-xl"
+        aria-label={`View ${book.title}`}
+      />
+      <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md border bg-muted">
         <BookCover book={book} />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
           {book.title}
         </p>
@@ -81,18 +77,16 @@ export const BookRow = React.memo(function BookRow({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 shrink-0 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
+          className="relative h-8 w-8 shrink-0 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
           onClick={(e) => {
-            e.stopPropagation();
+            e.preventDefault();
             onStartReading(book);
           }}
           aria-label={`Start reading ${book.title}`}
         >
           <BookOpen className="h-3.5 w-3.5" />
         </Button>
-      ) : (
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
-      )}
+      ) : null}
     </div>
   );
 });

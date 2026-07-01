@@ -24,6 +24,7 @@ import type { LibraryBook, Paginated } from "@/lib/types";
 // staleTime/invalidation table this implements.
 export const queryKeys = {
   books: (params: ListParams = {}) => ["books", params] as const,
+  book: (id: string) => ["book", id] as const,
   booksAll: ["books"] as const,
   groups: (base: GroupBasePath) => ["groups", base] as const,
   group: (base: GroupBasePath, id: string) => ["group", base, id] as const,
@@ -48,6 +49,15 @@ export function useBooks(params: ListParams = {}, options: { enabled?: boolean }
     queryFn: () => api.listBooks(params),
     staleTime: 20_000,
     enabled: options.enabled,
+  });
+}
+
+export function useBook(id: string) {
+  return useQuery({
+    queryKey: queryKeys.book(id),
+    queryFn: () => api.getBook(id),
+    staleTime: 20_000,
+    enabled: Boolean(id),
   });
 }
 
