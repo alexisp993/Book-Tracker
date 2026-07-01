@@ -238,3 +238,20 @@ export const listNotesQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(50),
 });
 export type ListNotesQuery = z.infer<typeof listNotesQuerySchema>;
+
+// --- Goals ---
+
+const GOAL_TYPES = ["BOOKS", "PAGES", "GENRE", "AUTHOR", "CUSTOM"] as const;
+
+export const createGoalSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(255),
+  type: z.enum(GOAL_TYPES).default("BOOKS"),
+  target: z.coerce.number().int().min(1, "Target must be at least 1"),
+  year: z.coerce.number().int().min(1900).max(2100).optional().nullable(),
+  metaKey: z.preprocess(emptyToUndefined, z.string().trim().max(255).optional().nullable()),
+  metaValue: z.preprocess(emptyToUndefined, z.string().trim().max(255).optional().nullable()),
+});
+export type CreateGoalInput = z.infer<typeof createGoalSchema>;
+
+export const updateGoalSchema = createGoalSchema.partial();
+export type UpdateGoalInput = z.infer<typeof updateGoalSchema>;

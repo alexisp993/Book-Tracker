@@ -11,10 +11,12 @@ import type { GroupBasePath } from "@/lib/api";
 import type { CreateBookInput, UpdateBookInput } from "@/lib/validation";
 import type {
   CreateFeedbackInput,
+  CreateGoalInput,
   CreateNoteInput,
   CreateSessionInput,
   StopSessionInput,
   UpdateFeedbackStatusInput,
+  UpdateGoalInput,
   UpdateNoteInput,
   UpdateSessionInput,
 } from "@/lib/validation";
@@ -43,6 +45,7 @@ export const queryKeys = {
     ["adminFeedback", "list", params] as const,
   adminFeedbackDetail: (id: string) => ["adminFeedback", "detail", id] as const,
   betaStats: ["betaStats"] as const,
+  goals: ["goals"] as const,
 };
 
 // --- Books ---
@@ -436,5 +439,40 @@ export function useDeleteNote() {
   return useMutation({
     mutationFn: (id: string) => api.deleteNote(id),
     onSuccess: invalidate,
+  });
+}
+
+// --- Goals ---
+
+export function useGoals() {
+  return useQuery({
+    queryKey: queryKeys.goals,
+    queryFn: () => api.listGoals(),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateGoalInput) => api.createGoal(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.goals }),
+  });
+}
+
+export function useUpdateGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateGoalInput }) =>
+      api.updateGoal(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.goals }),
+  });
+}
+
+export function useDeleteGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteGoal(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.goals }),
   });
 }

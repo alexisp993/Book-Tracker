@@ -1,11 +1,13 @@
 import type {
   CreateBookInput,
   CreateFeedbackInput,
+  CreateGoalInput,
   CreateNoteInput,
   CreateSessionInput,
   StopSessionInput,
   UpdateBookInput,
   UpdateFeedbackStatusInput,
+  UpdateGoalInput,
   UpdateNoteInput,
   UpdateSessionInput,
 } from "@/lib/validation";
@@ -13,6 +15,7 @@ import type {
   BetaStats,
   BookGroup,
   CurrentUser,
+  GoalDTO,
   LibraryBook,
   LibraryStats,
   NoteDTO,
@@ -400,6 +403,39 @@ export async function updateNote(
 
 export async function deleteNote(id: string): Promise<void> {
   const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) await handle<void>(res);
+}
+
+// --- Goals ---
+
+export async function listGoals(): Promise<GoalDTO[]> {
+  const res = await fetch("/api/goals", { cache: "no-store" });
+  return handle<GoalDTO[]>(res);
+}
+
+export async function createGoal(input: CreateGoalInput): Promise<GoalDTO> {
+  const res = await fetch("/api/goals", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<GoalDTO>(res);
+}
+
+export async function updateGoal(
+  id: string,
+  input: UpdateGoalInput,
+): Promise<GoalDTO> {
+  const res = await fetch(`/api/goals/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handle<GoalDTO>(res);
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  const res = await fetch(`/api/goals/${id}`, { method: "DELETE" });
   if (!res.ok && res.status !== 204) await handle<void>(res);
 }
 

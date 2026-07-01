@@ -118,6 +118,18 @@ export interface LibraryStats {
   genreBreakdown: { name: string; count: number }[];
 }
 
+export interface GoalDTO {
+  id: string;
+  title: string;
+  type: string; // BOOKS | PAGES | GENRE | AUTHOR | CUSTOM
+  target: number;
+  year: number | null;
+  metaKey: string | null;
+  metaValue: string | null;
+  createdAt: string;
+  progress: number; // computed: books read this year (for BOOKS goals)
+}
+
 export interface CurrentUser {
   id: string;
   name: string | null;
