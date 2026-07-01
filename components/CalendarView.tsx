@@ -364,6 +364,17 @@ export function CalendarView() {
                 key={key}
                 type="button"
                 onClick={() => setSelectedDate(isSelected ? null : key)}
+                // Use background-image instead of <img> — position:absolute inside
+                // a <button> with overflow:hidden is unreliable on mobile Safari.
+                style={
+                  cover
+                    ? {
+                        backgroundImage: `url(${JSON.stringify(cover)})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
                 className={[
                   "relative flex aspect-[2/3] w-full flex-col overflow-hidden rounded-xl border transition-all",
                   isSelected
@@ -375,18 +386,9 @@ export function CalendarView() {
                 ].join(" ")}
                 aria-label={`${key}${data ? `, ${data.totalMinutes} min` : ""}`}
               >
-                {/* Book cover fills the cell */}
+                {/* Gradient so the day number is legible over any cover */}
                 {cover ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={cover}
-                      alt=""
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                    {/* Gradient so the date number is always legible */}
-                    <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-black/50 to-transparent" />
-                  </>
+                  <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/60 to-transparent" />
                 ) : null}
 
                 {/* Day number */}
@@ -403,7 +405,7 @@ export function CalendarView() {
                   {day}
                 </span>
 
-                {/* No-cover heatmap: center dot when there's reading data */}
+                {/* Activity dot for days with data but no cover */}
                 {!cover && hasData ? (
                   <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
                 ) : null}
