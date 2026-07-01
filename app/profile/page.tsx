@@ -1,4 +1,4 @@
-import { StatsView } from "@/components/StatsView";
+import { ProfileView } from "@/components/ProfileView";
 
 export default function ProfilePage() {
   return (
@@ -8,10 +8,10 @@ export default function ProfilePage() {
           Profile
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Your reading stats, achievements, and settings.
+          Your reading life at a glance.
         </p>
       </div>
-      <StatsView />
+      <ProfileView />
     </div>
   );
 }
