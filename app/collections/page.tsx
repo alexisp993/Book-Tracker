@@ -1,4 +1,5 @@
 import { GroupsView } from "@/components/GroupsView";
+import { SuggestionSection } from "@/components/SuggestionSection";
 
 export default function CollectionsPage() {
   return (
@@ -12,6 +13,7 @@ export default function CollectionsPage() {
         </p>
       </div>
       <GroupsView base="collections" singular="collection" />
+      <SuggestionSection />
     </div>
   );
 }

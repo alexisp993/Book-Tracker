@@ -486,3 +486,13 @@ export function useCalendar(year: number, month: number) {
     staleTime: 60_000,
   });
 }
+
+// --- Suggestions ---
+
+export function useSuggestions() {
+  return useQuery({
+    queryKey: ["suggestions"],
+    queryFn: () => api.getSuggestions(),
+    staleTime: 5 * 60_000,
+  });
+}

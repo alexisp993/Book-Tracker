@@ -465,4 +465,21 @@ export async function getCalendar(
   return handle<CalendarDay[]>(res);
 }
 
+// --- Suggestions ---
+
+export interface SuggestionItem {
+  id: string;
+  bookId: string;
+  title: string;
+  authors: string[];
+  coverUrl: string | null;
+  reasons: string[];
+  score: number;
+}
+
+export async function getSuggestions(): Promise<SuggestionItem[]> {
+  const res = await fetch("/api/suggestions", { cache: "no-store" });
+  return handle<SuggestionItem[]>(res);
+}
+
 export { ApiRequestError };
