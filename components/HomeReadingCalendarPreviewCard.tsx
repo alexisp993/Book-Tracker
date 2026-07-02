@@ -48,22 +48,45 @@ function StatPill({
   value,
   label,
   tint,
+  caption,
+  featured = false,
 }: {
   icon: React.ReactNode;
   value: React.ReactNode;
   label: string;
   tint: keyof typeof TINTS;
+  caption?: string;
+  featured?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-muted/40 px-3.5 py-3">
+    <div
+      className={[
+        "flex min-w-0 items-center rounded-xl border bg-muted/40",
+        featured ? "gap-3.5 px-4 py-4" : "gap-3 px-3.5 py-3",
+      ].join(" ")}
+    >
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
+        className={[
+          "flex shrink-0 items-center justify-center rounded-full",
+          featured ? "h-11 w-11" : "h-9 w-9",
+          TINTS[tint],
+        ].join(" ")}
       >
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="truncate text-base font-semibold leading-tight">{value}</p>
+        <p
+          className={[
+            "truncate font-semibold leading-tight",
+            featured ? "text-2xl" : "text-base",
+          ].join(" ")}
+        >
+          {value}
+        </p>
         <p className="truncate text-[11px] leading-tight text-muted-foreground">{label}</p>
+        {caption ? (
+          <p className="truncate text-[10px] leading-tight text-muted-foreground/80">{caption}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -156,32 +179,37 @@ export function HomeReadingCalendarPreviewCard() {
 
       {/* Main body — 30/70 stats-to-heatmap split on desktop; stacked on mobile/tablet */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_7fr] lg:items-stretch lg:gap-5">
-        {/* Stat chips — always a compact 2x2 grid, vertically centered against
-            the (usually taller) heatmap panel so the two columns feel paired. */}
-        <div className="grid grid-cols-2 gap-2.5 lg:content-center">
+        {/* Stat column — 4 cards stacked vertically, with the Day streak card
+            featured (larger) as the primary emphasis of the left column. */}
+        <div className="flex flex-col gap-2.5">
           <StatPill
-            icon={<Flame className="h-4 w-4" />}
+            icon={<Flame className="h-5 w-5" />}
             value={stats.streakDays}
             label="Day streak"
             tint="amber"
+            caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
+            featured
           />
           <StatPill
             icon={<BookOpen className="h-4 w-4" />}
             value={stats.daysReadInWindow}
             label="Days read"
             tint="emerald"
+            caption="Last 13 weeks"
           />
           <StatPill
             icon={<Clock className="h-4 w-4" />}
             value={formatDuration(stats.minutesInWindow)}
             label="Time read"
             tint="teal"
+            caption="Last 13 weeks"
           />
           <StatPill
             icon={<NotebookText className="h-4 w-4" />}
             value={stats.pagesInWindow.toLocaleString()}
             label="Pages read"
             tint="violet"
+            caption="Last 13 weeks"
           />
         </div>
 
