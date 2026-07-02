@@ -19,19 +19,54 @@ const BUCKET_BG = [
   "bg-primary",
 ];
 
-// Hardcoded canvas colors — independent of CSS variables so the share card
-// always looks great regardless of the user's chosen theme (light/dark/
-// forest). This is the one deliberate export-only divergence from the live
-// grid's theme-driven BUCKET_BG classes; everything else (layout, day-cell
-// mapping, cover placement, summary values) comes from the same
-// MonthCalendarViewModel the live grid renders from.
-const CANVAS_BUCKET_FILL = [
-  "#1a2e1e", // 0 — empty cell
-  "#1e4d2b", // 1 — light
-  "#2d7a47", // 2 — medium
-  "#3aaa60", // 3 — strong
-  "#4eca78", // 4 — full
-];
+// Canvas palette read from the active theme's CSS variables at export time,
+// so the downloaded image mirrors whatever theme is live (default / dark /
+// forest / any future theme) instead of a fixed palette. A <canvas> can't
+// consume CSS variables directly, so we resolve them to concrete hsla()
+// strings here. Runs client-side only (downloadCalendarImage is click-driven).
+interface CanvasPalette {
+  background: string;
+  card: string;
+  border: string;
+  foreground: string;
+  mutedForeground: string;
+  primary: string;
+  bucketFill: string[]; // [0..4], matching the live BUCKET_BG intensity ramp
+  emptyCell: string;
+  texture: string;
+  badgeBg: string;
+}
+
+function readThemePalette(): CanvasPalette {
+  const cs = getComputedStyle(document.documentElement);
+  // CSS vars are stored as an "H S% L%" triple (e.g. "36 28% 97%").
+  const hsl = (name: string, alpha = 1): string => {
+    const triple = cs.getPropertyValue(name).trim();
+    const [h, s, l] = triple.split(/\s+/);
+    // hsla(H, S%, L%, A) — the most cross-browser-safe canvas color form.
+    return `hsla(${h}, ${s}, ${l}, ${alpha})`;
+  };
+  return {
+    background: hsl("--background"),
+    card: hsl("--card"),
+    border: hsl("--border"),
+    foreground: hsl("--foreground"),
+    mutedForeground: hsl("--muted-foreground"),
+    primary: hsl("--primary"),
+    // Same intensity ramp the live grid's BUCKET_BG uses: muted for empty,
+    // primary at increasing opacity for 1-4.
+    bucketFill: [
+      hsl("--muted", 0.35),
+      hsl("--primary", 0.2),
+      hsl("--primary", 0.4),
+      hsl("--primary", 0.65),
+      hsl("--primary", 1),
+    ],
+    emptyCell: hsl("--muted", 0.2),
+    texture: hsl("--foreground", 0.03),
+    badgeBg: hsl("--background", 0.8),
+  };
+}
 
 function formatDuration(minutes: number | null): string {
   if (!minutes) return "";
@@ -72,38 +107,45 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
+  // Resolve the active theme's colors so the export matches the live UI.
+  const palette = readThemePalette();
+
   // Background
-  ctx.fillStyle = "#0b1a10";
+  ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, W, H);
 
   // Subtle grid texture (very faint)
-  ctx.strokeStyle = "#ffffff08";
+  ctx.strokeStyle = palette.texture;
   ctx.lineWidth = 1;
   for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
   for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
-  // Card rect
+  // Card rect — filled + a subtle border so it stays delineated even on
+  // light themes where the card color is close to the background.
   const CARD_PAD = 40;
-  ctx.fillStyle = "#102018";
   roundRect(ctx, CARD_PAD, CARD_PAD, W - CARD_PAD * 2, H - CARD_PAD * 2, 32);
+  ctx.fillStyle = palette.card;
   ctx.fill();
+  ctx.strokeStyle = palette.border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
   // "Book Tracker" brand
   ctx.font = "600 28px -apple-system, system-ui, sans-serif";
-  ctx.fillStyle = "#4eca78";
+  ctx.fillStyle = palette.primary;
   ctx.textAlign = "left";
   ctx.fillText("📚 Book Tracker", PAD, PAD + 52);
 
   // Month + Year — same monthLabel string the live header shows
   ctx.font = `700 64px -apple-system, system-ui, sans-serif`;
-  ctx.fillStyle = "#eaf5ed";
+  ctx.fillStyle = palette.foreground;
   ctx.textAlign = "center";
   ctx.fillText(monthLabel, W / 2, PAD + 136);
 
   // Day-of-week labels — same order as the live grid's WEEKDAY_LABELS
   const labelY = PAD + HEADER_H + 28;
   ctx.font = "600 24px -apple-system, system-ui, sans-serif";
-  ctx.fillStyle = "#6bbd8a";
+  ctx.fillStyle = palette.mutedForeground;
   ctx.textAlign = "center";
   for (let d = 0; d < 7; d++) {
     const x = PAD + d * (CELL_W + GAP) + CELL_W / 2;
@@ -121,14 +163,14 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
 
     if (cell.day === null) {
       // Empty leading/trailing cell
-      ctx.fillStyle = "#0d1f14";
+      ctx.fillStyle = palette.emptyCell;
       roundRect(ctx, x, y, CELL_W, CELL_H, 14);
       ctx.fill();
       continue;
     }
 
     // Cell background
-    ctx.fillStyle = CANVAS_BUCKET_FILL[cell.bucket];
+    ctx.fillStyle = palette.bucketFill[cell.bucket];
     roundRect(ctx, x, y, CELL_W, CELL_H, 14);
     ctx.fill();
 
@@ -160,9 +202,12 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
     }
 
     // Day number — small, top-left, matching the live cell's self-start
-    // placement instead of a large centered digit.
+    // placement instead of a large centered digit. Over a cover the dark
+    // scrim is theme-independent so white always reads; otherwise use the
+    // theme's foreground (and white on the strongest bucket for contrast
+    // against the near-solid primary fill).
     ctx.font = `700 22px -apple-system, system-ui, sans-serif`;
-    ctx.fillStyle = coverLoaded ? "#ffffff" : cell.bucket >= 2 ? "#ffffff" : "#a8c9b0";
+    ctx.fillStyle = coverLoaded || cell.bucket >= 4 ? "#ffffff" : palette.foreground;
     ctx.textAlign = "left";
     ctx.fillText(String(cell.day), x + 14, y + 28);
     ctx.textAlign = "center"; // restore default used elsewhere in this function
@@ -174,17 +219,17 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
       const by = y + CELL_H - badgeR - 6;
       ctx.beginPath();
       ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
-      ctx.fillStyle = "#0b1a10cc";
+      ctx.fillStyle = palette.badgeBg;
       ctx.fill();
       ctx.font = "700 18px -apple-system, system-ui, sans-serif";
-      ctx.fillStyle = "#eaf5ed";
+      ctx.fillStyle = palette.foreground;
       ctx.textAlign = "center";
       ctx.fillText(`+${cell.extraBookCount}`, bx, by + 6);
     } else if (!coverLoaded && cell.hasData) {
       // Activity dot only when there's no cover taking its place.
       ctx.beginPath();
       ctx.arc(x + CELL_W / 2, y + CELL_H - 16, 4, 0, Math.PI * 2);
-      ctx.fillStyle = cell.bucket >= 3 ? "#ffffff99" : "#4eca78";
+      ctx.fillStyle = palette.primary;
       ctx.fill();
     }
   }
@@ -192,7 +237,7 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
   // Stats footer — from the same summary the view model computes
   const statsY = gridY + gridH + 48;
   ctx.font = "500 26px -apple-system, system-ui, sans-serif";
-  ctx.fillStyle = "#a8c9b0";
+  ctx.fillStyle = palette.mutedForeground;
   ctx.textAlign = "center";
   const parts = [
     `${summary.daysRead} day${summary.daysRead === 1 ? "" : "s"} read`,
