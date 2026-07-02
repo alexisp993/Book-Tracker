@@ -11,10 +11,12 @@ const ROWS = 7; // days per week
 const DAYS = COLS * ROWS; // 91 days per window (plain mode)
 
 // Cover mode uses a shorter, wider-celled window so covers stay legible —
-// 8 weeks reads as a compact "preview," distinct from the full 13-week
+// 10 weeks reads as a compact "preview," distinct from the full 13-week
 // analytics view on /stats and /sessions.
-const COVER_COLS = 8;
-const COVER_DAYS = COVER_COLS * ROWS; // 56 days
+const COVER_COLS = 10;
+const COVER_DAYS = COVER_COLS * ROWS; // 70 days
+
+const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
 const SHORT_MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -157,21 +159,24 @@ export function ReadingHeatmap({
     return null;
   });
 
-  const cellSizeClass = showCovers ? "h-8 w-8" : "h-[11px] w-[11px]";
+  const cellSizeClass = showCovers
+    ? "h-9 w-9 sm:h-11 sm:w-11 lg:h-14 lg:w-14"
+    : "h-[11px] w-[11px]";
 
   const body = (
     <div className="space-y-3">
+      {/* Range label on the left, nav controls grouped together on the right */}
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => onOffsetChange(offset + 1)}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary"
-          aria-label="Earlier weeks"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
         <p className="text-sm font-medium">{rangeLabel}</p>
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onOffsetChange(offset + 1)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary"
+            aria-label="Earlier weeks"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
           {showTodayButton ? (
             <button
               type="button"
@@ -195,7 +200,24 @@ export function ReadingHeatmap({
       </div>
 
       {showCovers ? (
-        <div className="flex gap-[3px] overflow-x-auto">
+        // Fixed intrinsic width at each breakpoint (COVER_COLS is constant),
+        // and this mode is only ever used inside the Home card's wide
+        // flex-1 column — it never needs to scroll, so we center it instead
+        // of using overflow-x-auto. (justify-center + overflow-x-auto is a
+        // real cross-browser clipping bug when content overflows; dropping
+        // the scroll here avoids that combination entirely.)
+        <div className="flex w-full justify-center gap-[3px]">
+          {/* Weekday row labels */}
+          <div className="flex flex-col gap-[3px] pr-1 pt-[calc(0.75rem+3px)]">
+            {WEEKDAY_INITIALS.map((d, i) => (
+              <span
+                key={i}
+                className="flex h-9 w-3 items-center justify-center text-[9px] text-muted-foreground sm:h-11 lg:h-14"
+              >
+                {d}
+              </span>
+            ))}
+          </div>
           {columns.map((week, i) => (
             <div key={i} className="flex flex-col items-center gap-[3px]">
               <span className="h-3 text-[9px] font-medium text-muted-foreground">

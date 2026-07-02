@@ -66,8 +66,11 @@ export function ReadingCalendarCard() {
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:gap-5">
-        {/* Stat column — 2x2 grid on mobile/tablet, stacked column on desktop */}
-        <div className="grid grid-cols-2 gap-2.5 lg:w-40 lg:shrink-0 lg:grid-cols-1">
+        {/* Stat column — 2x2 grid on mobile/tablet, stacked column on desktop.
+            The lg: shell groups the 4 tiles into one visual module beside the
+            calendar panel, without touching the shared Stat component itself
+            (also used on /stats and /sessions). */}
+        <div className="grid grid-cols-2 gap-2.5 lg:w-40 lg:shrink-0 lg:grid-cols-1 lg:gap-3 lg:rounded-xl lg:bg-muted/20 lg:p-2">
           <Stat
             icon={<Flame className="h-4 w-4" />}
             label="Day streak"
@@ -111,36 +114,38 @@ export function ReadingCalendarCard() {
         </div>
       </div>
 
-      {/* Summary strip */}
-      <div className="grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-3">
-        {hasSessions && stats.topDay ? (
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-7 shrink-0 overflow-hidden rounded-md border bg-muted">
-              {stats.topDay.coverCandidates[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={stats.topDay.coverCandidates[0]}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : null}
+      {/* Summary strip — three distinct panels rather than plain text under a divider */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-muted/40 p-3">
+          {hasSessions && stats.topDay ? (
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-7 shrink-0 overflow-hidden rounded-md border bg-muted">
+                {stats.topDay.coverCandidates[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={stats.topDay.coverCandidates[0]}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">
+                  Most reading on {formatShortDate(stats.topDay.date)}
+                </p>
+                <p className="line-clamp-1 text-sm font-medium">{stats.topDay.bookTitle}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDuration(stats.topDay.minutes)}
+                  {stats.topDay.pagesRead > 0 ? ` · ${stats.topDay.pagesRead} pages` : ""}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">
-                Most reading on {formatShortDate(stats.topDay.date)}
-              </p>
-              <p className="line-clamp-1 text-sm font-medium">{stats.topDay.bookTitle}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDuration(stats.topDay.minutes)}
-                {stats.topDay.pagesRead > 0 ? ` · ${stats.topDay.pagesRead} pages` : ""}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No reading sessions yet</p>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground">No reading sessions yet</p>
+          )}
+        </div>
 
-        <div>
+        <div className="rounded-xl bg-muted/40 p-3">
           <p className="text-xs text-muted-foreground">Longest streak</p>
           <p className="text-sm font-medium">
             {stats.longestStreakDays} day{stats.longestStreakDays === 1 ? "" : "s"}
@@ -152,7 +157,7 @@ export function ReadingCalendarCard() {
           ) : null}
         </div>
 
-        <div>
+        <div className="rounded-xl bg-muted/40 p-3">
           <p className="text-xs text-muted-foreground">Total sessions</p>
           <p className="text-sm font-medium">{stats.sessionsInWindow} sessions</p>
           <p className="text-xs text-muted-foreground">Last 13 weeks</p>
