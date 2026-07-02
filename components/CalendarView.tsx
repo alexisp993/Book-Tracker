@@ -61,16 +61,20 @@ async function downloadCalendarImage(
 ) {
   const W = 1080;
   const PAD = 72;
-  const CELL = 116;
   const GAP = 10;
   const HEADER_H = 160;
   const LABEL_H = 48;
   const FOOTER_H = 100;
 
+  // Portrait cells (2:3), matching the live grid's aspect-[2/3] day cells —
+  // a square cell is what caused covers to look squashed/stretched.
+  const CELL_W = Math.floor((W - PAD * 2 - GAP * 6) / 7);
+  const CELL_H = Math.round(CELL_W * 1.5);
+
   // How many rows needed
   const totalCells = startDow + daysInMonth;
   const rows = Math.ceil(totalCells / 7);
-  const gridH = rows * CELL + (rows - 1) * GAP;
+  const gridH = rows * CELL_H + (rows - 1) * GAP;
   const H = HEADER_H + LABEL_H + gridH + FOOTER_H + PAD * 2;
 
   const canvas = document.createElement("canvas");
@@ -115,7 +119,7 @@ async function downloadCalendarImage(
   ctx.fillStyle = "#6bbd8a";
   ctx.textAlign = "center";
   for (let d = 0; d < 7; d++) {
-    const x = PAD + d * (CELL + GAP) + CELL / 2;
+    const x = PAD + d * (CELL_W + GAP) + CELL_W / 2;
     ctx.fillText(DAY_LABELS[d], x, labelY);
   }
 
@@ -125,13 +129,13 @@ async function downloadCalendarImage(
     const col = i % 7;
     const row = Math.floor(i / 7);
     const day = i - startDow + 1;
-    const x = PAD + col * (CELL + GAP);
-    const y = gridY + row * (CELL + GAP);
+    const x = PAD + col * (CELL_W + GAP);
+    const y = gridY + row * (CELL_H + GAP);
 
     if (i < startDow || day > daysInMonth) {
       // Empty cell
       ctx.fillStyle = "#0d1f14";
-      roundRect(ctx, x, y, CELL, CELL, 16);
+      roundRect(ctx, x, y, CELL_W, CELL_H, 14);
       ctx.fill();
       continue;
     }
@@ -142,7 +146,7 @@ async function downloadCalendarImage(
 
     // Cell background
     ctx.fillStyle = CANVAS_BUCKET_FILL[b];
-    roundRect(ctx, x, y, CELL, CELL, 16);
+    roundRect(ctx, x, y, CELL_W, CELL_H, 14);
     ctx.fill();
 
     // Draw the most-recently-read book's cover — same fallback-chain walk
@@ -155,16 +159,17 @@ async function downloadCalendarImage(
         const img = await loadImage(candidate);
         if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
         ctx.save();
-        roundRect(ctx, x, y, CELL, CELL, 16);
+        roundRect(ctx, x, y, CELL_W, CELL_H, 14);
         ctx.clip();
-        // Full opacity + top scrim, matching the live day-cell treatment —
-        // this is what makes the export actually look like the live grid.
-        ctx.drawImage(img, x, y, CELL, CELL);
-        const scrim = ctx.createLinearGradient(x, y, x, y + 36);
+        // Cropped-to-fill (matches CSS object-cover on the live grid),
+        // full opacity + top scrim — this is what makes the export
+        // actually look like the live grid instead of a stretched image.
+        drawCoverFit(ctx, img, x, y, CELL_W, CELL_H);
+        const scrim = ctx.createLinearGradient(x, y, x, y + 44);
         scrim.addColorStop(0, "rgba(0,0,0,0.6)");
         scrim.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = scrim;
-        ctx.fillRect(x, y, CELL, 36);
+        ctx.fillRect(x, y, CELL_W, 44);
         ctx.restore();
         coverLoaded = true;
         break;
@@ -173,28 +178,31 @@ async function downloadCalendarImage(
       }
     }
 
-    // Day number
-    ctx.font = `${b >= 3 || coverLoaded ? "700" : "500"} 30px -apple-system, system-ui, sans-serif`;
+    // Day number — small, top-left, matching the live cell's self-start
+    // placement instead of a large centered digit.
+    ctx.font = `700 22px -apple-system, system-ui, sans-serif`;
     ctx.fillStyle = coverLoaded ? "#ffffff" : b >= 2 ? "#ffffff" : "#a8c9b0";
-    ctx.textAlign = "center";
-    ctx.fillText(String(day), x + CELL / 2, y + CELL / 2 + 10);
+    ctx.textAlign = "left";
+    ctx.fillText(String(day), x + 14, y + 28);
+    ctx.textAlign = "center"; // restore default used elsewhere in this function
 
     // "+N" badge for extra books read that day
     if (data && data.extraBookCount > 0) {
       const badgeR = 18;
-      const bx = x + CELL - badgeR - 6;
-      const by = y + CELL - badgeR - 6;
+      const bx = x + CELL_W - badgeR - 6;
+      const by = y + CELL_H - badgeR - 6;
       ctx.beginPath();
       ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
       ctx.fillStyle = "#0b1a10cc";
       ctx.fill();
       ctx.font = "700 18px -apple-system, system-ui, sans-serif";
       ctx.fillStyle = "#eaf5ed";
+      ctx.textAlign = "center";
       ctx.fillText(`+${data.extraBookCount}`, bx, by + 6);
     } else if (!coverLoaded && data && data.sessions.length > 0) {
       // Activity dot only when there's no cover taking its place.
       ctx.beginPath();
-      ctx.arc(x + CELL / 2, y + CELL - 16, 4, 0, Math.PI * 2);
+      ctx.arc(x + CELL_W / 2, y + CELL_H - 16, 4, 0, Math.PI * 2);
       ctx.fillStyle = b >= 3 ? "#ffffff99" : "#4eca78";
       ctx.fill();
     }
@@ -221,6 +229,34 @@ async function downloadCalendarImage(
   a.download = `reading-calendar-${year}-${String(month).padStart(2, "0")}.png`;
   a.href = canvas.toDataURL("image/png");
   a.click();
+}
+
+// CSS object-cover equivalent: crops the wider or taller side of the source
+// image so it fills the destination rect without distorting its aspect
+// ratio, instead of ctx.drawImage's default stretch-to-fill.
+function drawCoverFit(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const imgRatio = img.width / img.height;
+  const destRatio = w / h;
+  let sx: number, sy: number, sw: number, sh: number;
+  if (imgRatio > destRatio) {
+    sh = img.height;
+    sw = sh * destRatio;
+    sx = (img.width - sw) / 2;
+    sy = 0;
+  } else {
+    sw = img.width;
+    sh = sw / destRatio;
+    sx = 0;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
