@@ -15,7 +15,7 @@ import { StreakBanner } from "@/components/StreakBanner";
 import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import { SessionSummaryStats } from "@/components/SessionSummaryStats";
 import { ReadingGoalCard } from "@/components/ReadingGoalCard";
-import { ReadingCalendarCard } from "@/components/ReadingCalendarCard";
+import { HomeReadingCalendarPreviewCard } from "@/components/HomeReadingCalendarPreviewCard";
 import { HomeCustomizer } from "@/components/HomeCustomizer";
 import { BookCover } from "@/components/BookCover";
 import { useCurrentUser, useBooks, useGroups, useHomeConfig } from "@/lib/queries";
@@ -211,7 +211,7 @@ export function HomeView() {
         ) : null;
 
       case "calendar":
-        return <ReadingCalendarCard />;
+        return <HomeReadingCalendarPreviewCard />;
 
       case "quickActions":
         return (
