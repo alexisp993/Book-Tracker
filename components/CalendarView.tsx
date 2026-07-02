@@ -5,23 +5,11 @@ import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { useCalendar } from "@/lib/queries";
 import { FallbackCoverImg, CellCover } from "@/components/FallbackCoverImg";
+import {
+  buildMonthCalendarViewModel,
+  type MonthCalendarViewModel,
+} from "@/lib/calendarViewModel";
 import type { CalendarDay } from "@/lib/api";
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-// Minutes -> intensity bucket 0-4
-function bucket(minutes: number): number {
-  if (minutes <= 0) return 0;
-  if (minutes <= 20) return 1;
-  if (minutes <= 45) return 2;
-  if (minutes <= 90) return 3;
-  return 4;
-}
 
 const BUCKET_BG = [
   "",
@@ -32,7 +20,11 @@ const BUCKET_BG = [
 ];
 
 // Hardcoded canvas colors — independent of CSS variables so the share card
-// always looks great regardless of the user's chosen theme.
+// always looks great regardless of the user's chosen theme (light/dark/
+// forest). This is the one deliberate export-only divergence from the live
+// grid's theme-driven BUCKET_BG classes; everything else (layout, day-cell
+// mapping, cover placement, summary values) comes from the same
+// MonthCalendarViewModel the live grid renders from.
 const CANVAS_BUCKET_FILL = [
   "#1a2e1e", // 0 — empty cell
   "#1e4d2b", // 1 — light
@@ -50,15 +42,15 @@ function formatDuration(minutes: number | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// Canvas-based social share card (1080×1080, no external dependencies)
+// Canvas-based social share card (1080×1080, no external dependencies).
+// Consumes the exact same MonthCalendarViewModel the live grid below
+// renders from — same cell-to-day mapping, same intensity buckets, same
+// cover-candidate resolution, same summary totals. No separate calculation
+// path exists here anymore.
 // ---------------------------------------------------------------------------
-async function downloadCalendarImage(
-  year: number,
-  month: number,
-  calData: CalendarDay[],
-  daysInMonth: number,
-  startDow: number,
-) {
+async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
+  const { monthLabel, weekdayLabels, cells, summary } = viewModel;
+
   const W = 1080;
   const PAD = 72;
   const GAP = 10;
@@ -66,14 +58,11 @@ async function downloadCalendarImage(
   const LABEL_H = 48;
   const FOOTER_H = 100;
 
-  // Portrait cells (2:3), matching the live grid's aspect-[2/3] day cells —
-  // a square cell is what caused covers to look squashed/stretched.
+  // Portrait cells (2:3), matching the live grid's aspect-[2/3] day cells.
   const CELL_W = Math.floor((W - PAD * 2 - GAP * 6) / 7);
   const CELL_H = Math.round(CELL_W * 1.5);
 
-  // How many rows needed
-  const totalCells = startDow + daysInMonth;
-  const rows = Math.ceil(totalCells / 7);
+  const rows = cells.length / 7;
   const gridH = rows * CELL_H + (rows - 1) * GAP;
   const H = HEADER_H + LABEL_H + gridH + FOOTER_H + PAD * 2;
 
@@ -82,8 +71,6 @@ async function downloadCalendarImage(
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-
-  const byDay = new Map(calData.map((d) => [d.date, d]));
 
   // Background
   ctx.fillStyle = "#0b1a10";
@@ -107,54 +94,49 @@ async function downloadCalendarImage(
   ctx.textAlign = "left";
   ctx.fillText("📚 Book Tracker", PAD, PAD + 52);
 
-  // Month + Year
+  // Month + Year — same monthLabel string the live header shows
   ctx.font = `700 64px -apple-system, system-ui, sans-serif`;
   ctx.fillStyle = "#eaf5ed";
   ctx.textAlign = "center";
-  ctx.fillText(`${MONTH_NAMES[month - 1]} ${year}`, W / 2, PAD + 136);
+  ctx.fillText(monthLabel, W / 2, PAD + 136);
 
-  // Day-of-week labels
+  // Day-of-week labels — same order as the live grid's WEEKDAY_LABELS
   const labelY = PAD + HEADER_H + 28;
   ctx.font = "600 24px -apple-system, system-ui, sans-serif";
   ctx.fillStyle = "#6bbd8a";
   ctx.textAlign = "center";
   for (let d = 0; d < 7; d++) {
     const x = PAD + d * (CELL_W + GAP) + CELL_W / 2;
-    ctx.fillText(DAY_LABELS[d], x, labelY);
+    ctx.fillText(weekdayLabels[d], x, labelY);
   }
 
-  // Calendar grid
+  // Calendar grid — iterates the same cells[] the live grid maps over
   const gridY = PAD + HEADER_H + LABEL_H;
-  for (let i = 0; i < rows * 7; i++) {
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
     const col = i % 7;
     const row = Math.floor(i / 7);
-    const day = i - startDow + 1;
     const x = PAD + col * (CELL_W + GAP);
     const y = gridY + row * (CELL_H + GAP);
 
-    if (i < startDow || day > daysInMonth) {
-      // Empty cell
+    if (cell.day === null) {
+      // Empty leading/trailing cell
       ctx.fillStyle = "#0d1f14";
       roundRect(ctx, x, y, CELL_W, CELL_H, 14);
       ctx.fill();
       continue;
     }
 
-    const key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const data = byDay.get(key);
-    const b = bucket(data?.totalMinutes ?? 0);
-
     // Cell background
-    ctx.fillStyle = CANVAS_BUCKET_FILL[b];
+    ctx.fillStyle = CANVAS_BUCKET_FILL[cell.bucket];
     roundRect(ctx, x, y, CELL_W, CELL_H, 14);
     ctx.fill();
 
     // Draw the most-recently-read book's cover — same fallback-chain walk
     // used live, so a missing/dead first candidate doesn't leave the cell
     // blank when a later candidate would have worked.
-    const candidates = data?.primary?.coverCandidates ?? [];
     let coverLoaded = false;
-    for (const candidate of candidates) {
+    for (const candidate of cell.coverCandidates) {
       try {
         const img = await loadImage(candidate);
         if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
@@ -162,8 +144,7 @@ async function downloadCalendarImage(
         roundRect(ctx, x, y, CELL_W, CELL_H, 14);
         ctx.clip();
         // Cropped-to-fill (matches CSS object-cover on the live grid),
-        // full opacity + top scrim — this is what makes the export
-        // actually look like the live grid instead of a stretched image.
+        // full opacity + top scrim.
         drawCoverFit(ctx, img, x, y, CELL_W, CELL_H);
         const scrim = ctx.createLinearGradient(x, y, x, y + 44);
         scrim.addColorStop(0, "rgba(0,0,0,0.6)");
@@ -181,13 +162,13 @@ async function downloadCalendarImage(
     // Day number — small, top-left, matching the live cell's self-start
     // placement instead of a large centered digit.
     ctx.font = `700 22px -apple-system, system-ui, sans-serif`;
-    ctx.fillStyle = coverLoaded ? "#ffffff" : b >= 2 ? "#ffffff" : "#a8c9b0";
+    ctx.fillStyle = coverLoaded ? "#ffffff" : cell.bucket >= 2 ? "#ffffff" : "#a8c9b0";
     ctx.textAlign = "left";
-    ctx.fillText(String(day), x + 14, y + 28);
+    ctx.fillText(String(cell.day), x + 14, y + 28);
     ctx.textAlign = "center"; // restore default used elsewhere in this function
 
     // "+N" badge for extra books read that day
-    if (data && data.extraBookCount > 0) {
+    if (cell.extraBookCount > 0) {
       const badgeR = 18;
       const bx = x + CELL_W - badgeR - 6;
       const by = y + CELL_H - badgeR - 6;
@@ -198,35 +179,32 @@ async function downloadCalendarImage(
       ctx.font = "700 18px -apple-system, system-ui, sans-serif";
       ctx.fillStyle = "#eaf5ed";
       ctx.textAlign = "center";
-      ctx.fillText(`+${data.extraBookCount}`, bx, by + 6);
-    } else if (!coverLoaded && data && data.sessions.length > 0) {
+      ctx.fillText(`+${cell.extraBookCount}`, bx, by + 6);
+    } else if (!coverLoaded && cell.hasData) {
       // Activity dot only when there's no cover taking its place.
       ctx.beginPath();
       ctx.arc(x + CELL_W / 2, y + CELL_H - 16, 4, 0, Math.PI * 2);
-      ctx.fillStyle = b >= 3 ? "#ffffff99" : "#4eca78";
+      ctx.fillStyle = cell.bucket >= 3 ? "#ffffff99" : "#4eca78";
       ctx.fill();
     }
   }
 
-  // Stats footer
-  const totalDays = calData.length;
-  const totalMinutes = calData.reduce((s, d) => s + d.totalMinutes, 0);
-  const totalPages = calData.reduce((s, d) => s + d.totalPages, 0);
-
+  // Stats footer — from the same summary the view model computes
   const statsY = gridY + gridH + 48;
   ctx.font = "500 26px -apple-system, system-ui, sans-serif";
   ctx.fillStyle = "#a8c9b0";
   ctx.textAlign = "center";
   const parts = [
-    `${totalDays} day${totalDays === 1 ? "" : "s"} read`,
-    totalMinutes > 0 ? formatDuration(totalMinutes) : null,
-    totalPages > 0 ? `${totalPages} pages` : null,
+    `${summary.daysRead} day${summary.daysRead === 1 ? "" : "s"} read`,
+    summary.totalMinutes > 0 ? formatDuration(summary.totalMinutes) : null,
+    summary.totalPages > 0 ? `${summary.totalPages} pages` : null,
   ].filter(Boolean);
   ctx.fillText(parts.join("  ·  "), W / 2, statsY);
 
   // Download
+  const yearMonth = cells.find((c) => c.dateKey)?.dateKey?.slice(0, 7) ?? "";
   const a = document.createElement("a");
-  a.download = `reading-calendar-${year}-${String(month).padStart(2, "0")}.png`;
+  a.download = `reading-calendar-${yearMonth}.png`;
   a.href = canvas.toDataURL("image/png");
   a.click();
 }
@@ -302,7 +280,14 @@ export function CalendarView() {
 
   const { data: calData = [], isLoading } = useCalendar(year, month);
 
-  const byDay = new Map(calData.map((d) => [d.date, d]));
+  // Single source of truth for this month's grid — the live JSX below and
+  // downloadCalendarImage() both render from this same view model, so they
+  // can never disagree on day placement, cover choice, or summary totals.
+  const viewModel = React.useMemo(
+    () => buildMonthCalendarViewModel(year, month, calData, today),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [year, month, calData],
+  );
 
   function prevMonth() {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
@@ -319,26 +304,14 @@ export function CalendarView() {
       (year === today.getFullYear() && month < today.getMonth() + 1);
   }
 
-  const firstOfMonth = new Date(year, month - 1, 1);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const startDow = firstOfMonth.getDay();
-
-  const cells: (number | null)[] = [
-    ...Array.from({ length: startDow }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  function dateKey(day: number): string {
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  }
-
-  const selectedDay = selectedDate ? byDay.get(selectedDate) : null;
+  const selectedDay = selectedDate
+    ? viewModel.cells.find((c) => c.dateKey === selectedDate)?.data ?? null
+    : null;
 
   async function handleDownload() {
     setDownloading(true);
     try {
-      await downloadCalendarImage(year, month, calData, daysInMonth, startDow);
+      await downloadCalendarImage(viewModel);
     } finally {
       setDownloading(false);
     }
@@ -357,9 +330,7 @@ export function CalendarView() {
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <p className="font-display text-base font-semibold">
-          {MONTH_NAMES[month - 1]} {year}
-        </p>
+        <p className="font-display text-base font-semibold">{viewModel.monthLabel}</p>
 
         <div className="flex items-center gap-1">
           <button
@@ -390,7 +361,7 @@ export function CalendarView() {
 
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 text-center">
-        {DAY_LABELS.map((d) => (
+        {viewModel.weekdayLabels.map((d) => (
           <p key={d} className="pb-1 text-[11px] font-medium text-muted-foreground">
             {d}
           </p>
@@ -402,47 +373,40 @@ export function CalendarView() {
         <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
       ) : (
         <div className="grid grid-cols-7 gap-1">
-          {cells.map((day, i) => {
-            if (day === null) {
+          {viewModel.cells.map((cell, i) => {
+            if (cell.day === null || cell.dateKey === null) {
               return <div key={`empty-${i}`} />;
             }
-            const key = dateKey(day);
-            const data = byDay.get(key);
-            const isToday =
-              day === today.getDate() &&
-              month === today.getMonth() + 1 &&
-              year === today.getFullYear();
-            const isSelected = selectedDate === key;
-            const b = bucket(data?.totalMinutes ?? 0);
-            const hasData = (data?.sessions.length ?? 0) > 0;
-
-            const candidates = data?.primary?.coverCandidates ?? [];
-            const hasCover = candidates.length > 0;
+            const isSelected = selectedDate === cell.dateKey;
 
             return (
               <button
-                key={key}
+                key={cell.dateKey}
                 type="button"
-                onClick={() => setSelectedDate(isSelected ? null : key)}
+                onClick={() => setSelectedDate(isSelected ? null : cell.dateKey)}
                 className={[
                   "relative flex aspect-[2/3] w-full flex-col rounded-xl border transition-all",
                   isSelected
                     ? "border-primary ring-2 ring-primary"
-                    : hasData
+                    : cell.hasData
                     ? "border-border/40 hover:border-border"
                     : "border-transparent hover:border-border/40",
-                  !hasCover && b > 0 ? BUCKET_BG[b] : !hasData ? "bg-muted/20" : "",
+                  !cell.hasCover && cell.bucket > 0
+                    ? BUCKET_BG[cell.bucket]
+                    : !cell.hasData
+                    ? "bg-muted/20"
+                    : "",
                 ].join(" ")}
-                aria-label={`${key}${data ? `, ${data.totalMinutes} min` : ""}`}
+                aria-label={`${cell.dateKey}${cell.data ? `, ${cell.data.totalMinutes} min` : ""}`}
               >
                 {/* Cover image — clipped by <span>, not by the button, to avoid
                     the iOS Safari overflow:hidden+border-radius button bug.
                     Walks the full ISBN fallback chain, so a book with no
                     stored Book.coverUrl still shows art here. */}
-                {hasCover ? <CellCover candidates={candidates} /> : null}
+                {cell.hasCover ? <CellCover candidates={cell.coverCandidates} /> : null}
 
                 {/* Gradient so the day number stays readable over any cover */}
-                {hasCover ? (
+                {cell.hasCover ? (
                   <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 rounded-t-xl bg-gradient-to-b from-black/60 to-transparent" />
                 ) : null}
 
@@ -450,18 +414,22 @@ export function CalendarView() {
                 <span
                   className={[
                     "relative z-20 px-1 pt-0.5 text-[10px] font-semibold leading-none self-start",
-                    hasCover ? "text-white drop-shadow-sm" : isToday ? "text-primary" : "text-foreground",
+                    cell.hasCover
+                      ? "text-white drop-shadow-sm"
+                      : cell.isToday
+                      ? "text-primary"
+                      : "text-foreground",
                   ].join(" ")}
                 >
-                  {day}
+                  {cell.day}
                 </span>
 
                 {/* "+N" badge when multiple books were read that day */}
-                {data && data.extraBookCount > 0 ? (
+                {cell.extraBookCount > 0 ? (
                   <span className="absolute bottom-1 right-1 z-20 rounded-full bg-black/60 px-1 text-[9px] font-semibold leading-[14px] text-white">
-                    +{data.extraBookCount}
+                    +{cell.extraBookCount}
                   </span>
-                ) : !hasCover && hasData ? (
+                ) : !cell.hasCover && cell.hasData ? (
                   <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
                 ) : null}
               </button>
