@@ -55,9 +55,9 @@ function StatPill({
   tint: keyof typeof TINTS;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5 rounded-xl border bg-muted/40 px-3 py-2.5">
+    <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-muted/40 px-3.5 py-3">
       <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
       >
         {icon}
       </span>
@@ -65,6 +65,30 @@ function StatPill({
         <p className="truncate text-base font-semibold leading-tight">{value}</p>
         <p className="truncate text-[11px] leading-tight text-muted-foreground">{label}</p>
       </div>
+    </div>
+  );
+}
+
+// Small header row shared by the three bottom summary cards, so "Most
+// reading" / "Longest streak" / "Total sessions" all establish the same
+// icon + label baseline before their value/subtext content diverges.
+function SummaryLabel({
+  icon,
+  label,
+  tint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tint: keyof typeof TINTS;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
+      >
+        {icon}
+      </span>
+      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -130,10 +154,11 @@ export function HomeReadingCalendarPreviewCard() {
         </Link>
       </div>
 
-      {/* Main body — stats left, heatmap preview right on desktop; stacked on mobile/tablet */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
-        {/* Stat chips — always a compact 2x2 grid */}
-        <div className="grid grid-cols-2 gap-2 lg:w-[220px] lg:shrink-0">
+      {/* Main body — 30/70 stats-to-heatmap split on desktop; stacked on mobile/tablet */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_7fr] lg:items-stretch lg:gap-5">
+        {/* Stat chips — always a compact 2x2 grid, vertically centered against
+            the (usually taller) heatmap panel so the two columns feel paired. */}
+        <div className="grid grid-cols-2 gap-2.5 lg:content-center">
           <StatPill
             icon={<Flame className="h-4 w-4" />}
             value={stats.streakDays}
@@ -160,13 +185,19 @@ export function HomeReadingCalendarPreviewCard() {
           />
         </div>
 
-        {/* Heatmap preview — a pure navigation surface, not interactive per-cell;
-            the whole block links through to the full calendar page. */}
-        <Link href="/calendar" className="block flex-1 space-y-2 transition-opacity hover:opacity-80">
+        {/* Heatmap preview — the card's visual centerpiece. A bounded panel
+            (not bare floating squares) so it reads as an intentional block
+            even where the grid itself doesn't reach the panel's edges. A
+            pure navigation surface, not interactive per-cell — the whole
+            block links through to the full calendar page. */}
+        <Link
+          href="/calendar"
+          className="block rounded-xl border bg-muted/20 p-3 transition-colors hover:border-primary/30 hover:bg-muted/30 lg:p-4"
+        >
           <p className="text-xs font-medium text-muted-foreground">Last 12 weeks</p>
-          <div className="flex flex-wrap gap-[3px]">
+          <div className="mt-2.5 flex flex-wrap gap-1">
             {columns.map((week, i) => (
-              <div key={i} className="flex flex-col gap-[3px]">
+              <div key={i} className="flex flex-col gap-1">
                 {week.map((day) => {
                   const isToday = day.date === todayKey;
                   return (
@@ -174,7 +205,7 @@ export function HomeReadingCalendarPreviewCard() {
                       key={day.date}
                       title={`${day.date} · ${day.totalMinutes} min`}
                       className={[
-                        "h-[18px] w-[18px] shrink-0 rounded-[4px]",
+                        "h-5 w-5 shrink-0 rounded-[5px] lg:h-6 lg:w-6",
                         BUCKET_CLASS[bucket(day.totalMinutes)],
                         isToday ? "ring-1 ring-primary" : "",
                       ].join(" ")}
@@ -184,7 +215,7 @@ export function HomeReadingCalendarPreviewCard() {
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
             {LEGEND.map((l) => (
               <span key={l.label} className="inline-flex items-center gap-1">
                 <span className={`h-2 w-2 rounded-sm ${l.cls}`} />
@@ -195,12 +226,15 @@ export function HomeReadingCalendarPreviewCard() {
         </Link>
       </div>
 
-      {/* Summary strip */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl bg-muted/40 p-3">
+      {/* Summary strip — three equal-height cards sharing the same
+          label -> value -> subtext rhythm, so they read as one cohesive
+          footer rather than three unrelated boxes. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-stretch">
+        <div className="flex flex-col gap-2 rounded-xl bg-muted/40 p-3.5">
+          <SummaryLabel icon={<BookOpen className="h-3.5 w-3.5" />} label="Most reading" tint="rose" />
           {hasSessions && topDay ? (
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
+              <div className="flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
                 {topDay.coverCandidates.length > 0 ? (
                   <FallbackCoverImg
                     candidates={topDay.coverCandidates}
@@ -211,13 +245,10 @@ export function HomeReadingCalendarPreviewCard() {
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">
-                  Most reading on {formatShortDate(topDay.date)}
-                </p>
-                <p className="line-clamp-1 text-sm font-medium">{topDay.bookTitle}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDuration(topDay.minutes)}
-                  {topDay.pagesRead > 0 ? ` · ${topDay.pagesRead} pages` : ""}
+                <p className="line-clamp-1 text-sm font-medium leading-tight">{topDay.bookTitle}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatShortDate(topDay.date)} · {formatDuration(topDay.minutes)}
+                  {topDay.pagesRead > 0 ? ` · ${topDay.pagesRead}p` : ""}
                 </p>
               </div>
             </div>
@@ -228,21 +259,19 @@ export function HomeReadingCalendarPreviewCard() {
           )}
         </div>
 
-        <div className="rounded-xl bg-muted/40 p-3">
-          <p className="text-xs text-muted-foreground">Longest streak</p>
-          <p className="text-sm font-medium">
+        <div className="flex flex-col gap-2 rounded-xl bg-muted/40 p-3.5">
+          <SummaryLabel icon={<Flame className="h-3.5 w-3.5" />} label="Longest streak" tint="amber" />
+          <p className="text-sm font-semibold leading-tight">
             {stats.longestStreakDays} day{stats.longestStreakDays === 1 ? "" : "s"}
           </p>
-          {stats.longestStreakRange ? (
-            <p className="text-xs text-muted-foreground">
-              {formatStreakRange(stats.longestStreakRange)}
-            </p>
-          ) : null}
+          <p className="text-xs text-muted-foreground">
+            {stats.longestStreakRange ? formatStreakRange(stats.longestStreakRange) : "—"}
+          </p>
         </div>
 
-        <div className="rounded-xl bg-muted/40 p-3">
-          <p className="text-xs text-muted-foreground">Total sessions</p>
-          <p className="text-sm font-medium">{stats.sessionsInWindow} sessions</p>
+        <div className="flex flex-col gap-2 rounded-xl bg-muted/40 p-3.5">
+          <SummaryLabel icon={<NotebookText className="h-3.5 w-3.5" />} label="Total sessions" tint="blue" />
+          <p className="text-sm font-semibold leading-tight">{stats.sessionsInWindow} sessions</p>
           <p className="text-xs text-muted-foreground">Last 13 weeks</p>
         </div>
       </div>
