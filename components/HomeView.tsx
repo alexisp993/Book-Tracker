@@ -211,12 +211,7 @@ export function HomeView() {
         ) : null;
 
       case "calendar":
-        return (
-          <section className="space-y-3">
-            <SectionHeader title="Reading Calendar" seeAllHref="/calendar" />
-            <ReadingCalendarCard />
-          </section>
-        );
+        return <ReadingCalendarCard />;
 
       case "quickActions":
         return (

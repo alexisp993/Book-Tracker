@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Clock, Flame, NotebookText } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, BookOpen, CalendarDays, Clock, Flame, NotebookText } from "lucide-react";
 import { Stat } from "@/components/StatsView";
 import { ReadingHeatmap } from "@/components/ReadingHeatmap";
 import { useSessionStats } from "@/lib/queries";
@@ -28,56 +29,91 @@ function formatStreakRange(range: { start: string; end: string }): string {
   return `${formatShortDate(range.start)} – ${formatShortDate(range.end)}`;
 }
 
-// Home tab preview card — stat tiles + the shared 13-week heatmap
-// (components/ReadingHeatmap.tsx) + a "most reading on X" footer. Everything
-// here is powered by real data: useSessionStats() (window aggregates,
-// streak, topDay) and useCalendarRange() inside ReadingHeatmap — both backed
-// by the same normalized calendar-data builder the full calendar/export use.
+// Home tab preview card — a compact, always-visible dashboard module: its
+// own header ("Reading Calendar" + "See all"), a stat column (2x2 on mobile,
+// stacked on desktop), the shared cover-capable heatmap
+// (components/ReadingHeatmap.tsx, showCovers/showTodayButton on), and a
+// "most reading on X" summary strip. Everything is powered by real data —
+// useSessionStats() (window aggregates, streak, topDay) and
+// useCalendarRange() inside ReadingHeatmap — both backed by the same
+// normalized calendar-data builder the full calendar page and its export
+// use, so nothing here is a separate/fake calendar implementation.
 export function ReadingCalendarCard() {
   const [offset, setOffset] = React.useState(0);
   const { data: stats } = useSessionStats();
 
-  if (!stats || stats.sessionCount === 0) return null;
+  // Unlike most Home sections, this card always renders (even with zero
+  // sessions) so a brand-new library still sees a polished, friendly module
+  // rather than a gap in the layout.
+  if (!stats) return null;
+
+  const hasSessions = stats.sessionCount > 0;
 
   return (
-    <div className="space-y-5 rounded-2xl border bg-card p-4 sm:p-5">
-      {/* Stat tiles */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat
-          icon={<Flame className="h-4 w-4" />}
-          label="Day streak"
-          tint="amber"
-          value={stats.streakDays}
-          caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
-        />
-        <Stat
-          icon={<BookOpen className="h-4 w-4" />}
-          label="Days read"
-          tint="emerald"
-          value={stats.daysReadInWindow}
-          caption="Last 13 weeks"
-        />
-        <Stat
-          icon={<Clock className="h-4 w-4" />}
-          label="Time read"
-          tint="teal"
-          value={formatDuration(stats.minutesInWindow)}
-          caption="Last 13 weeks"
-        />
-        <Stat
-          icon={<NotebookText className="h-4 w-4" />}
-          label="Pages read"
-          tint="violet"
-          value={stats.pagesInWindow.toLocaleString()}
-          caption="Last 13 weeks"
-        />
+    <div className="space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
+      {/* Header — owned by the card itself, not the outer Home section */}
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">
+          <CalendarDays className="h-4 w-4 text-primary" />
+          Reading Calendar
+        </h2>
+        <Link
+          href="/calendar"
+          className="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          See all <ArrowRight className="h-3 w-3" />
+        </Link>
       </div>
 
-      <ReadingHeatmap offset={offset} onOffsetChange={setOffset} showCard={false} />
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-5">
+        {/* Stat column — 2x2 grid on mobile/tablet, stacked column on desktop */}
+        <div className="grid grid-cols-2 gap-2.5 lg:w-40 lg:shrink-0 lg:grid-cols-1">
+          <Stat
+            icon={<Flame className="h-4 w-4" />}
+            label="Day streak"
+            tint="amber"
+            value={stats.streakDays}
+            caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
+          />
+          <Stat
+            icon={<BookOpen className="h-4 w-4" />}
+            label="Days read"
+            tint="emerald"
+            value={stats.daysReadInWindow}
+            caption="Last 13 weeks"
+          />
+          <Stat
+            icon={<Clock className="h-4 w-4" />}
+            label="Time read"
+            tint="teal"
+            value={formatDuration(stats.minutesInWindow)}
+            caption="Last 13 weeks"
+          />
+          <Stat
+            icon={<NotebookText className="h-4 w-4" />}
+            label="Pages read"
+            tint="violet"
+            value={stats.pagesInWindow.toLocaleString()}
+            caption="Last 13 weeks"
+          />
+        </div>
 
-      {/* Footer stats */}
+        {/* Calendar preview — same shared data/heatmap as /stats and /sessions,
+            just with covers + a Today button turned on. */}
+        <div className="min-w-0 flex-1">
+          <ReadingHeatmap
+            offset={offset}
+            onOffsetChange={setOffset}
+            showCard={false}
+            showCovers
+            showTodayButton
+          />
+        </div>
+      </div>
+
+      {/* Summary strip */}
       <div className="grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-3">
-        {stats.topDay ? (
+        {hasSessions && stats.topDay ? (
           <div className="flex items-center gap-3">
             <div className="h-10 w-7 shrink-0 overflow-hidden rounded-md border bg-muted">
               {stats.topDay.coverCandidates[0] ? (
@@ -100,7 +136,9 @@ export function ReadingCalendarCard() {
               </p>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <p className="text-sm text-muted-foreground">No reading sessions yet</p>
+        )}
 
         <div>
           <p className="text-xs text-muted-foreground">Longest streak</p>

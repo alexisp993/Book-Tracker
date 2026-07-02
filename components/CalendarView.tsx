@@ -4,6 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { useCalendar } from "@/lib/queries";
+import { FallbackCoverImg, CellCover } from "@/components/FallbackCoverImg";
 import type { CalendarDay } from "@/lib/api";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -39,52 +40,6 @@ const CANVAS_BUCKET_FILL = [
   "#3aaa60", // 3 — strong
   "#4eca78", // 4 — full
 ];
-
-// Walks a cover-candidate fallback chain (stored URL -> Open Library ->
-// Amazon), advancing on load error and skipping tiny placeholder images —
-// the exact pattern BookCover.tsx already uses for library covers, now
-// shared with the calendar so a null/broken Book.coverUrl doesn't leave a
-// day cell blank when an ISBN-based cover would have worked.
-function FallbackCoverImg({
-  candidates,
-  alt,
-  className,
-}: {
-  candidates: string[];
-  alt: string;
-  className?: string;
-}) {
-  const [idx, setIdx] = React.useState(0);
-  const src = candidates[idx];
-  if (!src) return null;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      key={src}
-      src={src}
-      alt={alt}
-      className={className ?? "h-full w-full object-cover"}
-      onError={() => setIdx((i) => i + 1)}
-      onLoad={(e) => {
-        if (e.currentTarget.naturalWidth <= 2) setIdx((i) => i + 1);
-      }}
-    />
-  );
-}
-
-// The <span> wrapper (not the <button>) owns overflow:hidden + border-radius,
-// avoiding a long-standing iOS Safari bug where absolutely-positioned
-// children aren't clipped by their button parent.
-function CellCover({ candidates }: { candidates: string[] }) {
-  return (
-    <span
-      className="absolute inset-0 block overflow-hidden rounded-xl"
-      style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
-    >
-      <FallbackCoverImg candidates={candidates} alt="" />
-    </span>
-  );
-}
 
 function formatDuration(minutes: number | null): string {
   if (!minutes) return "";
