@@ -442,17 +442,24 @@ export async function deleteGoal(id: string): Promise<void> {
 
 // --- Calendar ---
 
+export interface CalendarSessionEntry {
+  bookId: string;
+  bookTitle: string;
+  coverCandidates: string[];
+  minutes: number | null;
+  pagesRead: number | null;
+  mood: string | null;
+  note: string | null;
+  sessionDate: string;
+}
+
 export interface CalendarDay {
   date: string;
   totalMinutes: number;
   totalPages: number;
-  sessions: {
-    bookTitle: string;
-    coverUrl: string | null;
-    minutes: number | null;
-    pagesRead: number | null;
-    mood: string | null;
-  }[];
+  sessions: CalendarSessionEntry[];
+  primary: CalendarSessionEntry | null;
+  extraBookCount: number;
 }
 
 export async function getCalendar(
@@ -461,6 +468,17 @@ export async function getCalendar(
 ): Promise<CalendarDay[]> {
   const res = await fetch(
     `/api/calendar?year=${year}&month=${month}`,
+    { cache: "no-store" },
+  );
+  return handle<CalendarDay[]>(res);
+}
+
+export async function getCalendarRange(
+  rangeDays: number,
+  offset: number,
+): Promise<CalendarDay[]> {
+  const res = await fetch(
+    `/api/calendar?rangeDays=${rangeDays}&offset=${offset}`,
     { cache: "no-store" },
   );
   return handle<CalendarDay[]>(res);

@@ -1,38 +1,37 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user";
-import { prisma } from "@/lib/prisma";
+import { getCalendarDays } from "@/lib/calendarData";
 
 export const dynamic = "force-dynamic";
-
-export interface CalendarDay {
-  date: string; // YYYY-MM-DD
-  totalMinutes: number;
-  totalPages: number;
-  sessions: {
-    bookTitle: string;
-    coverUrl: string | null;
-    minutes: number | null;
-    pagesRead: number | null;
-    mood: string | null;
-  }[];
-}
-
-function isoLocalDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Google Books API returns http:// URLs; force https:// to avoid mixed-content
-// blocking on the deployed site.
-function toHttps(url: string | null): string | null {
-  if (!url) return null;
-  return url.replace(/^http:\/\//i, "https://");
-}
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   const { searchParams } = new URL(request.url);
 
   const now = new Date();
+  const rangeDaysParam = searchParams.get("rangeDays");
+
+  if (rangeDaysParam) {
+    // Windowed range mode — powers the Home tab's rolling heatmap preview.
+    // offset=0 is the window ending today; offset=1 is the window before
+    // that, etc. Shares the exact same builder as the month view below.
+    const rangeDays = parseInt(rangeDaysParam, 10);
+    const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+    if (isNaN(rangeDays) || rangeDays < 1 || isNaN(offset) || offset < 0) {
+      return NextResponse.json({ error: "Invalid rangeDays or offset" }, { status: 400 });
+    }
+
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endExclusive = new Date(startOfToday);
+    endExclusive.setDate(endExclusive.getDate() + 1 - offset * rangeDays);
+    const start = new Date(endExclusive);
+    start.setDate(start.getDate() - rangeDays);
+
+    const days = await getCalendarDays(user.id, start, endExclusive);
+    return NextResponse.json(days);
+  }
+
+  // Month mode — full calendar page + export.
   const year = parseInt(searchParams.get("year") ?? String(now.getFullYear()), 10);
   const month = parseInt(searchParams.get("month") ?? String(now.getMonth() + 1), 10);
 
@@ -44,46 +43,6 @@ export async function GET(request: Request) {
   const start = new Date(Date.UTC(year, month - 1, 1));
   const end = new Date(Date.UTC(year, month, 1));
 
-  const sessions = await prisma.readingSession.findMany({
-    where: {
-      userId: user.id,
-      date: { gte: start, lt: end },
-    },
-    include: {
-      userBook: {
-        select: {
-          book: { select: { title: true, coverUrl: true } },
-        },
-      },
-    },
-    orderBy: { date: "asc" },
-  });
-
-  // Group sessions by local day (using UTC date key — sessions are stored as
-  // full DateTime so we use the UTC date as the key).
-  const byDay = new Map<string, CalendarDay>();
-
-  for (const s of sessions) {
-    const key = isoLocalDate(s.date);
-    if (!byDay.has(key)) {
-      byDay.set(key, {
-        date: key,
-        totalMinutes: 0,
-        totalPages: 0,
-        sessions: [],
-      });
-    }
-    const day = byDay.get(key)!;
-    day.totalMinutes += s.minutes ?? 0;
-    day.totalPages += s.pagesRead ?? 0;
-    day.sessions.push({
-      bookTitle: s.userBook.book.title,
-      coverUrl: toHttps(s.userBook.book.coverUrl),
-      minutes: s.minutes,
-      pagesRead: s.pagesRead,
-      mood: s.mood,
-    });
-  }
-
-  return NextResponse.json(Array.from(byDay.values()));
+  const days = await getCalendarDays(user.id, start, end);
+  return NextResponse.json(days);
 }

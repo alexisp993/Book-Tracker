@@ -1,16 +1,18 @@
 "use client";
 
 import type * as React from "react";
+import { useState } from "react";
 import { BookCheck, BookOpen, Clock, Flame, Heart, Star, Timer, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSessionStats, useStats } from "@/lib/queries";
 import { STATUS_DOT } from "@/lib/constants";
 import { EmptyState } from "@/components/EmptyState";
-import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { ReadingHeatmap } from "@/components/ReadingHeatmap";
 
 export function StatsView() {
   const { data: stats, isLoading: loading } = useStats();
   const { data: sessionStats } = useSessionStats();
+  const [calendarOffset, setCalendarOffset] = useState(0);
 
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -85,7 +87,7 @@ export function StatsView() {
       ) : null}
 
       {/* Reading calendar (last 13 weeks, GitHub-style heatmap) */}
-      <ReadingCalendar />
+      <ReadingHeatmap offset={calendarOffset} onOffsetChange={setCalendarOffset} />
 
       {/* Books finished per month */}
       <Card title="Books finished" subtitle="Last 12 months">
@@ -216,11 +218,13 @@ export function Stat({
   label,
   value,
   tint = "blue",
+  caption,
 }: {
   icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
   tint?: keyof typeof TINTS;
+  caption?: React.ReactNode;
 }) {
   return (
     <div className="rounded-2xl border bg-card p-4">
@@ -234,6 +238,9 @@ export function Stat({
       </span>
       <p className="mt-2.5 text-xs text-muted-foreground">{label}</p>
       <p className="mt-0.5 font-display text-2xl font-semibold">{value}</p>
+      {caption ? (
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{caption}</p>
+      ) : null}
     </div>
   );
 }

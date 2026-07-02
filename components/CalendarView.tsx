@@ -40,25 +40,48 @@ const CANVAS_BUCKET_FILL = [
   "#4eca78", // 4 — full
 ];
 
-// Separate component so each cell's error state is isolated — if one URL
-// fails the rest aren't affected. The <span> wrapper (not the <button>) owns
-// overflow:hidden + border-radius, avoiding a long-standing iOS Safari bug
-// where absolutely-positioned children aren't clipped by their button parent.
-function CellCover({ src }: { src: string }) {
-  const [failed, setFailed] = React.useState(false);
-  if (failed) return null;
+// Walks a cover-candidate fallback chain (stored URL -> Open Library ->
+// Amazon), advancing on load error and skipping tiny placeholder images —
+// the exact pattern BookCover.tsx already uses for library covers, now
+// shared with the calendar so a null/broken Book.coverUrl doesn't leave a
+// day cell blank when an ISBN-based cover would have worked.
+function FallbackCoverImg({
+  candidates,
+  alt,
+  className,
+}: {
+  candidates: string[];
+  alt: string;
+  className?: string;
+}) {
+  const [idx, setIdx] = React.useState(0);
+  const src = candidates[idx];
+  if (!src) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      key={src}
+      src={src}
+      alt={alt}
+      className={className ?? "h-full w-full object-cover"}
+      onError={() => setIdx((i) => i + 1)}
+      onLoad={(e) => {
+        if (e.currentTarget.naturalWidth <= 2) setIdx((i) => i + 1);
+      }}
+    />
+  );
+}
+
+// The <span> wrapper (not the <button>) owns overflow:hidden + border-radius,
+// avoiding a long-standing iOS Safari bug where absolutely-positioned
+// children aren't clipped by their button parent.
+function CellCover({ candidates }: { candidates: string[] }) {
   return (
     <span
       className="absolute inset-0 block overflow-hidden rounded-xl"
       style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt=""
-        className="h-full w-full object-cover"
-        onError={() => setFailed(true)}
-      />
+      <FallbackCoverImg candidates={candidates} alt="" />
     </span>
   );
 }
@@ -167,32 +190,54 @@ async function downloadCalendarImage(
     roundRect(ctx, x, y, CELL, CELL, 16);
     ctx.fill();
 
-    // If a book cover exists, draw it clipped to the cell
-    const cover = data?.sessions.find((s) => s.coverUrl)?.coverUrl;
-    if (cover && data && data.sessions.length > 0) {
+    // Draw the most-recently-read book's cover — same fallback-chain walk
+    // used live, so a missing/dead first candidate doesn't leave the cell
+    // blank when a later candidate would have worked.
+    const candidates = data?.primary?.coverCandidates ?? [];
+    let coverLoaded = false;
+    for (const candidate of candidates) {
       try {
-        const img = await loadImage(cover);
+        const img = await loadImage(candidate);
+        if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
         ctx.save();
         roundRect(ctx, x, y, CELL, CELL, 16);
         ctx.clip();
-        // Draw cover at 30% opacity
-        ctx.globalAlpha = 0.3;
+        // Full opacity + top scrim, matching the live day-cell treatment —
+        // this is what makes the export actually look like the live grid.
         ctx.drawImage(img, x, y, CELL, CELL);
-        ctx.globalAlpha = 1;
+        const scrim = ctx.createLinearGradient(x, y, x, y + 36);
+        scrim.addColorStop(0, "rgba(0,0,0,0.6)");
+        scrim.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = scrim;
+        ctx.fillRect(x, y, CELL, 36);
         ctx.restore();
+        coverLoaded = true;
+        break;
       } catch {
-        // Cover failed to load — just use the heatmap color
+        // Try the next candidate.
       }
     }
 
     // Day number
-    ctx.font = `${b >= 3 ? "700" : "500"} 30px -apple-system, system-ui, sans-serif`;
-    ctx.fillStyle = b >= 2 ? "#ffffff" : "#a8c9b0";
+    ctx.font = `${b >= 3 || coverLoaded ? "700" : "500"} 30px -apple-system, system-ui, sans-serif`;
+    ctx.fillStyle = coverLoaded ? "#ffffff" : b >= 2 ? "#ffffff" : "#a8c9b0";
     ctx.textAlign = "center";
     ctx.fillText(String(day), x + CELL / 2, y + CELL / 2 + 10);
 
-    // Activity dot for days with sessions
-    if (data && data.sessions.length > 0) {
+    // "+N" badge for extra books read that day
+    if (data && data.extraBookCount > 0) {
+      const badgeR = 18;
+      const bx = x + CELL - badgeR - 6;
+      const by = y + CELL - badgeR - 6;
+      ctx.beginPath();
+      ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
+      ctx.fillStyle = "#0b1a10cc";
+      ctx.fill();
+      ctx.font = "700 18px -apple-system, system-ui, sans-serif";
+      ctx.fillStyle = "#eaf5ed";
+      ctx.fillText(`+${data.extraBookCount}`, bx, by + 6);
+    } else if (!coverLoaded && data && data.sessions.length > 0) {
+      // Activity dot only when there's no cover taking its place.
       ctx.beginPath();
       ctx.arc(x + CELL / 2, y + CELL - 16, 4, 0, Math.PI * 2);
       ctx.fillStyle = b >= 3 ? "#ffffff99" : "#4eca78";
@@ -380,7 +425,8 @@ export function CalendarView() {
             const b = bucket(data?.totalMinutes ?? 0);
             const hasData = (data?.sessions.length ?? 0) > 0;
 
-            const cover = data?.sessions.find((s) => s.coverUrl)?.coverUrl;
+            const candidates = data?.primary?.coverCandidates ?? [];
+            const hasCover = candidates.length > 0;
 
             return (
               <button
@@ -394,16 +440,18 @@ export function CalendarView() {
                     : hasData
                     ? "border-border/40 hover:border-border"
                     : "border-transparent hover:border-border/40",
-                  !cover && b > 0 ? BUCKET_BG[b] : !hasData ? "bg-muted/20" : "",
+                  !hasCover && b > 0 ? BUCKET_BG[b] : !hasData ? "bg-muted/20" : "",
                 ].join(" ")}
                 aria-label={`${key}${data ? `, ${data.totalMinutes} min` : ""}`}
               >
                 {/* Cover image — clipped by <span>, not by the button, to avoid
-                    the iOS Safari overflow:hidden+border-radius button bug */}
-                {cover ? <CellCover src={cover} /> : null}
+                    the iOS Safari overflow:hidden+border-radius button bug.
+                    Walks the full ISBN fallback chain, so a book with no
+                    stored Book.coverUrl still shows art here. */}
+                {hasCover ? <CellCover candidates={candidates} /> : null}
 
                 {/* Gradient so the day number stays readable over any cover */}
-                {cover ? (
+                {hasCover ? (
                   <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 rounded-t-xl bg-gradient-to-b from-black/60 to-transparent" />
                 ) : null}
 
@@ -411,14 +459,18 @@ export function CalendarView() {
                 <span
                   className={[
                     "relative z-20 px-1 pt-0.5 text-[10px] font-semibold leading-none self-start",
-                    cover ? "text-white drop-shadow-sm" : isToday ? "text-primary" : "text-foreground",
+                    hasCover ? "text-white drop-shadow-sm" : isToday ? "text-primary" : "text-foreground",
                   ].join(" ")}
                 >
                   {day}
                 </span>
 
-                {/* Activity dot for days with data but no cover */}
-                {!cover && hasData ? (
+                {/* "+N" badge when multiple books were read that day */}
+                {data && data.extraBookCount > 0 ? (
+                  <span className="absolute bottom-1 right-1 z-20 rounded-full bg-black/60 px-1 text-[9px] font-semibold leading-[14px] text-white">
+                    +{data.extraBookCount}
+                  </span>
+                ) : !hasCover && hasData ? (
                   <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
                 ) : null}
               </button>
@@ -453,18 +505,9 @@ function DayDetail({ day }: { day: CalendarDay }) {
       <div className="space-y-2">
         {day.sessions.map((s, i) => (
           <div key={i} className="flex items-start gap-3">
-            {s.coverUrl ? (
-              <div className="h-12 w-8 shrink-0 overflow-hidden rounded-lg border bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={s.coverUrl}
-                  alt={s.bookTitle}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="h-12 w-8 shrink-0 rounded-lg border bg-muted" />
-            )}
+            <div className="h-12 w-8 shrink-0 overflow-hidden rounded-lg border bg-muted">
+              <FallbackCoverImg candidates={s.coverCandidates} alt={s.bookTitle} />
+            </div>
             <div className="min-w-0 flex-1">
               <p className="line-clamp-1 text-sm font-medium">{s.bookTitle}</p>
               <p className="text-xs text-muted-foreground">
@@ -478,6 +521,11 @@ function DayDetail({ day }: { day: CalendarDay }) {
                   .filter(Boolean)
                   .join(" · ")}
               </p>
+              {s.note ? (
+                <p className="mt-1 line-clamp-2 text-xs italic text-muted-foreground/80">
+                  “{s.note}”
+                </p>
+              ) : null}
             </div>
           </div>
         ))}

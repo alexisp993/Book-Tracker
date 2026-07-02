@@ -96,10 +96,24 @@ export interface SessionStats {
   // Longest consecutive run of days-with-a-session found anywhere in the
   // fetched history (not necessarily the streak that's still active today).
   longestStreakDays: number;
+  // Local-date range (YYYY-MM-DD) of the longest streak's run, if any.
+  longestStreakRange: { start: string; end: string } | null;
   pagesToday: number;
   // Sparse — only days with at least one session, local-date YYYY-MM-DD keys.
   last90Days: { date: string; minutes: number }[];
   moodBreakdown: { mood: ReadingMood; count: number }[];
+  // Aggregates over the same trailing 90-day window as last90Days.
+  daysReadInWindow: number;
+  minutesInWindow: number;
+  pagesInWindow: number;
+  sessionsInWindow: number;
+  topDay: {
+    date: string;
+    minutes: number;
+    pagesRead: number;
+    bookTitle: string;
+    coverCandidates: string[];
+  } | null;
 }
 
 export interface LibraryStats {

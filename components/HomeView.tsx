@@ -15,7 +15,7 @@ import { StreakBanner } from "@/components/StreakBanner";
 import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import { SessionSummaryStats } from "@/components/SessionSummaryStats";
 import { ReadingGoalCard } from "@/components/ReadingGoalCard";
-import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { ReadingCalendarCard } from "@/components/ReadingCalendarCard";
 import { HomeCustomizer } from "@/components/HomeCustomizer";
 import { BookCover } from "@/components/BookCover";
 import { useCurrentUser, useBooks, useGroups, useHomeConfig } from "@/lib/queries";
@@ -214,7 +214,7 @@ export function HomeView() {
         return (
           <section className="space-y-3">
             <SectionHeader title="Reading Calendar" seeAllHref="/calendar" />
-            <ReadingCalendar />
+            <ReadingCalendarCard />
           </section>
         );
 

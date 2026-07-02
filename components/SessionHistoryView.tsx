@@ -8,7 +8,7 @@ import { Input, Select } from "@/components/ui/input";
 import { SessionForm } from "@/components/SessionForm";
 import { EmptyState } from "@/components/EmptyState";
 import { SessionSummaryStats } from "@/components/SessionSummaryStats";
-import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { ReadingHeatmap } from "@/components/ReadingHeatmap";
 import { MoodBreakdown } from "@/components/MoodBreakdown";
 import { ApiRequestError } from "@/lib/api";
 import {
@@ -27,6 +27,7 @@ export function SessionHistoryView() {
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [calendarOffset, setCalendarOffset] = React.useState(0);
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ReadingSessionDTO | null>(null);
@@ -93,7 +94,7 @@ export function SessionHistoryView() {
   return (
     <div className="space-y-6">
       <SessionSummaryStats />
-      <ReadingCalendar />
+      <ReadingHeatmap offset={calendarOffset} onOffsetChange={setCalendarOffset} />
       <MoodBreakdown />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

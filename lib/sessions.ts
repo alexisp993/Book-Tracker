@@ -321,10 +321,21 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     // Streak (and the reading-calendar heatmap below) only need which days
     // had a session and how many minutes, not every row — 800 rows
     // comfortably covers years of daily reading on the existing
-    // [userId, date] index, far short of a full-table scan.
+    // [userId, date] index, far short of a full-table scan. Also carries
+    // pagesRead + book info so the same rows can power the windowed
+    // aggregates and "top day" lookup below without a second query.
     prisma.readingSession.findMany({
       where: baseWhere,
-      select: { date: true, minutes: true },
+      select: {
+        date: true,
+        minutes: true,
+        pagesRead: true,
+        userBook: {
+          select: {
+            book: { select: { title: true, coverUrl: true, isbn13: true, isbn10: true } },
+          },
+        },
+      },
       orderBy: { date: "desc" },
       take: 800,
     }),
@@ -369,30 +380,93 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     new Set(recentDates.map((s) => isoLocalDate(s.date))),
   ).sort();
   let longestStreakDays = 0;
+  let longestStreakRange: { start: string; end: string } | null = null;
   let currentRun = 0;
+  let runStart = "";
   let prevDay: Date | null = null;
   for (const key of sortedDays) {
     const day = new Date(key);
     if (prevDay) {
       const diffDays = Math.round((day.getTime() - prevDay.getTime()) / 86400000);
-      currentRun = diffDays === 1 ? currentRun + 1 : 1;
+      if (diffDays === 1) {
+        currentRun++;
+      } else {
+        currentRun = 1;
+        runStart = key;
+      }
     } else {
       currentRun = 1;
+      runStart = key;
     }
-    longestStreakDays = Math.max(longestStreakDays, currentRun);
+    if (currentRun > longestStreakDays) {
+      longestStreakDays = currentRun;
+      longestStreakRange = { start: runStart, end: key };
+    }
     prevDay = day;
   }
-  longestStreakDays = Math.max(longestStreakDays, streakDays);
+  if (streakDays > longestStreakDays) {
+    longestStreakDays = streakDays;
+    const end = isoLocalDate(startOfToday);
+    const startDate = new Date(startOfToday);
+    startDate.setDate(startDate.getDate() - (streakDays - 1));
+    longestStreakRange = { start: isoLocalDate(startDate), end };
+  }
 
   const ninetyDaysAgo = new Date(startOfToday);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
   const minutesByDay = new Map<string, number>();
+  let daysReadInWindow = 0;
+  let minutesInWindow = 0;
+  let pagesInWindow = 0;
+  let sessionsInWindow = 0;
+  let topDay: SessionStats["topDay"] = null;
+  const topDayMinutesByKey = new Map<string, number>();
+  const topDayEntryByKey = new Map<
+    string,
+    { minutes: number; pagesRead: number; bookTitle: string; coverCandidates: string[] }
+  >();
+
   for (const s of recentDates) {
     if (s.date < ninetyDaysAgo) continue;
     const key = isoLocalDate(s.date);
+    if (!minutesByDay.has(key)) daysReadInWindow++;
     minutesByDay.set(key, (minutesByDay.get(key) ?? 0) + (s.minutes ?? 0));
+    minutesInWindow += s.minutes ?? 0;
+    pagesInWindow += s.pagesRead ?? 0;
+    sessionsInWindow++;
+
+    // Track the dominant (largest single) session per day so we can surface
+    // "most reading on X" without a second query.
+    const dayTotal = (topDayMinutesByKey.get(key) ?? 0) + (s.minutes ?? 0);
+    topDayMinutesByKey.set(key, dayTotal);
+    const existingTop = topDayEntryByKey.get(key);
+    if (!existingTop || (s.minutes ?? 0) > existingTop.minutes) {
+      topDayEntryByKey.set(key, {
+        minutes: s.minutes ?? 0,
+        pagesRead: s.pagesRead ?? 0,
+        bookTitle: s.userBook.book.title,
+        coverCandidates: coverCandidates({
+          stored: s.userBook.book.coverUrl,
+          isbn13: s.userBook.book.isbn13,
+          isbn10: s.userBook.book.isbn10,
+        }),
+      });
+    }
   }
   const last90Days = Array.from(minutesByDay, ([date, minutes]) => ({ date, minutes }));
+
+  let topDayKey: string | null = null;
+  let topDayTotal = 0;
+  for (const [key, total] of topDayMinutesByKey) {
+    if (total > topDayTotal) {
+      topDayTotal = total;
+      topDayKey = key;
+    }
+  }
+  if (topDayKey) {
+    const { minutes: _dominantSessionMinutes, ...entry } = topDayEntryByKey.get(topDayKey)!;
+    topDay = { date: topDayKey, minutes: topDayTotal, ...entry };
+  }
 
   const moodBreakdown = moodGroups
     .filter((g) => g.mood !== null)
@@ -410,8 +484,14 @@ export async function getSessionStats(userId: string): Promise<SessionStats> {
     hoursThisMonth: Math.round(((month._sum.minutes ?? 0) / 60) * 10) / 10,
     streakDays,
     longestStreakDays,
+    longestStreakRange,
     pagesToday: today._sum.pagesRead ?? 0,
     last90Days,
     moodBreakdown,
+    daysReadInWindow,
+    minutesInWindow,
+    pagesInWindow,
+    sessionsInWindow,
+    topDay,
   };
 }

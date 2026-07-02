@@ -53,6 +53,13 @@ export function isbn13To10(rawIsbn13: string): string | null {
   return core + (check === 10 ? "X" : String(check));
 }
 
+// Some providers (Google Books) return http:// URLs; force https:// so they
+// aren't blocked as mixed content on a deployed HTTPS site.
+function toHttps(url: string | null | undefined): string | null | undefined {
+  if (!url) return url;
+  return url.replace(/^http:\/\//i, "https://");
+}
+
 // Build the ordered list of cover-image candidates for a book, best first.
 // The UI tries each in turn, falling through on load error OR tiny placeholder.
 export function coverCandidates(opts: {
@@ -70,7 +77,7 @@ export function coverCandidates(opts: {
     (opts.isbn10 ? normalizeIsbn(opts.isbn10) : null) ??
     (isbn13 ? isbn13To10(isbn13) : null);
 
-  push(opts.stored);
+  push(toHttps(opts.stored));
   if (isbn13) push(coverUrlForIsbn(isbn13));
   else if (isbn10) push(coverUrlForIsbn(isbn10));
   if (isbn10) push(amazonCoverForIsbn10(isbn10));

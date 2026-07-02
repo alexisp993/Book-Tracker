@@ -487,6 +487,14 @@ export function useCalendar(year: number, month: number) {
   });
 }
 
+export function useCalendarRange(offset: number, rangeDays = 91) {
+  return useQuery({
+    queryKey: ["calendar-range", rangeDays, offset],
+    queryFn: () => api.getCalendarRange(rangeDays, offset),
+    staleTime: 60_000,
+  });
+}
+
 // --- Suggestions ---
 
 export function useSuggestions() {
