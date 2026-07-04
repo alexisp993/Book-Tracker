@@ -188,13 +188,19 @@ export function HomeReadingCalendarPreviewCard() {
     columns.push(col);
   }
 
-  // Month label per column — printed only when the month changes.
-  let lastMonth = -1;
+  // Month label per column — label the FIRST column that contains any day of a
+  // not-yet-seen month (scanning all 7 cells, not just the Monday), so a month
+  // whose 1st falls mid-week — including the current/rightmost month showing
+  // only its last few days — still gets exactly one label, aligned to its
+  // first visible week column.
+  const seenMonths = new Set<number>();
   const monthLabels = columns.map((col) => {
-    const [, m] = col[0].date.split("-").map(Number);
-    if (m - 1 !== lastMonth) {
-      lastMonth = m - 1;
-      return SHORT_MONTHS[m - 1].toUpperCase();
+    for (const cell of col) {
+      const m = Number(cell.date.split("-")[1]) - 1; // 0-based month
+      if (!seenMonths.has(m)) {
+        seenMonths.add(m);
+        return SHORT_MONTHS[m].toUpperCase();
+      }
     }
     return null;
   });
@@ -300,43 +306,48 @@ export function HomeReadingCalendarPreviewCard() {
             </div>
           </div>
 
-          {/* Grid: weekday-label column + 13 week columns with month labels above */}
+          {/* Grid: fixed weekday-label column + 13 fluid week columns (each
+              flex-1) so the grid fills the panel width instead of sitting tiny
+              in the top-left. Month labels sit above the columns. */}
           <div className="mt-4 flex gap-[3px]">
-            {/* Weekday labels (Monday-first) */}
-            <div className="flex flex-col gap-[3px] pr-1">
+            {/* Weekday labels (Monday-first) — rows flex-1 to match the cell
+                heights via the row's items-stretch. */}
+            <div className="flex w-4 shrink-0 flex-col gap-[3px] pr-1">
               <div className="h-3" /> {/* spacer aligning with the month-label row */}
               {WEEKDAY_INITIALS.map((d, i) => (
                 <span
                   key={i}
-                  className="flex h-[18px] items-center text-[9px] leading-none text-muted-foreground"
+                  className="flex flex-1 items-center text-[9px] leading-none text-muted-foreground"
                 >
                   {d}
                 </span>
               ))}
             </div>
 
-            {columns.map((col, ci) => (
-              <div key={ci} className="flex flex-col gap-[3px]">
-                <span className="h-3 text-[9px] font-medium leading-none text-muted-foreground">
-                  {monthLabels[ci] ?? ""}
-                </span>
-                {col.map((cell) => {
-                  const isToday = cell.date === todayKey;
-                  const minutes = cell.data?.totalMinutes ?? 0;
-                  return (
-                    <div
-                      key={cell.date}
-                      title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
-                      className={[
-                        "h-[18px] w-[18px] shrink-0 rounded-[5px]",
-                        cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
-                        isToday ? "ring-1 ring-primary" : "",
-                      ].join(" ")}
-                    />
-                  );
-                })}
-              </div>
-            ))}
+            <div className="flex flex-1 gap-[3px]">
+              {columns.map((col, ci) => (
+                <div key={ci} className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                  <span className="h-3 text-[9px] font-medium leading-none text-muted-foreground">
+                    {monthLabels[ci] ?? ""}
+                  </span>
+                  {col.map((cell) => {
+                    const isToday = cell.date === todayKey;
+                    const minutes = cell.data?.totalMinutes ?? 0;
+                    return (
+                      <div
+                        key={cell.date}
+                        title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
+                        className={[
+                          "aspect-square w-full rounded-[5px]",
+                          cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
+                          isToday ? "ring-1 ring-primary" : "",
+                        ].join(" ")}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Legend */}
