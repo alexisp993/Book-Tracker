@@ -2,9 +2,8 @@ import type * as React from "react";
 import type { LucideIcon } from "lucide-react";
 
 // Shared empty-state pattern (icon, headline, subtext, optional primary
-// action) — currently adopted by the Library page; other screens
-// (Sessions, Shelves, Collections, Stats) each still inline their own
-// border-dashed markup and will switch to this in their own later phases.
+// action) — used by Library, Notes, Sessions, Book detail, and the feedback
+// screens so every empty view has the same calm, intentional treatment.
 export function EmptyState({
   icon: Icon,
   title,
@@ -17,15 +16,17 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary">
-        <Icon className="h-7 w-7 text-muted-foreground/60" />
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-16 text-center">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary ring-4 ring-secondary/40">
+        <Icon className="h-6 w-6 text-muted-foreground/70" strokeWidth={1.6} />
       </span>
-      <div>
+      <div className="max-w-sm">
         <p className="font-display text-lg font-semibold">{title}</p>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       </div>
-      {action}
+      {action ? <div className="mt-1">{action}</div> : null}
     </div>
   );
 }

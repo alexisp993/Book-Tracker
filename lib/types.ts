@@ -71,7 +71,10 @@ export interface ReadingSessionDTO {
   userBookId: string;
   bookId: string;
   title: string;
+  author: string | null; // primary author, for reading-mode display
   coverUrl: string | null;
+  pageCount: number | null;
+  currentPage: number; // the book's current page at read time
   date: string; // ISO — also the start time for an active session
   minutes: number | null; // null while the timer is running
   pagesRead: number | null;

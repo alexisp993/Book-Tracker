@@ -1,23 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Pause, Play, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BookOpen, Play } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { ApiRequestError } from "@/lib/api";
 import {
   useActiveSession,
   useBooks,
   useStartSession,
-  useStopSession,
 } from "@/lib/queries";
-import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS, STATUS_LABELS } from "@/lib/constants";
-import type { ReadingMood } from "@/lib/constants";
+import { STATUS_LABELS } from "@/lib/constants";
+import {
+  READING_MODE_OPEN_EVENT,
+  ReadingMode,
+  getActiveElapsedMs,
+} from "@/components/ReadingMode";
 
-function elapsedLabel(startIso: string, nowMs: number): string {
-  const start = new Date(startIso).getTime();
-  const totalSec = Math.max(0, Math.floor((nowMs - start) / 1000));
+function clockLabel(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
@@ -26,7 +26,9 @@ function elapsedLabel(startIso: string, nowMs: number): string {
 }
 
 // Floating reading-timer widget, mounted once in AppShell so it survives
-// route navigation (a timer shouldn't reset just because the user switches tabs).
+// route navigation (a timer shouldn't reset just because the user switches
+// tabs). The pill is only an entry point / collapsed indicator — the actual
+// session UI is the full-screen ReadingMode overlay.
 //
 // IMPORTANT: the 1-second elapsed-time tick below is plain local state
 // (`now`) re-rendering a clock from data already in memory — it must NOT
@@ -38,14 +40,10 @@ export function ReadingTimer() {
   const [now, setNow] = React.useState(Date.now());
 
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const [stopOpen, setStopOpen] = React.useState(false);
-  const [endPage, setEndPage] = React.useState("");
-  const [mood, setMood] = React.useState("");
-  const [note, setNote] = React.useState("");
+  const [modeOpen, setModeOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const startMutation = useStartSession();
-  const stopMutation = useStopSession();
 
   // Each status is its own query (cacheable and shared with LibraryView when
   // filters match) — three explicit calls, not a `.map()` over a status list,
@@ -80,12 +78,29 @@ export function ReadingTimer() {
     return () => clearInterval(t);
   }, [active]);
 
+  // A book page's "Start reading session" CTA (or any other launcher) can
+  // request the full-screen mode; if the session hasn't landed in the cache
+  // yet the flag stays set and the mode opens as soon as it does.
+  const [wantOpen, setWantOpen] = React.useState(false);
+  React.useEffect(() => {
+    const onOpen = () => setWantOpen(true);
+    window.addEventListener(READING_MODE_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(READING_MODE_OPEN_EVENT, onOpen);
+  }, []);
+  React.useEffect(() => {
+    if (wantOpen && active) {
+      setModeOpen(true);
+      setWantOpen(false);
+    }
+  }, [wantOpen, active]);
+
   async function handleStart(userBookId: string) {
     setError(null);
     try {
       await startMutation.mutateAsync(userBookId);
       setNow(Date.now());
       setPickerOpen(false);
+      setModeOpen(true);
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Couldn't start the timer.",
@@ -93,50 +108,32 @@ export function ReadingTimer() {
     }
   }
 
-  function openStop() {
-    setEndPage("");
-    setMood("");
-    setNote("");
-    setError(null);
-    setStopOpen(true);
-  }
-
-  async function handleStop(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    try {
-      await stopMutation.mutateAsync({
-        endPage: endPage ? Number(endPage) : undefined,
-        mood: (mood as ReadingMood) || undefined,
-        note: note.trim() || undefined,
-      });
-      setStopOpen(false);
-    } catch (err) {
-      setError(
-        err instanceof ApiRequestError ? err.message : "Couldn't stop the timer.",
-      );
-    }
-  }
-
   if (loadingActive) return null;
 
   const starting = startMutation.isPending;
-  const stopping = stopMutation.isPending;
+  const activeClock = active
+    ? getActiveElapsedMs(active.id, active.date, now)
+    : null;
 
   return (
     <>
       {active ? (
         <button
           type="button"
-          onClick={openStop}
+          onClick={() => setModeOpen(true)}
+          title="Open reading mode"
           className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-foreground px-4 py-3 text-background shadow-lg transition-transform hover:scale-105 sm:bottom-6"
         >
-          <Pause className="h-4 w-4" />
+          {activeClock?.paused ? (
+            <Play className="h-4 w-4" />
+          ) : (
+            <BookOpen className="h-4 w-4" />
+          )}
           <span className="line-clamp-1 max-w-[140px] text-sm font-medium">
             {active.title}
           </span>
           <span className="font-mono text-sm tabular-nums">
-            {elapsedLabel(active.date, now)}
+            {activeClock?.paused ? "Paused" : clockLabel(activeClock?.elapsedMs ?? 0)}
           </span>
         </button>
       ) : (
@@ -205,64 +202,13 @@ export function ReadingTimer() {
         </div>
       </Dialog>
 
-      <Dialog
-        open={stopOpen}
-        onClose={() => setStopOpen(false)}
-        title="Finish session"
-        description={active ? `${active.title} · ${elapsedLabel(active.date, now)}` : undefined}
-      >
-        <form onSubmit={handleStop} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="end-page">Page you reached</Label>
-            <Input
-              id="end-page"
-              type="number"
-              min={0}
-              value={endPage}
-              onChange={(e) => setEndPage(e.target.value)}
-              placeholder="e.g. 124"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="session-mood">How did it feel?</Label>
-            <Select
-              id="session-mood"
-              value={mood}
-              onChange={(e) => setMood(e.target.value)}
-            >
-              <option value="">Skip</option>
-              {READING_MOODS.map((m) => (
-                <option key={m} value={m}>
-                  {MOOD_EMOJI[m]} {MOOD_LABELS[m]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="session-note">Notes / thoughts (optional)</Label>
-            <Textarea
-              id="session-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-            />
-          </div>
-          {error ? (
-            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setStopOpen(false)}>
-              <X className="h-4 w-4" /> Cancel
-            </Button>
-            <Button type="submit" disabled={stopping}>
-              {stopping ? "Saving…" : "Save session"}
-            </Button>
-          </div>
-        </form>
-      </Dialog>
+      {active ? (
+        <ReadingMode
+          session={active}
+          open={modeOpen}
+          onClose={() => setModeOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

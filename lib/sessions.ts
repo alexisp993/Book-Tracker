@@ -21,7 +21,20 @@ const sessionInclude = {
       id: true,
       bookId: true,
       currentPage: true,
-      book: { select: { title: true, coverUrl: true, isbn13: true, isbn10: true } },
+      book: {
+        select: {
+          title: true,
+          coverUrl: true,
+          isbn13: true,
+          isbn10: true,
+          pageCount: true,
+          authors: {
+            orderBy: { order: "asc" },
+            take: 1,
+            select: { author: { select: { name: true } } },
+          },
+        },
+      },
     },
   },
 } satisfies Prisma.ReadingSessionInclude;
@@ -41,7 +54,10 @@ function serializeSession(s: SessionWithBook): ReadingSessionDTO {
     userBookId: s.userBookId,
     bookId: s.userBook.bookId,
     title: s.userBook.book.title,
+    author: s.userBook.book.authors[0]?.author.name ?? null,
     coverUrl: cover ?? null,
+    pageCount: s.userBook.book.pageCount,
+    currentPage: s.userBook.currentPage,
     date: s.date.toISOString(),
     minutes: s.minutes,
     pagesRead: s.pagesRead,
@@ -249,9 +265,15 @@ export async function stopSession(
     throw new SessionError("This session has already been stopped.", 409);
   }
 
-  const minutes = Math.max(
+  // Wall-clock elapsed time is the ceiling; a client-reported duration
+  // (reading mode subtracting paused time) may only reduce it.
+  const wallClockMinutes = Math.max(
     1,
     Math.round((Date.now() - existing.date.getTime()) / 60000),
+  );
+  const minutes = Math.max(
+    1,
+    Math.min(input.minutes ?? wallClockMinutes, wallClockMinutes),
   );
   const endPage = input.endPage ?? undefined;
   const pagesRead =

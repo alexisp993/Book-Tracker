@@ -2,25 +2,12 @@
 
 import * as React from "react";
 import { Leaf, Moon, Sun } from "lucide-react";
+import { useTheme, type Theme } from "@/lib/theme";
 
-export type Theme = "light" | "dark" | "forest";
-
-export function applyTheme(theme: Theme) {
-  const el = document.documentElement;
-  el.classList.toggle("dark", theme === "dark");
-  el.classList.toggle("forest", theme === "forest");
-  localStorage.setItem("bt_theme", theme);
-}
-
-function readCurrentTheme(): Theme {
-  try {
-    const stored = localStorage.getItem("bt_theme") as Theme | null;
-    if (stored === "dark" || stored === "forest") return stored;
-    return "light";
-  } catch {
-    return "light";
-  }
-}
+// Compat re-exports: theme logic now lives in lib/theme.ts (single source of
+// truth shared with the Profile appearance picker).
+export { applyTheme } from "@/lib/theme";
+export type { Theme } from "@/lib/theme";
 
 const CYCLE: Theme[] = ["light", "dark", "forest"];
 
@@ -36,20 +23,15 @@ const LABEL: Record<Theme, string> = {
   forest: "Switch to light mode",
 };
 
-// Cycles through Light → Dark → Forest → Light.
-// Initial theme is read from localStorage (set by the blocking script in
-// layout.tsx), so the icon matches instantly with no flash.
+// Cycles through Light → Dark → Forest → Light. The current theme comes from
+// useTheme() (backed by the <html> classes set pre-paint in layout.tsx), so
+// the icon always matches the applied theme — including the OS fallback —
+// and stays in sync when the theme is changed from the Profile picker.
 export function ThemeToggle() {
-  const [theme, setTheme] = React.useState<Theme>("light");
-
-  React.useEffect(() => {
-    setTheme(readCurrentTheme());
-  }, []);
+  const { theme, setTheme } = useTheme();
 
   function cycle() {
-    const next = CYCLE[(CYCLE.indexOf(theme) + 1) % CYCLE.length];
-    applyTheme(next);
-    setTheme(next);
+    setTheme(CYCLE[(CYCLE.indexOf(theme) + 1) % CYCLE.length]);
   }
 
   return (

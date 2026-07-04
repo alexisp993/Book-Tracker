@@ -21,11 +21,14 @@ import {
 } from "@/components/BookForm";
 import { ApiRequestError } from "@/lib/api";
 import {
+  useActiveSession,
   useBook,
+  useStartSession,
   useUpdateBook,
   useSessions,
   useDeleteBook,
 } from "@/lib/queries";
+import { requestReadingModeOpen } from "@/components/ReadingMode";
 import { NotesView } from "@/components/NotesView";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/utils";
@@ -37,8 +40,31 @@ export function BookDetailView({ id }: { id: string }) {
   const [tab, setTab] = React.useState<Tab>("info");
   const [formOpen, setFormOpen] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [sessionError, setSessionError] = React.useState<string | null>(null);
   const updateMutation = useUpdateBook();
   const deleteMutation = useDeleteBook();
+  const { data: activeSession } = useActiveSession();
+  const startSession = useStartSession();
+
+  // Entry point only — the timer UI itself is the full-screen ReadingMode
+  // overlay (mounted globally in AppShell via ReadingTimer).
+  async function handleStartReading() {
+    setSessionError(null);
+    if (activeSession) {
+      requestReadingModeOpen();
+      return;
+    }
+    try {
+      await startSession.mutateAsync(id);
+      requestReadingModeOpen();
+    } catch (err) {
+      setSessionError(
+        err instanceof ApiRequestError
+          ? err.message
+          : "Couldn't start the session.",
+      );
+    }
+  }
 
   async function handleSubmit(values: BookFormValues) {
     if (!book) return;
@@ -146,6 +172,31 @@ export function BookDetailView({ id }: { id: string }) {
               <p className="mt-1 text-xs text-muted-foreground">
                 {book.currentPage}/{book.pageCount} pages · {progress}%
               </p>
+            </div>
+          ) : null}
+
+          {/* Reading session entry point (opens the full-screen reading mode) */}
+          {book.status !== "READ" || activeSession ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleStartReading}
+                disabled={startSession.isPending}
+                variant={activeSession ? "outline" : "default"}
+              >
+                <Timer className="h-4 w-4" />
+                {startSession.isPending
+                  ? "Starting…"
+                  : activeSession
+                    ? activeSession.userBookId === book.id
+                      ? "Continue reading session"
+                      : "Open current session"
+                    : "Start reading session"}
+              </Button>
+              {sessionError ? (
+                <p className="mt-2 text-xs text-destructive">{sessionError}</p>
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -64,7 +64,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+    // suppressHydrationWarning is required: THEME_INIT_SCRIPT mutates the
+    // <html> class list before React hydrates, and without it React 19
+    // treats the className mismatch as a hydration error and recovers by
+    // re-rendering with the server value — wiping the saved theme class
+    // right after paint (the intermittent "loads in light mode" bug).
+    <html
+      lang="en"
+      className={`${sans.variable} ${serif.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

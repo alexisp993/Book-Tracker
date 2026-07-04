@@ -13,9 +13,8 @@ import {
   Timer,
 } from "lucide-react";
 import { StatsView } from "@/components/StatsView";
-import { applyTheme } from "@/components/ThemeToggle";
+import { useTheme, type Theme } from "@/lib/theme";
 import { useCurrentUser } from "@/lib/queries";
-import type { Theme } from "@/components/ThemeToggle";
 
 export function ProfileView() {
   const { data: me } = useCurrentUser();
@@ -162,23 +161,9 @@ const THEMES: { value: Theme; label: string; icon: React.ReactNode; description:
 ];
 
 function AppearancePicker() {
-  const [current, setCurrent] = React.useState<Theme>("light");
-
-  React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem("bt_theme") as Theme | null;
-      if (stored === "dark" || stored === "forest" || stored === "light") {
-        setCurrent(stored);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  function select(theme: Theme) {
-    applyTheme(theme);
-    setCurrent(theme);
-  }
+  // Shared reactive theme (lib/theme.ts): always matches the applied theme
+  // and updates live if the header toggle (or another tab) changes it.
+  const { theme: current, setTheme: select } = useTheme();
 
   return (
     <div className="grid grid-cols-3 gap-2">

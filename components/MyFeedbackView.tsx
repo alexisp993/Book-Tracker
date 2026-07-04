@@ -2,6 +2,7 @@
 
 import { MessageSquareText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/EmptyState";
 import { useMyFeedback } from "@/lib/queries";
 import {
   FEEDBACK_STATUS_LABELS,
@@ -27,15 +28,11 @@ export function MyFeedbackView() {
   }
   if (!items || items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed py-16 text-center">
-        <MessageSquareText className="h-9 w-9 text-muted-foreground/40" />
-        <div>
-          <p className="font-medium">No feedback yet</p>
-          <p className="text-sm text-muted-foreground">
-            Spotted a bug or have an idea? Send it from the Feedback page.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={MessageSquareText}
+        title="No feedback yet"
+        description="Spotted a bug or have an idea? Send it from the Feedback page."
+      />
     );
   }
 

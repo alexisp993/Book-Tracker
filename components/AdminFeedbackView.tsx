@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, MessageSquareText, Search } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import { useAdminFeedbackList } from "@/lib/queries";
 import {
   FEEDBACK_STATUS_LABELS,
@@ -74,10 +75,11 @@ export function AdminFeedbackView() {
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed py-16 text-center">
-          <MessageSquareText className="h-9 w-9 text-muted-foreground/40" />
-          <p className="font-medium">No feedback matches</p>
-        </div>
+        <EmptyState
+          icon={MessageSquareText}
+          title="No feedback matches"
+          description="Try a different search or clear the type filter."
+        />
       ) : (
         <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
           {items.map((f) => (

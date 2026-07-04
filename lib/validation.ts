@@ -137,6 +137,10 @@ export const stopSessionSchema = z.object({
   pagesRead: optionalInt,
   mood: optionalMood,
   note: optionalString,
+  // Optional client-reported active-reading minutes (reading-mode pause
+  // support). The server clamps it to the wall-clock elapsed time, so it can
+  // only ever *reduce* the recorded duration — never inflate stats.
+  minutes: optionalInt,
 });
 
 export type StopSessionInput = z.infer<typeof stopSessionSchema>;
