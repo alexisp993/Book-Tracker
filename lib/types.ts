@@ -73,6 +73,10 @@ export interface ReadingSessionDTO {
   title: string;
   author: string | null; // primary author, for reading-mode display
   coverUrl: string | null;
+  // Ordered cover-image candidates (best first) — reading mode walks these
+  // with fallback, like the rest of the app, so a dead/1x1 first URL doesn't
+  // render a corrupted cover.
+  coverCandidates: string[];
   pageCount: number | null;
   currentPage: number; // the book's current page at read time
   date: string; // ISO — also the start time for an active session

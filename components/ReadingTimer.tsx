@@ -3,6 +3,7 @@
 import * as React from "react";
 import { BookOpen, Play } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
+import { BookCover } from "@/components/BookCover";
 import { ApiRequestError } from "@/lib/api";
 import {
   useActiveSession,
@@ -174,14 +175,7 @@ export function ReadingTimer() {
                   className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-secondary disabled:opacity-50"
                 >
                   <div className="h-12 w-9 shrink-0 overflow-hidden rounded-md border bg-muted">
-                    {b.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={b.coverUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
+                    <BookCover book={b} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-1 text-sm font-medium">{b.title}</p>

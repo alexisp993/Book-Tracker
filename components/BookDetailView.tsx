@@ -122,7 +122,7 @@ export function BookDetailView({ id }: { id: string }) {
 
       {/* Header card */}
       <div className="flex gap-4 rounded-2xl border bg-card p-4">
-        <div className="h-32 w-22 sm:h-40 sm:w-28 shrink-0 overflow-hidden rounded-xl border bg-muted">
+        <div className="aspect-[2/3] w-24 sm:w-28 shrink-0 overflow-hidden rounded-xl border bg-muted">
           <BookCover book={book} />
         </div>
         <div className="min-w-0 flex-1">
@@ -251,6 +251,28 @@ export function BookDetailView({ id }: { id: string }) {
 // --- Info tab ---
 
 function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }) {
+  const cells = [
+    book.pageCount ? { label: "Pages", value: book.pageCount.toLocaleString() } : null,
+    book.publisher ? { label: "Publisher", value: book.publisher } : null,
+    book.publishedDate ? { label: "Published", value: book.publishedDate } : null,
+    book.language ? { label: "Language", value: book.language.toUpperCase() } : null,
+    book.isbn13 ? { label: "ISBN-13", value: book.isbn13 } : null,
+    book.startDate ? { label: "Started", value: formatDate(book.startDate) } : null,
+    book.finishDate ? { label: "Finished", value: formatDate(book.finishDate) } : null,
+  ].filter((c): c is { label: string; value: string } => c !== null);
+
+  // Nothing to show at all — a book with no description and no metadata would
+  // otherwise render a blank tab.
+  if (!book.description && cells.length === 0) {
+    return (
+      <EmptyState
+        icon={BookOpen}
+        title="No details yet"
+        description="This book doesn't have a description or metadata. Edit it to add more."
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {book.description ? (
@@ -262,29 +284,13 @@ function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {book.pageCount ? (
-          <InfoCell label="Pages" value={book.pageCount.toLocaleString()} />
-        ) : null}
-        {book.publisher ? (
-          <InfoCell label="Publisher" value={book.publisher} />
-        ) : null}
-        {book.publishedDate ? (
-          <InfoCell label="Published" value={book.publishedDate} />
-        ) : null}
-        {book.language ? (
-          <InfoCell label="Language" value={book.language.toUpperCase()} />
-        ) : null}
-        {book.isbn13 ? (
-          <InfoCell label="ISBN-13" value={book.isbn13} />
-        ) : null}
-        {book.startDate ? (
-          <InfoCell label="Started" value={formatDate(book.startDate)} />
-        ) : null}
-        {book.finishDate ? (
-          <InfoCell label="Finished" value={formatDate(book.finishDate)} />
-        ) : null}
-      </div>
+      {cells.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {cells.map((c) => (
+            <InfoCell key={c.label} label={c.label} value={c.value} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -295,7 +301,7 @@ function InfoCell({ label, value }: { label: string; value: string | number }) {
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="mt-0.5 text-sm font-medium">{value}</p>
+      <p className="mt-0.5 break-words text-sm font-medium">{value}</p>
     </div>
   );
 }

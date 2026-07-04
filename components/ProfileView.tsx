@@ -30,23 +30,28 @@ export function ProfileView() {
 
   return (
     <div className="space-y-8">
-      {/* User card */}
-      <div className="flex items-center gap-4 rounded-2xl border bg-card p-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
-          {initials}
-        </div>
-        <div className="min-w-0">
-          {me?.name ? (
-            <p className="font-display text-lg font-semibold leading-tight">
-              {me.name}
-            </p>
-          ) : null}
-          <p className="truncate text-sm text-muted-foreground">{me?.email}</p>
-          {me?.isAdmin ? (
-            <span className="mt-1 inline-block rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-300">
-              Admin
-            </span>
-          ) : null}
+      {/* Account summary card */}
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <div className="h-16 bg-gradient-to-r from-primary/20 via-primary/10 to-warm/10" />
+        <div className="flex items-end gap-4 px-4 pb-4">
+          <div className="-mt-8 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground shadow-md ring-4 ring-card">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1 pt-2">
+            <div className="flex items-center gap-2">
+              {me?.name ? (
+                <p className="truncate font-display text-lg font-semibold leading-tight">
+                  {me.name}
+                </p>
+              ) : null}
+              {me?.isAdmin ? (
+                <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-300">
+                  Admin
+                </span>
+              ) : null}
+            </div>
+            <p className="truncate text-sm text-muted-foreground">{me?.email}</p>
+          </div>
         </div>
       </div>
 

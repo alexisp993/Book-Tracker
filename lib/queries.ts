@@ -60,11 +60,26 @@ export function useBooks(params: ListParams = {}, options: { enabled?: boolean }
 }
 
 export function useBook(id: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: queryKeys.book(id),
     queryFn: () => api.getBook(id),
     staleTime: 20_000,
     enabled: Boolean(id),
+    // Seed the detail view instantly from any already-cached books list (the
+    // list uses the same UserBook id as the /books/[id] route param), so
+    // opening a book from Library shows the hero immediately while the full
+    // detail refetches in the background — no blank "Loading…" flash.
+    placeholderData: () => {
+      const lists = qc.getQueriesData<Paginated<LibraryBook>>({
+        queryKey: queryKeys.booksAll,
+      });
+      for (const [, data] of lists) {
+        const hit = data?.items.find((b) => b.id === id);
+        if (hit) return hit;
+      }
+      return undefined;
+    },
   });
 }
 

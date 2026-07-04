@@ -36,10 +36,10 @@ export const BookRow = React.memo(function BookRow({
         className="absolute inset-0 rounded-xl"
         aria-label={`View ${book.title}`}
       />
-      <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md border bg-muted">
+      <div className="pointer-events-none relative h-14 w-10 shrink-0 overflow-hidden rounded-md border bg-muted">
         <BookCover book={book} />
       </div>
-      <div className="relative min-w-0 flex-1">
+      <div className="pointer-events-none relative min-w-0 flex-1">
         <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
           {book.title}
         </p>

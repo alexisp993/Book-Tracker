@@ -44,18 +44,19 @@ type SessionWithBook = Prisma.ReadingSessionGetPayload<{
 }>;
 
 function serializeSession(s: SessionWithBook): ReadingSessionDTO {
-  const cover = coverCandidates({
+  const candidates = coverCandidates({
     stored: s.userBook.book.coverUrl,
     isbn13: s.userBook.book.isbn13,
     isbn10: s.userBook.book.isbn10,
-  })[0];
+  });
   return {
     id: s.id,
     userBookId: s.userBookId,
     bookId: s.userBook.bookId,
     title: s.userBook.book.title,
     author: s.userBook.book.authors[0]?.author.name ?? null,
-    coverUrl: cover ?? null,
+    coverUrl: candidates[0] ?? null,
+    coverCandidates: candidates,
     pageCount: s.userBook.book.pageCount,
     currentPage: s.userBook.currentPage,
     date: s.date.toISOString(),

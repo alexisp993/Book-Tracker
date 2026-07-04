@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { ApiRequestError } from "@/lib/api";
 import { useDeleteSession, useStopSession } from "@/lib/queries";
 import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS } from "@/lib/constants";
@@ -260,13 +261,11 @@ export function ReadingMode({
         <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-10">
           {/* Book identity */}
           <div className="flex flex-col items-center gap-4 text-center">
-            <div className="h-40 w-28 overflow-hidden rounded-xl border bg-muted shadow-md sm:h-48 sm:w-32">
-              {session.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={session.coverUrl}
+            <div className="relative h-40 w-28 overflow-hidden rounded-xl border bg-muted shadow-md sm:h-48 sm:w-32">
+              {session.coverCandidates.length > 0 ? (
+                <FallbackCoverImg
+                  candidates={session.coverCandidates}
                   alt={`Cover of ${session.title}`}
-                  className="h-full w-full object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
