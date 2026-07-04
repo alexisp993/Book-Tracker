@@ -273,6 +273,11 @@ export function HomeReadingCalendarPreviewCard() {
 
         {/* Heatmap panel — header (range + nav), weekday/month labels, grid, legend. */}
         <div className="rounded-xl border bg-muted/20 p-4">
+          {/* Content is capped to a controlled max width and centered, so the
+              fluid grid renders as clean ~34px squares and any residual panel
+              width becomes symmetric side space (intentional alignment) rather
+              than a tiny left-stranded or oversized grid. */}
+          <div className="mx-auto w-full max-w-[520px]">
           {/* Header row */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{rangeLabel}</p>
@@ -358,6 +363,7 @@ export function HomeReadingCalendarPreviewCard() {
                 {l.label}
               </span>
             ))}
+          </div>
           </div>
         </div>
       </div>
