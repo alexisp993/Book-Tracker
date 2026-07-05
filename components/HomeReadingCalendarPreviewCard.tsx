@@ -287,28 +287,28 @@ export function HomeReadingCalendarPreviewCard() {
             </div>
           </div>
 
-          {/* Grid: fixed weekday-label column + 13 fluid week columns (each
-              flex-1) that evenly fill the full panel width; cells are
-              aspect-square so they scale up as uniform squares. */}
-          <div className="mt-4 flex gap-[3px]">
-            {/* Weekday labels (Monday-first) — rows flex-1 to match the cell
-                heights via the row's items-stretch. */}
-            <div className="flex w-4 shrink-0 flex-col gap-[3px] pr-1">
+          {/* Grid: weekday-label column + 13 week columns of small fixed-size
+              squares (capped ~28px on desktop, smaller on mobile to avoid
+              overflow), centered within the panel with tight gaps so the
+              heatmap stays compact and shrink-wraps its height. */}
+          <div className="mt-4 flex justify-center gap-[2px]">
+            {/* Weekday labels (Monday-first) — fixed heights matching the cells. */}
+            <div className="flex shrink-0 flex-col gap-[2px] pr-1">
               <div className="h-3" /> {/* spacer aligning with the month-label row */}
               {WEEKDAY_INITIALS.map((d, i) => (
                 <span
                   key={i}
-                  className="flex flex-1 items-center text-[9px] leading-none text-muted-foreground"
+                  className="flex h-[18px] items-center text-[8px] leading-none text-muted-foreground sm:h-6 lg:h-7"
                 >
                   {d}
                 </span>
               ))}
             </div>
 
-            <div className="flex flex-1 gap-[3px]">
+            <div className="flex gap-[2px]">
               {columns.map((col, ci) => (
-                <div key={ci} className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                  <span className="h-3 text-[9px] font-medium leading-none text-muted-foreground">
+                <div key={ci} className="flex flex-col gap-[2px]">
+                  <span className="h-3 text-[8px] font-medium leading-none text-muted-foreground">
                     {monthLabels[ci] ?? ""}
                   </span>
                   {col.map((cell) => {
@@ -319,7 +319,7 @@ export function HomeReadingCalendarPreviewCard() {
                         key={cell.date}
                         title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
                         className={[
-                          "aspect-square w-full rounded-[5px]",
+                          "h-[18px] w-[18px] rounded-[4px] sm:h-6 sm:w-6 lg:h-7 lg:w-7",
                           cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
                           isToday ? "ring-1 ring-primary" : "",
                         ].join(" ")}
