@@ -52,7 +52,13 @@ function SectionHeader({
   );
 }
 
-function MiniBookCard({ book }: { book: LibraryBook }) {
+function MiniBookCard({
+  book,
+  showTitle = true,
+}: {
+  book: LibraryBook;
+  showTitle?: boolean;
+}) {
   return (
     <Link
       href={`/books/${book.id}`}
@@ -61,19 +67,27 @@ function MiniBookCard({ book }: { book: LibraryBook }) {
       <div className="h-[132px] w-[88px] overflow-hidden rounded-xl border bg-muted shadow-sm transition-transform group-hover:scale-[1.02]">
         <BookCover book={book} />
       </div>
-      <p className="line-clamp-2 text-[11px] font-medium leading-tight text-foreground/80">
-        {book.title}
-      </p>
+      {showTitle ? (
+        <p className="line-clamp-2 text-[11px] font-medium leading-tight text-foreground/80">
+          {book.title}
+        </p>
+      ) : null}
     </Link>
   );
 }
 
-function BookScrollRow({ books }: { books: LibraryBook[] }) {
+function BookScrollRow({
+  books,
+  showTitle = true,
+}: {
+  books: LibraryBook[];
+  showTitle?: boolean;
+}) {
   if (books.length === 0) return null;
   return (
     <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {books.map((b) => (
-        <MiniBookCard key={b.id} book={b} />
+        <MiniBookCard key={b.id} book={b} showTitle={showTitle} />
       ))}
     </div>
   );
@@ -194,7 +208,8 @@ export function HomeView() {
         return recentlyAddedBooks.length > 0 ? (
           <section className="space-y-3">
             <SectionHeader title="Recently Added" seeAllHref="/library" />
-            <BookScrollRow books={recentlyAddedBooks} />
+            {/* Clean uniform row of vertical covers, no text below (blueprint) */}
+            <BookScrollRow books={recentlyAddedBooks} showTitle={false} />
           </section>
         ) : null;
 

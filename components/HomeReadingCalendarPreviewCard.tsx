@@ -12,10 +12,9 @@ import {
   Flame,
   NotebookText,
 } from "lucide-react";
-import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { bucket, BUCKET_CLASS, isoLocalDate } from "@/components/ReadingHeatmap";
 import { TINTS } from "@/components/StatsView";
-import { useCalendarRange, useSessionStats } from "@/lib/queries";
+import { useCalendarRange, useSessionStats, useStats } from "@/lib/queries";
 import type { CalendarDay } from "@/lib/api";
 
 const WEEKS = 53; // columns shown per page — a full rolling year (GitHub-style)
@@ -43,15 +42,6 @@ function formatDuration(minutes: number): string {
   const m = minutes % 60;
   if (h === 0) return `${m}m`;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-function formatShortDate(key: string): string {
-  const [, m, d] = key.split("-").map(Number);
-  return `${SHORT_MONTHS[m - 1]} ${d}`;
-}
-
-function formatStreakRange(range: { start: string; end: string }): string {
-  return `${formatShortDate(range.start)} – ${formatShortDate(range.end)}`;
 }
 
 function addDays(d: Date, n: number): Date {
@@ -103,35 +93,6 @@ function StatPill({
   );
 }
 
-// One column of the unified footer — icon on the left, stacked text on the
-// right, so "Longest streak" / "Total sessions" mirror the "Most reading"
-// row pattern instead of a centered label-on-top layout.
-function SummaryColumn({
-  icon,
-  tint,
-  label,
-  children,
-}: {
-  icon: React.ReactNode;
-  tint: keyof typeof TINTS;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 p-3.5">
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 // Home tab preview widget — deliberately a DIFFERENT UI structure from the
 // full /calendar page (components/CalendarView.tsx): a compact featured
 // stat sidebar beside a navigable 13-week heatmap preview, over a unified
@@ -141,6 +102,7 @@ function SummaryColumn({
 export function HomeReadingCalendarPreviewCard() {
   const [pageOffset, setPageOffset] = React.useState(0); // 0 = newest 53 weeks
   const { data: stats } = useSessionStats();
+  const { data: libStats } = useStats(); // for the "Books read" metric
   // One generous fetch; navigation pages through it client-side (no refetch).
   const { data: rangeDays = [] } = useCalendarRange(0, BUFFER_DAYS);
 
@@ -158,7 +120,6 @@ export function HomeReadingCalendarPreviewCard() {
   // brand-new library still gets a polished, friendly module.
   if (!stats) return null;
 
-  const hasSessions = stats.sessionCount > 0;
   const byDay = new Map(rangeDays.map((d) => [d.date, d]));
 
   const today = new Date();
@@ -215,7 +176,6 @@ export function HomeReadingCalendarPreviewCard() {
     return `${startStr} – ${SHORT_MONTHS[lm - 1]} ${ly}`;
   })();
 
-  const topDay = stats.topDay;
   const canGoBack = pageOffset < 1; // buffer covers 2 pages
   const canGoForward = pageOffset > 0;
 
@@ -235,45 +195,9 @@ export function HomeReadingCalendarPreviewCard() {
         </Link>
       </div>
 
-      {/* Split view — 30% stat sidebar + 70% heatmap on desktop; stacked below lg */}
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_7fr] lg:items-start lg:gap-5">
-      {/* Stat sidebar — 4 compact metric rows stacked vertically */}
-      <div className="flex flex-col gap-2">
-        <StatPill
-          icon={<Flame className="h-4 w-4" />}
-          value={stats.streakDays}
-          label="Day streak"
-          tint="amber"
-          caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
-        />
-        <StatPill
-          icon={<BookOpen className="h-4 w-4" />}
-          value={stats.daysReadInWindow}
-          label="Days read"
-          tint="emerald"
-          caption="Last 13 weeks"
-        />
-        <StatPill
-          icon={<Clock className="h-4 w-4" />}
-          value={formatDuration(stats.minutesInWindow)}
-          label="Time read"
-          tint="teal"
-          caption="Last 13 weeks"
-        />
-        <StatPill
-          icon={<NotebookText className="h-4 w-4" />}
-          value={stats.pagesInWindow.toLocaleString()}
-          label="Pages read"
-          tint="violet"
-          caption="Last 13 weeks"
-        />
-      </div>
-
-      {/* Heatmap panel (right column) — its own enclosed card: header (range + nav),
-          weekday/month labels, grid, legend. min-w-0 lets this grid-track child
-          shrink so the inner overflow-x-auto contains the grid instead of
-          spilling off the card. */}
-      <div className="min-w-0 rounded-xl border bg-muted/20 p-4">
+      {/* Full-width heatmap panel — header (range + nav), weekday/month labels,
+          grid, legend. */}
+      <div className="rounded-xl border bg-muted/20 p-4">
           {/* Header row */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{rangeLabel}</p>
@@ -369,60 +293,37 @@ export function HomeReadingCalendarPreviewCard() {
             ))}
           </div>
       </div>
-      </div>
 
-      {/* Unified summary footer — one container, three divider-separated columns */}
-      <div className="grid grid-cols-1 divide-y divide-border rounded-xl border bg-muted/40 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        {/* Most reading */}
-        <div className="p-3.5">
-          {hasSessions && topDay ? (
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
-                {topDay.coverCandidates.length > 0 ? (
-                  <FallbackCoverImg candidates={topDay.coverCandidates} alt={topDay.bookTitle} />
-                ) : (
-                  <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium text-muted-foreground">Most reading</p>
-                <p className="line-clamp-1 text-sm font-medium leading-tight">{topDay.bookTitle}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatShortDate(topDay.date)} · {formatDuration(topDay.minutes)}
-                  {topDay.pagesRead > 0 ? ` · ${topDay.pagesRead}p` : ""}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-8 shrink-0 items-center justify-center rounded-md border bg-muted">
-                <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium text-muted-foreground">Most reading</p>
-                <p className="text-xs text-muted-foreground">
-                  Start your first reading session to build your reading calendar.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Longest streak */}
-        <SummaryColumn icon={<Flame className="h-4 w-4" />} tint="amber" label="Longest streak">
-          <p className="text-sm font-semibold leading-tight">
-            {stats.longestStreakDays} day{stats.longestStreakDays === 1 ? "" : "s"}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {stats.longestStreakRange ? formatStreakRange(stats.longestStreakRange) : "—"}
-          </p>
-        </SummaryColumn>
-
-        {/* Total sessions */}
-        <SummaryColumn icon={<NotebookText className="h-4 w-4" />} tint="blue" label="Total sessions">
-          <p className="text-sm font-semibold leading-tight">{stats.sessionsInWindow} sessions</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Last 13 weeks</p>
-        </SummaryColumn>
+      {/* Stat row — 4 metric cards below the heatmap (2x2 on mobile, one row from sm) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatPill
+          icon={<Flame className="h-4 w-4" />}
+          value={stats.streakDays}
+          label="Streak"
+          tint="amber"
+          caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
+        />
+        <StatPill
+          icon={<BookOpen className="h-4 w-4" />}
+          value={libStats?.read ?? 0}
+          label="Books read"
+          tint="emerald"
+          caption="All time"
+        />
+        <StatPill
+          icon={<Clock className="h-4 w-4" />}
+          value={formatDuration(stats.minutesInWindow)}
+          label="Time read"
+          tint="teal"
+          caption="Last 13 weeks"
+        />
+        <StatPill
+          icon={<NotebookText className="h-4 w-4" />}
+          value={stats.sessionsInWindow}
+          label="Sessions"
+          tint="violet"
+          caption="Last 13 weeks"
+        />
       </div>
     </div>
   );

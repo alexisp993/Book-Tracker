@@ -108,55 +108,47 @@ export function GroupsView({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3">
           {groups.map((g) => {
             const tint = colorForName(g.name);
             return (
               <div
                 key={g.id}
-                className="relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-card p-3 pt-4 transition-shadow hover:shadow-md"
+                className={cn(
+                  "group relative overflow-hidden rounded-2xl p-4 transition-shadow hover:shadow-md",
+                  GROUP_TINTS[tint].badge,
+                )}
               >
-                <span
-                  className={cn(
-                    "absolute inset-x-0 top-0 h-1.5",
-                    GROUP_TINTS[tint].solid,
-                  )}
-                  aria-hidden
-                />
                 <button
                   type="button"
                   onClick={() => setOpenId(g.id)}
-                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  className="flex w-full items-center gap-3 text-left"
                 >
-                  <CoverStack covers={g.covers} tint={tint} />
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/50 dark:bg-black/20">
+                    <Library className="h-5 w-5" />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-lg font-semibold">
+                    <p className="truncate font-display text-base font-semibold leading-tight">
                       {g.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs opacity-70">
                       {g.count} book{g.count === 1 ? "" : "s"}
                     </p>
                   </div>
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                      GROUP_TINTS[tint].badge,
-                    )}
-                  >
-                    <Library className="h-4 w-4" />
-                  </span>
                 </button>
-                <div className="flex shrink-0 flex-col gap-1">
+                {/* Edit/delete stay reachable but recede until hover, so the
+                    resting card is a clean pastel bento tile. */}
+                <div className="absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                   <button
                     onClick={() => startRename(g)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    className="rounded-md p-1.5 hover:bg-white/40 dark:hover:bg-black/30"
                     aria-label={`Rename ${g.name}`}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => remove(g)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
+                    className="rounded-md p-1.5 hover:bg-white/40 dark:hover:bg-black/30"
                     aria-label={`Delete ${g.name}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -245,44 +237,6 @@ export function GroupsView({
           </div>
         )}
       </Dialog>
-    </div>
-  );
-}
-
-function CoverStack({
-  covers,
-  tint,
-}: {
-  covers: string[];
-  tint: ReturnType<typeof colorForName>;
-}) {
-  if (covers.length === 0) {
-    // Even an empty shelf/collection gets a colorful, intentional-looking
-    // illustration instead of a blank box.
-    return (
-      <div
-        className={cn(
-          "flex h-16 w-12 shrink-0 items-center justify-center rounded-md",
-          GROUP_TINTS[tint].badge,
-        )}
-      >
-        <BookOpen className="h-6 w-6" />
-      </div>
-    );
-  }
-  return (
-    <div className="flex shrink-0 -space-x-3">
-      {covers.slice(0, 3).map((c, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={c}
-          alt=""
-          className="h-16 w-12 rounded-md border-2 border-card object-cover shadow-sm"
-          style={{ zIndex: 3 - i }}
-          onError={(e) => (e.currentTarget.style.display = "none")}
-        />
-      ))}
     </div>
   );
 }
