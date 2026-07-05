@@ -235,49 +235,40 @@ export function HomeReadingCalendarPreviewCard() {
         </Link>
       </div>
 
-      {/* Main body — 30/70 stats-to-heatmap split on desktop; stacked on mobile/tablet */}
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_7fr] lg:items-stretch lg:gap-5">
-        {/* Stat sidebar — 4 stacked cards; Day streak featured (taller) as the
-            hero metric. justify-between spreads them to match the heatmap height. */}
-        <div className="flex flex-col gap-2 lg:justify-between">
-          <StatPill
-            icon={<Flame className="h-5 w-5" />}
-            value={stats.streakDays}
-            label="Day streak"
-            tint="amber"
-            caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
-            featured
-          />
-          <StatPill
-            icon={<BookOpen className="h-4 w-4" />}
-            value={stats.daysReadInWindow}
-            label="Days read"
-            tint="emerald"
-            caption="Last 13 weeks"
-          />
-          <StatPill
-            icon={<Clock className="h-4 w-4" />}
-            value={formatDuration(stats.minutesInWindow)}
-            label="Time read"
-            tint="teal"
-            caption="Last 13 weeks"
-          />
-          <StatPill
-            icon={<NotebookText className="h-4 w-4" />}
-            value={stats.pagesInWindow.toLocaleString()}
-            label="Pages read"
-            tint="violet"
-            caption="Last 13 weeks"
-          />
-        </div>
+      {/* Stat row — 4 uniform metric cards across the full width */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatPill
+          icon={<Flame className="h-4 w-4" />}
+          value={stats.streakDays}
+          label="Day streak"
+          tint="amber"
+          caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
+        />
+        <StatPill
+          icon={<BookOpen className="h-4 w-4" />}
+          value={stats.daysReadInWindow}
+          label="Days read"
+          tint="emerald"
+          caption="Last 13 weeks"
+        />
+        <StatPill
+          icon={<Clock className="h-4 w-4" />}
+          value={formatDuration(stats.minutesInWindow)}
+          label="Time read"
+          tint="teal"
+          caption="Last 13 weeks"
+        />
+        <StatPill
+          icon={<NotebookText className="h-4 w-4" />}
+          value={stats.pagesInWindow.toLocaleString()}
+          label="Pages read"
+          tint="violet"
+          caption="Last 13 weeks"
+        />
+      </div>
 
-        {/* Heatmap panel — header (range + nav), weekday/month labels, grid, legend. */}
-        <div className="rounded-xl border bg-muted/20 p-4">
-          {/* Content is capped to a controlled max width and centered, so the
-              fluid grid renders as clean ~34px squares and any residual panel
-              width becomes symmetric side space (intentional alignment) rather
-              than a tiny left-stranded or oversized grid. */}
-          <div className="mx-auto w-full max-w-[520px]">
+      {/* Full-width heatmap panel — header (range + nav), weekday/month labels, grid, legend. */}
+      <div className="rounded-xl border bg-muted/20 p-4">
           {/* Header row */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{rangeLabel}</p>
@@ -312,9 +303,10 @@ export function HomeReadingCalendarPreviewCard() {
           </div>
 
           {/* Grid: fixed weekday-label column + 13 fluid week columns (each
-              flex-1) so the grid fills the panel width instead of sitting tiny
-              in the top-left. Month labels sit above the columns. */}
-          <div className="mt-4 flex gap-[3px]">
+              flex-1). Capped and left-aligned so cells render as clean ~55px
+              squares starting at the left edge with a natural right margin,
+              rather than stretching to giant cells across the full width. */}
+          <div className="mt-4 flex max-w-3xl gap-[3px]">
             {/* Weekday labels (Monday-first) — rows flex-1 to match the cell
                 heights via the row's items-stretch. */}
             <div className="flex w-4 shrink-0 flex-col gap-[3px] pr-1">
@@ -364,8 +356,6 @@ export function HomeReadingCalendarPreviewCard() {
               </span>
             ))}
           </div>
-          </div>
-        </div>
       </div>
 
       {/* Unified summary footer — one container, three divider-separated columns */}
