@@ -69,50 +69,35 @@ function mondayOf(d: Date): Date {
   return x;
 }
 
+// All four metric cards share one uniform style: centered icon badge, bold
+// value, and a single muted detail line ("label • caption"), so every card in
+// the row has identical width, padding, and text shape.
 function StatPill({
   icon,
   value,
   label,
   tint,
   caption,
-  featured = false,
 }: {
   icon: React.ReactNode;
   value: React.ReactNode;
   label: string;
   tint: keyof typeof TINTS;
   caption?: string;
-  featured?: boolean;
 }) {
   return (
-    <div
-      className={[
-        "flex min-w-0 items-center rounded-xl border bg-muted/40",
-        featured ? "gap-3.5 px-4 py-5" : "gap-3 px-3.5 py-3",
-      ].join(" ")}
-    >
+    <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3.5">
       <span
-        className={[
-          "flex shrink-0 items-center justify-center rounded-full",
-          featured ? "h-11 w-11" : "h-9 w-9",
-          TINTS[tint],
-        ].join(" ")}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
       >
         {icon}
       </span>
       <div className="min-w-0">
-        <p
-          className={[
-            "truncate font-semibold leading-tight",
-            featured ? "text-2xl" : "text-base",
-          ].join(" ")}
-        >
-          {value}
+        <p className="truncate text-2xl font-semibold leading-tight">{value}</p>
+        <p className="truncate text-[11px] leading-tight text-muted-foreground">
+          {label}
+          {caption ? ` • ${caption}` : ""}
         </p>
-        <p className="truncate text-[11px] leading-tight text-muted-foreground">{label}</p>
-        {caption ? (
-          <p className="truncate text-[10px] leading-tight text-muted-foreground/80">{caption}</p>
-        ) : null}
       </div>
     </div>
   );
@@ -303,10 +288,9 @@ export function HomeReadingCalendarPreviewCard() {
           </div>
 
           {/* Grid: fixed weekday-label column + 13 fluid week columns (each
-              flex-1). Capped and left-aligned so cells render as clean ~55px
-              squares starting at the left edge with a natural right margin,
-              rather than stretching to giant cells across the full width. */}
-          <div className="mt-4 flex max-w-3xl gap-[3px]">
+              flex-1) that evenly fill the full panel width; cells are
+              aspect-square so they scale up as uniform squares. */}
+          <div className="mt-4 flex gap-[3px]">
             {/* Weekday labels (Monday-first) — rows flex-1 to match the cell
                 heights via the row's items-stretch. */}
             <div className="flex w-4 shrink-0 flex-col gap-[3px] pr-1">
