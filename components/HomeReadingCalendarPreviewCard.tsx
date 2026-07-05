@@ -139,10 +139,20 @@ function SummaryColumn({
 // useCalendarRange -> lib/calendarData.ts) so it can never disagree with the
 // full page's numbers. Deep history lives behind the "See all" link.
 export function HomeReadingCalendarPreviewCard() {
-  const [pageOffset, setPageOffset] = React.useState(0); // 0 = newest 13 weeks
+  const [pageOffset, setPageOffset] = React.useState(0); // 0 = newest 53 weeks
   const { data: stats } = useSessionStats();
   // One generous fetch; navigation pages through it client-side (no refetch).
   const { data: rangeDays = [] } = useCalendarRange(0, BUFFER_DAYS);
+
+  // Default the heatmap's horizontal scroll to the far right (newest weeks)
+  // on load and after paging, so the user's most recent reading is what
+  // greets them. `stats` is a dep because the grid only mounts once stats
+  // has loaded — the ref is null before that.
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [pageOffset, stats]);
 
   // Always render once stats has loaded, even with zero sessions — a
   // brand-new library still gets a polished, friendly module.
@@ -297,50 +307,55 @@ export function HomeReadingCalendarPreviewCard() {
             </div>
           </div>
 
-          {/* Grid: weekday-label column + 53 week columns of small 12px squares
-              (a full rolling year). The mx-auto w-max inside overflow-x-auto
-              centers the grid on desktop (where it fits) and scrolls it
-              left-aligned on mobile (where it doesn't), without the
-              justify-center + overflow clipping bug. */}
-          <div className="mt-4 overflow-x-auto">
-            <div className="mx-auto flex w-max gap-[2px]">
-            {/* Weekday labels (Monday-first) — fixed 12px heights matching the cells. */}
+          {/* Grid: a FIXED weekday-label column beside a horizontally
+              scrollable region holding the month labels + 53 week columns of
+              12px squares. Only the grid scrolls — the panel header above and
+              legend below stay put — and the native scrollbar is hidden (same
+              utility combo as HomeView's BookScrollRow) so it reads as a clean
+              swipeable timeline. An effect scrolls it to the far right (newest
+              weeks) on load. */}
+          <div className="mt-4 flex gap-[2px]">
+            {/* Weekday labels (Monday-first) — pinned outside the scroll region. */}
             <div className="flex shrink-0 flex-col gap-[2px] pr-1">
               <div className="h-3" /> {/* spacer aligning with the month-label row */}
               {WEEKDAY_INITIALS.map((d, i) => (
                 <span
                   key={i}
-                  className="flex h-2 items-center text-[7px] leading-none text-muted-foreground"
+                  className="flex h-3 items-center text-[8px] leading-none text-muted-foreground"
                 >
                   {d}
                 </span>
               ))}
             </div>
 
-            <div className="flex gap-[2px]">
-              {columns.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-[2px]">
-                  <span className="h-3 whitespace-nowrap text-[7px] font-medium leading-none text-muted-foreground">
-                    {monthLabels[ci] ?? ""}
-                  </span>
-                  {col.map((cell) => {
-                    const isToday = cell.date === todayKey;
-                    const minutes = cell.data?.totalMinutes ?? 0;
-                    return (
-                      <div
-                        key={cell.date}
-                        title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
-                        className={[
-                          "h-2 w-2 rounded-[2px]",
-                          cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
-                          isToday ? "ring-1 ring-primary" : "",
-                        ].join(" ")}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+            <div
+              ref={scrollRef}
+              className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              <div className="flex w-max gap-[2px]">
+                {columns.map((col, ci) => (
+                  <div key={ci} className="flex flex-col gap-[2px]">
+                    <span className="h-3 whitespace-nowrap text-[8px] font-medium leading-none text-muted-foreground">
+                      {monthLabels[ci] ?? ""}
+                    </span>
+                    {col.map((cell) => {
+                      const isToday = cell.date === todayKey;
+                      const minutes = cell.data?.totalMinutes ?? 0;
+                      return (
+                        <div
+                          key={cell.date}
+                          title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
+                          className={[
+                            "h-3 w-3 rounded-[3px]",
+                            cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
+                            isToday ? "ring-1 ring-primary" : "",
+                          ].join(" ")}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
