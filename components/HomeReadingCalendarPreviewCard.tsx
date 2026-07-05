@@ -18,9 +18,9 @@ import { TINTS } from "@/components/StatsView";
 import { useCalendarRange, useSessionStats } from "@/lib/queries";
 import type { CalendarDay } from "@/lib/api";
 
-const WEEKS = 13; // columns shown per page — aligns with the "Last 13 weeks" stat window
+const WEEKS = 53; // columns shown per page — a full rolling year (GitHub-style)
 const ROWS = 7; // Mon..Sun
-const BUFFER_DAYS = 27 * 7; // fetch 27 weeks once; paginate client-side within it (2 pages)
+const BUFFER_DAYS = (WEEKS * 2 + 2) * 7; // ~2 years, so the 2-page nav (this year / last year) works
 
 const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -178,13 +178,17 @@ export function HomeReadingCalendarPreviewCard() {
   // whose 1st falls mid-week — including the current/rightmost month showing
   // only its last few days — still gets exactly one label, aligned to its
   // first visible week column.
-  const seenMonths = new Set<number>();
+  // Keyed by "year-month" (not just month index) so a rolling year that
+  // crosses a year boundary labels the boundary month at BOTH ends — e.g.
+  // Jul 2025 and the current Jul 2026 both get a label.
+  const seenMonths = new Set<string>();
   const monthLabels = columns.map((col) => {
     for (const cell of col) {
-      const m = Number(cell.date.split("-")[1]) - 1; // 0-based month
-      if (!seenMonths.has(m)) {
-        seenMonths.add(m);
-        return SHORT_MONTHS[m].toUpperCase();
+      const [y, mm] = cell.date.split("-");
+      const key = `${y}-${mm}`;
+      if (!seenMonths.has(key)) {
+        seenMonths.add(key);
+        return SHORT_MONTHS[Number(mm) - 1].toUpperCase();
       }
     }
     return null;
@@ -193,11 +197,12 @@ export function HomeReadingCalendarPreviewCard() {
   const firstCellDate = columns[0][0].date;
   const lastCellDate = columns[WEEKS - 1][ROWS - 1].date;
   const rangeLabel = (() => {
-    const [, fm] = firstCellDate.split("-").map(Number);
+    const [fy, fm] = firstCellDate.split("-").map(Number);
     const [ly, lm] = lastCellDate.split("-").map(Number);
-    const start = SHORT_MONTHS[fm - 1];
-    const end = SHORT_MONTHS[lm - 1];
-    return start === end ? `${start} ${ly}` : `${start} – ${end} ${ly}`;
+    // Show the start year only when it differs from the end year, so a
+    // rolling year reads "Jul 2025 – Jul 2026" and a calendar year "Jan – Dec 2026".
+    const startStr = fy === ly ? SHORT_MONTHS[fm - 1] : `${SHORT_MONTHS[fm - 1]} ${fy}`;
+    return `${startStr} – ${SHORT_MONTHS[lm - 1]} ${ly}`;
   })();
 
   const topDay = stats.topDay;
@@ -287,18 +292,20 @@ export function HomeReadingCalendarPreviewCard() {
             </div>
           </div>
 
-          {/* Grid: weekday-label column + 13 week columns of small fixed-size
-              squares (capped ~28px on desktop, smaller on mobile to avoid
-              overflow), centered within the panel with tight gaps so the
-              heatmap stays compact and shrink-wraps its height. */}
-          <div className="mt-4 flex justify-center gap-[2px]">
-            {/* Weekday labels (Monday-first) — fixed heights matching the cells. */}
+          {/* Grid: weekday-label column + 53 week columns of small 12px squares
+              (a full rolling year). The mx-auto w-max inside overflow-x-auto
+              centers the grid on desktop (where it fits) and scrolls it
+              left-aligned on mobile (where it doesn't), without the
+              justify-center + overflow clipping bug. */}
+          <div className="mt-4 overflow-x-auto">
+            <div className="mx-auto flex w-max gap-[2px]">
+            {/* Weekday labels (Monday-first) — fixed 12px heights matching the cells. */}
             <div className="flex shrink-0 flex-col gap-[2px] pr-1">
               <div className="h-3" /> {/* spacer aligning with the month-label row */}
               {WEEKDAY_INITIALS.map((d, i) => (
                 <span
                   key={i}
-                  className="flex h-[18px] items-center text-[8px] leading-none text-muted-foreground sm:h-6 lg:h-7"
+                  className="flex h-3 items-center text-[8px] leading-none text-muted-foreground"
                 >
                   {d}
                 </span>
@@ -308,7 +315,7 @@ export function HomeReadingCalendarPreviewCard() {
             <div className="flex gap-[2px]">
               {columns.map((col, ci) => (
                 <div key={ci} className="flex flex-col gap-[2px]">
-                  <span className="h-3 text-[8px] font-medium leading-none text-muted-foreground">
+                  <span className="h-3 whitespace-nowrap text-[8px] font-medium leading-none text-muted-foreground">
                     {monthLabels[ci] ?? ""}
                   </span>
                   {col.map((cell) => {
@@ -319,7 +326,7 @@ export function HomeReadingCalendarPreviewCard() {
                         key={cell.date}
                         title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
                         className={[
-                          "h-[18px] w-[18px] rounded-[4px] sm:h-6 sm:w-6 lg:h-7 lg:w-7",
+                          "h-3 w-3 rounded-[3px]",
                           cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
                           isToday ? "ring-1 ring-primary" : "",
                         ].join(" ")}
@@ -328,6 +335,7 @@ export function HomeReadingCalendarPreviewCard() {
                   })}
                 </div>
               ))}
+            </div>
             </div>
           </div>
 
