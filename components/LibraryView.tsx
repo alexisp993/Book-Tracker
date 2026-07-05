@@ -9,6 +9,7 @@ import {
   Library,
   RefreshCw,
   ScanBarcode,
+  Search,
   SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import { StreakBanner } from "@/components/StreakBanner";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
 import { ApiRequestError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   queryKeys,
   useBooks,
@@ -44,6 +46,15 @@ const DEFAULT_FILTERS: LibraryFilters = {
   sort: "createdAt",
   order: "desc",
 };
+
+// The primary status filter, surfaced as tabs. On Hold / Did Not Finish stay
+// reachable via the search/filter sheet's existing status select.
+const STATUS_TABS: { value: string; label: string }[] = [
+  { value: "", label: "All" },
+  { value: "CURRENTLY_READING", label: "Currently Reading" },
+  { value: "WANT_TO_READ", label: "Want to Read" },
+  { value: "READ", label: "Read" },
+];
 
 export function LibraryView() {
   const [filters, setFilters] = React.useState<LibraryFilters>(DEFAULT_FILTERS);
@@ -222,68 +233,92 @@ export function LibraryView() {
       <StreakBanner />
       <ContinueReadingCard onContinue={openEdit} />
 
+      {/* Page title + search/filter icon actions */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <p className="shrink-0 text-sm text-muted-foreground">
-            {loading && !data
-              ? "Loading…"
-              : `${total} book${total === 1 ? "" : "s"}`}
-          </p>
-          {total > 0 ? (
-            <button
-              onClick={handleEnrich}
-              disabled={enriching}
-              className="inline-flex shrink-0 items-center gap-1 truncate text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-              title="Fetch missing covers and details from Open Library / Google Books"
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 shrink-0 ${enriching ? "animate-spin" : ""}`}
-              />
-              <span className="hidden sm:inline">
-                {enriching ? "Refreshing…" : enrichMsg ?? "Refresh details"}
-              </span>
-            </button>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setScannerOpen(true)}
-            className="w-9 sm:w-auto sm:px-3"
-            aria-label="Scan barcode"
+        <h1 className="font-display text-2xl font-bold tracking-tight">Library</h1>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setFilterSheetOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border bg-card text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Search library"
           >
-            <ScanBarcode className="h-4 w-4" />
-            <span className="hidden sm:inline">Scan</span>
-          </Button>
-          <Button
-            size="icon"
-            onClick={openAdd}
-            className="w-9 sm:w-auto sm:px-3"
-            aria-label="Add book"
+            <Search className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterSheetOpen(true)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border bg-card text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Filter and sort"
           >
-            <BookPlus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add book</span>
-          </Button>
+            <SlidersHorizontal className="h-4 w-4" />
+            {filtersActive ? (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+            ) : null}
+          </button>
         </div>
       </div>
 
+      {/* Status tabs — the primary filter; On Hold / Did Not Finish remain
+          reachable via the search/filter sheet's status select. */}
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setFilterSheetOpen(true)}
-          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-card/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground sm:hidden"
-          aria-label="Search and filter"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          {filtersActive ? (
-            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-          ) : null}
-        </button>
-        <div className="hidden flex-1 sm:flex">
-          <LibraryToolbar filters={filters} onChange={setFilters} />
+        <div className="flex flex-1 gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {STATUS_TABS.map((tab) => {
+            const active = filters.status === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setFilters({ ...filters, status: tab.value })}
+                className={cn(
+                  "shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
         <ViewToggle value={view} onChange={changeView} />
+      </div>
+
+      {/* Prominent Add Book CTA */}
+      <div className="flex items-center gap-2">
+        <Button onClick={openAdd} className="h-11 flex-1 rounded-full text-[15px]">
+          <BookPlus className="h-4 w-4" /> Add book
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setScannerOpen(true)}
+          className="h-11 w-11 shrink-0 rounded-full"
+          aria-label="Scan barcode"
+        >
+          <ScanBarcode className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Count + unobtrusive refresh-details link */}
+      <div className="flex items-center gap-3">
+        <p className="text-xs text-muted-foreground">
+          {loading && !data ? "Loading…" : `${total} book${total === 1 ? "" : "s"}`}
+        </p>
+        {total > 0 ? (
+          <button
+            onClick={handleEnrich}
+            disabled={enriching}
+            className="inline-flex items-center gap-1 truncate text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+            title="Fetch missing covers and details from Open Library / Google Books"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 shrink-0 ${enriching ? "animate-spin" : ""}`}
+            />
+            {enriching ? "Refreshing…" : enrichMsg ?? "Refresh details"}
+          </button>
+        ) : null}
       </div>
 
       <Dialog
@@ -331,6 +366,7 @@ export function LibraryView() {
               key={book.id}
               book={book}
               onEdit={openEdit}
+              onDelete={setToDelete}
               onStartReading={handleStartReading}
             />
           ))}

@@ -28,6 +28,16 @@ export const STATUS_STYLES: Record<ReadingStatus, string> = {
   ON_HOLD: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
 };
 
+// Text-only variant of STATUS_STYLES (no background) — for compact inline
+// labels like a list row's status word, where a full pill badge is too heavy.
+export const STATUS_TEXT: Record<ReadingStatus, string> = {
+  WANT_TO_READ: "text-blue-600 dark:text-blue-300",
+  CURRENTLY_READING: "text-amber-600 dark:text-amber-300",
+  READ: "text-emerald-600 dark:text-emerald-300",
+  DID_NOT_FINISH: "text-rose-600 dark:text-rose-300",
+  ON_HOLD: "text-slate-600 dark:text-slate-300",
+};
+
 // Solid dot colors per status (used in compact/list views).
 export const STATUS_DOT: Record<ReadingStatus, string> = {
   WANT_TO_READ: "bg-blue-500",

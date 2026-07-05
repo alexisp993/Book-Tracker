@@ -2,25 +2,27 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BookOpen, Heart } from "lucide-react";
+import { BookOpen, Heart, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { BookCover } from "@/components/BookCover";
 import { StarRating } from "@/components/StarRating";
-import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
+import { STATUS_LABELS, STATUS_TEXT } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
 
 // The default Library row — denser than the card grid but progress-forward.
-// Tapping the row navigates to the book's detail page; "Start" is a separate
-// tap target that doesn't also trigger navigation. Memoized (same reasoning
-// as BookCard); effective only because LibraryView passes stable callbacks.
+// Tapping the row navigates to the book's detail page; the kebab menu is a
+// separate tap target that doesn't also trigger navigation. Memoized (same
+// reasoning as BookCard); effective only because LibraryView passes stable
+// callbacks.
 export const BookRow = React.memo(function BookRow({
   book,
-  onEdit: _onEdit,
+  onEdit,
+  onDelete,
   onStartReading,
 }: {
   book: LibraryBook;
   onEdit?: (book: LibraryBook) => void;
+  onDelete?: (book: LibraryBook) => void;
   onStartReading?: (book: LibraryBook) => void;
 }) {
   const canStart = book.status === "WANT_TO_READ" || book.status === "ON_HOLD";
@@ -28,6 +30,20 @@ export const BookRow = React.memo(function BookRow({
     book.status === "CURRENTLY_READING" && book.pageCount && book.pageCount > 0
       ? Math.min(100, Math.round((book.currentPage / book.pageCount) * 100))
       : null;
+
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    function onOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [menuOpen]);
 
   return (
     <div className="relative flex w-full items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-secondary">
@@ -60,10 +76,7 @@ export const BookRow = React.memo(function BookRow({
           </div>
         ) : (
           <div className="mt-1 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span
-                className={cn("h-2 w-2 rounded-full", STATUS_DOT[book.status])}
-              />
+            <span className={cn("text-[11px] font-medium", STATUS_TEXT[book.status])}>
               {STATUS_LABELS[book.status]}
             </span>
             {book.rating ? <StarRating value={book.rating} size={12} /> : null}
@@ -73,20 +86,70 @@ export const BookRow = React.memo(function BookRow({
           </div>
         )}
       </div>
-      {canStart && onStartReading ? (
-        <Button
-          variant="outline"
-          size="icon"
-          className="relative h-8 w-8 shrink-0 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
+
+      {/* Kebab actions — a separate tap target so it never triggers the
+          row-level navigation Link above. */}
+      <div ref={menuRef} className="relative shrink-0">
+        <button
+          type="button"
           onClick={(e) => {
             e.preventDefault();
-            onStartReading(book);
+            setMenuOpen((v) => !v);
           }}
-          aria-label={`Start reading ${book.title}`}
+          className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+          aria-label={`Actions for ${book.title}`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
         >
-          <BookOpen className="h-3.5 w-3.5" />
-        </Button>
-      ) : null}
+          <MoreVertical className="h-4 w-4" />
+        </button>
+        {menuOpen ? (
+          <div
+            role="menu"
+            className="absolute right-0 top-9 z-20 w-40 overflow-hidden rounded-xl border bg-card py-1 shadow-lg"
+          >
+            {canStart && onStartReading ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onStartReading(book);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-warm transition-colors hover:bg-secondary"
+              >
+                <BookOpen className="h-3.5 w-3.5" /> Start reading
+              </button>
+            ) : null}
+            {onEdit ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEdit(book);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </button>
+            ) : null}
+            {onDelete ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete(book);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 });
