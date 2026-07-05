@@ -260,8 +260,10 @@ export function HomeReadingCalendarPreviewCard() {
       </div>
 
       {/* Heatmap panel (right column) — its own enclosed card: header (range + nav),
-          weekday/month labels, grid, legend. */}
-      <div className="rounded-xl border bg-muted/20 p-4">
+          weekday/month labels, grid, legend. min-w-0 lets this grid-track child
+          shrink so the inner overflow-x-auto contains the grid instead of
+          spilling off the card. */}
+      <div className="min-w-0 rounded-xl border bg-muted/20 p-4">
           {/* Header row */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{rangeLabel}</p>
@@ -308,7 +310,7 @@ export function HomeReadingCalendarPreviewCard() {
               {WEEKDAY_INITIALS.map((d, i) => (
                 <span
                   key={i}
-                  className="flex h-3 items-center text-[8px] leading-none text-muted-foreground"
+                  className="flex h-2 items-center text-[7px] leading-none text-muted-foreground"
                 >
                   {d}
                 </span>
@@ -318,7 +320,7 @@ export function HomeReadingCalendarPreviewCard() {
             <div className="flex gap-[2px]">
               {columns.map((col, ci) => (
                 <div key={ci} className="flex flex-col gap-[2px]">
-                  <span className="h-3 whitespace-nowrap text-[8px] font-medium leading-none text-muted-foreground">
+                  <span className="h-3 whitespace-nowrap text-[7px] font-medium leading-none text-muted-foreground">
                     {monthLabels[ci] ?? ""}
                   </span>
                   {col.map((cell) => {
@@ -329,7 +331,7 @@ export function HomeReadingCalendarPreviewCard() {
                         key={cell.date}
                         title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
                         className={[
-                          "h-3 w-3 rounded-[3px]",
+                          "h-2 w-2 rounded-[2px]",
                           cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
                           isToday ? "ring-1 ring-primary" : "",
                         ].join(" ")}
