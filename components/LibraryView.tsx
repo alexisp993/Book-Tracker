@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   BookPlus,
@@ -132,6 +133,22 @@ export function LibraryView() {
     setFormError(null);
     setFormOpen(true);
   }, []);
+
+  // Deep-link entry points from the Add a Book launcher (and Home's existing
+  // "Scan Book" quick action, which already linked to ?scan=1 but had no
+  // handler here until now) — auto-open the matching dialog on arrival.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  React.useEffect(() => {
+    if (searchParams.get("scan") === "1") {
+      setScannerOpen(true);
+      router.replace("/library");
+    } else if (searchParams.get("add") === "1") {
+      openAdd();
+      router.replace("/library");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const openEdit = React.useCallback((book: LibraryBook) => {
     setEditing(book);
@@ -285,9 +302,12 @@ export function LibraryView() {
         <ViewToggle value={view} onChange={changeView} />
       </div>
 
-      {/* Prominent Add Book CTA */}
+      {/* Prominent Add Book CTA — opens the Scan/Search/Manual launcher */}
       <div className="flex items-center gap-2">
-        <Button onClick={openAdd} className="h-11 flex-1 rounded-full text-[15px]">
+        <Button
+          onClick={() => router.push("/library/add")}
+          className="h-11 flex-1 rounded-full text-[15px]"
+        >
           <BookPlus className="h-4 w-4" /> Add book
         </Button>
         <Button

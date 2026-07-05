@@ -328,7 +328,7 @@ export function ReadingMode({
                 onClick={openFinish}
                 className="h-14 rounded-full px-8 text-base"
               >
-                <Check className="h-5 w-5" /> Finish
+                <Check className="h-5 w-5" /> Finish Session
               </Button>
             </div>
 
