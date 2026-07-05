@@ -225,8 +225,10 @@ export function HomeReadingCalendarPreviewCard() {
         </Link>
       </div>
 
-      {/* Stat row — 4 uniform metric cards across the full width */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Split view — 30% stat sidebar + 70% heatmap on desktop; stacked below lg */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_7fr] lg:items-start lg:gap-5">
+      {/* Stat sidebar — 4 compact metric rows stacked vertically */}
+      <div className="flex flex-col gap-2">
         <StatPill
           icon={<Flame className="h-4 w-4" />}
           value={stats.streakDays}
@@ -257,7 +259,8 @@ export function HomeReadingCalendarPreviewCard() {
         />
       </div>
 
-      {/* Full-width heatmap panel — header (range + nav), weekday/month labels, grid, legend. */}
+      {/* Heatmap panel (right column) — its own enclosed card: header (range + nav),
+          weekday/month labels, grid, legend. */}
       <div className="rounded-xl border bg-muted/20 p-4">
           {/* Header row */}
           <div className="flex items-center justify-between">
@@ -348,6 +351,7 @@ export function HomeReadingCalendarPreviewCard() {
               </span>
             ))}
           </div>
+      </div>
       </div>
 
       {/* Unified summary footer — one container, three divider-separated columns */}
