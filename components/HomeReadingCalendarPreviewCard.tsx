@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clock,
   Flame,
+  Lightbulb,
   NotebookText,
 } from "lucide-react";
 import { bucket, BUCKET_CLASS, isoLocalDate } from "@/components/ReadingHeatmap";
@@ -59,9 +60,20 @@ function mondayOf(d: Date): Date {
   return x;
 }
 
-// All four metric cards share one uniform style: centered icon badge, bold
-// value, and a single muted detail line ("label • caption"), so every card in
-// the row has identical width, padding, and text shape.
+// Soft full-card pastel backgrounds, one per tint used on this card's stat
+// row — same color families as TINTS's icon-badge classes, just a lower
+// opacity so the whole card reads as a tinted panel, not just the icon.
+const CARD_TINTS: Record<"amber" | "emerald" | "teal" | "violet", string> = {
+  amber: "bg-amber-500/10",
+  emerald: "bg-emerald-500/10",
+  teal: "bg-teal-500/10",
+  violet: "bg-violet-500/10",
+};
+
+// All four metric cards share one uniform style: a pastel-tinted card,
+// centered icon badge, bold value, and a single muted detail line
+// ("label • caption"), so every card in the row has identical width,
+// padding, and text shape — only the tint color differs.
 function StatPill({
   icon,
   value,
@@ -72,13 +84,15 @@ function StatPill({
   icon: React.ReactNode;
   value: React.ReactNode;
   label: string;
-  tint: keyof typeof TINTS;
+  tint: keyof typeof CARD_TINTS;
   caption?: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3.5">
+    <div
+      className={`flex min-w-0 items-center gap-3 rounded-xl px-4 py-3.5 ${CARD_TINTS[tint]}`}
+    >
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background ${TINTS[tint]}`}
       >
         {icon}
       </span>
@@ -180,24 +194,29 @@ export function HomeReadingCalendarPreviewCard() {
   const canGoForward = pageOffset > 0;
 
   return (
-    <div className="space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Header — bare, no card background */}
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">
-          <CalendarDays className="h-4 w-4 text-primary" />
-          Reading Calendar
-        </h2>
+        <div>
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            Reading Calendar
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Track your reading consistency over time
+          </p>
+        </div>
         <Link
           href="/calendar"
-          className="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           See all <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
-      {/* Full-width heatmap panel — header (range + nav), weekday/month labels,
+      {/* Standalone heatmap card — header (range + nav), weekday/month labels,
           grid, legend. */}
-      <div className="rounded-xl border bg-muted/20 p-4">
+      <div className="rounded-2xl border bg-card p-4 sm:p-5">
           {/* Header row */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{rangeLabel}</p>
@@ -294,36 +313,63 @@ export function HomeReadingCalendarPreviewCard() {
           </div>
       </div>
 
-      {/* Stat row — 4 metric cards below the heatmap (2x2 on mobile, one row from sm) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatPill
-          icon={<Flame className="h-4 w-4" />}
-          value={stats.streakDays}
-          label="Streak"
-          tint="amber"
-          caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
-        />
-        <StatPill
-          icon={<BookOpen className="h-4 w-4" />}
-          value={libStats?.read ?? 0}
-          label="Books read"
-          tint="emerald"
-          caption="All time"
-        />
-        <StatPill
-          icon={<Clock className="h-4 w-4" />}
-          value={formatDuration(stats.minutesInWindow)}
-          label="Time read"
-          tint="teal"
-          caption="Last 13 weeks"
-        />
-        <StatPill
-          icon={<NotebookText className="h-4 w-4" />}
-          value={stats.sessionsInWindow}
-          label="Sessions"
-          tint="violet"
-          caption="Last 13 weeks"
-        />
+      {/* Standalone reading-summary card — stat row + a streak tip banner */}
+      <div className="space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatPill
+            icon={<Flame className="h-4 w-4" />}
+            value={stats.streakDays}
+            label="Day streak"
+            tint="amber"
+            caption={stats.streakDays > 0 ? "Keep it going!" : "Start today!"}
+          />
+          <StatPill
+            icon={<BookOpen className="h-4 w-4" />}
+            value={libStats?.read ?? 0}
+            label="Books read"
+            tint="emerald"
+            caption="All time"
+          />
+          <StatPill
+            icon={<Clock className="h-4 w-4" />}
+            value={formatDuration(stats.minutesInWindow)}
+            label="Time read"
+            tint="teal"
+            caption="Last 13 weeks"
+          />
+          <StatPill
+            icon={<NotebookText className="h-4 w-4" />}
+            value={stats.sessionsInWindow}
+            label="Sessions"
+            tint="violet"
+            caption="Last 13 weeks"
+          />
+        </div>
+
+        {/* Tip banner — title reflects the real streak status, not fabricated */}
+        <div className="flex flex-col items-start gap-3 rounded-xl bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background text-amber-600 dark:text-amber-300">
+              <Lightbulb className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">
+                {stats.streakDays > 0
+                  ? "Keep your reading streak alive!"
+                  : "Start your reading streak today!"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Read for at least a few minutes each day to build a consistent habit.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/sessions"
+            className="inline-flex shrink-0 items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Add Reading
+          </Link>
+        </div>
       </div>
     </div>
   );
