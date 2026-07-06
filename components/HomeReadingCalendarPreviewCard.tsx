@@ -277,8 +277,8 @@ export function HomeReadingCalendarPreviewCard() {
             >
               <div className="flex w-max gap-[2px]">
                 {columns.map((col, ci) => (
-                  <div key={ci} className="flex flex-col gap-[2px]">
-                    <span className="h-3 whitespace-nowrap text-[8px] font-medium leading-none text-muted-foreground">
+                  <div key={ci} className="flex w-3 shrink-0 flex-col gap-[2px]">
+                    <span className="h-3 w-3 overflow-visible whitespace-nowrap text-[8px] font-medium leading-none text-muted-foreground">
                       {monthLabels[ci] ?? ""}
                     </span>
                     {col.map((cell) => {
