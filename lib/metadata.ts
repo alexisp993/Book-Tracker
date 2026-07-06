@@ -244,6 +244,118 @@ function merge(parts: (PartialMeta | null)[]): BookMetadata | null {
   };
 }
 
+// --- Free-text search (title/author) — used by Add a Book's "Search Books" -
+// Distinct from BookMetadata: a search returns many lightweight candidates,
+// not one merged detail record. Tapping a result re-resolves the full record
+// via the existing lookupByIsbn/findLocalBook pipeline when it has an ISBN.
+export interface BookSearchResult {
+  title: string;
+  subtitle?: string;
+  authors: string[];
+  publishedDate?: string;
+  isbn13?: string;
+  coverUrl?: string;
+  source: string;
+}
+
+async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
+  const params = new URLSearchParams({ q: query, maxResults: "20" });
+  params.set("country", process.env.GOOGLE_BOOKS_COUNTRY || "US");
+  const key = process.env.GOOGLE_BOOKS_API_KEY;
+  if (key) params.set("key", key);
+
+  const data = (await fetchJson(
+    `https://www.googleapis.com/books/v1/volumes?${params.toString()}`,
+  )) as GBResponse | null;
+
+  return (data?.items ?? [])
+    .map((item): BookSearchResult | null => {
+      const info = item.volumeInfo;
+      if (!info?.title) return null;
+      const isbn13 = info.industryIdentifiers?.find((i) => i.type === "ISBN_13")?.identifier;
+      const cover = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail;
+      return {
+        title: info.title,
+        subtitle: info.subtitle,
+        authors: info.authors ?? [],
+        publishedDate: info.publishedDate,
+        isbn13,
+        coverUrl: cover ? cover.replace(/^http:/, "https:") : undefined,
+        source: "GOOGLE_BOOKS",
+      };
+    })
+    .filter((r): r is BookSearchResult => r !== null);
+}
+
+async function searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    fields: "title,subtitle,author_name,first_publish_year,isbn,cover_i",
+    limit: "20",
+  });
+  const data = (await fetchJson(
+    `https://openlibrary.org/search.json?${params.toString()}`,
+  )) as OLSearchByQueryResponse | null;
+
+  return (data?.docs ?? [])
+    .map((doc): BookSearchResult | null => {
+      if (!doc.title) return null;
+      // Open Library's `isbn` field is an unsorted list of every edition's
+      // ISBN — prefer a 13-digit one so it lines up with our unique index.
+      const isbn13 = doc.isbn?.find((i) => i.length === 13);
+      return {
+        title: doc.title,
+        subtitle: doc.subtitle,
+        authors: doc.author_name ?? [],
+        publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : undefined,
+        isbn13,
+        coverUrl: doc.cover_i
+          ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
+          : undefined,
+        source: "OPEN_LIBRARY_SEARCH",
+      };
+    })
+    .filter((r): r is BookSearchResult => r !== null);
+}
+
+interface OLSearchByQueryResponse {
+  docs?: {
+    title?: string;
+    subtitle?: string;
+    author_name?: string[];
+    first_publish_year?: number;
+    isbn?: string[];
+    cover_i?: number;
+  }[];
+}
+
+/**
+ * Free-text title/author search across Google Books and Open Library, run
+ * in parallel (provider failures isolated, same as lookupByIsbn) and
+ * deduped by ISBN-13 — falling back to a lowercase title+first-author key
+ * when a result has no ISBN — capped at ~20 results.
+ */
+export async function searchBooks(query: string): Promise<BookSearchResult[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  const [gb, ol] = await Promise.all([
+    searchGoogleBooks(q).catch(() => []),
+    searchOpenLibrary(q).catch(() => []),
+  ]);
+
+  const seen = new Set<string>();
+  const deduped: BookSearchResult[] = [];
+  for (const r of [...gb, ...ol]) {
+    const key = r.isbn13 ?? `${r.title.toLowerCase()}|${(r.authors[0] ?? "").toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(r);
+    if (deduped.length >= 20) break;
+  }
+  return deduped;
+}
+
 // Check the local Book table before hitting any external provider. Books are
 // deduped by `isbn13 @unique`, so a 10-digit scan is normalized to 13 first.
 // Used by the scan/lookup API route (app/api/metadata/isbn/[isbn]/route.ts) —

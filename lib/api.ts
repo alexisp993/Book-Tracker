@@ -23,7 +23,7 @@ import type {
   ReadingSessionDTO,
   SessionStats,
 } from "@/lib/types";
-import type { BookMetadata } from "@/lib/metadata";
+import type { BookMetadata, BookSearchResult } from "@/lib/metadata";
 import type { AdminFeedbackDetail, AdminFeedbackRow, FeedbackDTO } from "@/lib/feedback";
 import type { HomeSection } from "@/lib/homeConfig";
 
@@ -134,6 +134,16 @@ export async function lookupIsbn(isbn: string): Promise<BookMetadata> {
     { cache: "no-store" },
   );
   return handle<BookMetadata>(res);
+}
+
+export async function searchBookMetadata(
+  q: string,
+): Promise<{ results: BookSearchResult[] }> {
+  const res = await fetch(
+    `/api/metadata/search?q=${encodeURIComponent(q)}`,
+    { cache: "no-store" },
+  );
+  return handle<{ results: BookSearchResult[] }>(res);
 }
 
 // --- Shelves & Collections (groups) ---

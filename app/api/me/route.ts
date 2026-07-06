@@ -13,6 +13,7 @@ export async function GET() {
     name: user.name,
     email: user.email,
     isAdmin: user.isAdmin,
+    createdAt: user.createdAt.toISOString(),
   };
   return NextResponse.json(me);
 }

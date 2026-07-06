@@ -18,7 +18,19 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getCurrentUser();
 
-  const [statusGroups, ratingAgg, ratingGroups, favorites, readRows, topAuthors, genreBreakdown] =
+  const now0 = new Date();
+  const twoYearsAgoStart = new Date(now0.getFullYear() - 1, 0, 1);
+
+  const [
+    statusGroups,
+    ratingAgg,
+    ratingGroups,
+    favorites,
+    readRows,
+    topAuthors,
+    genreBreakdown,
+    sessionRows,
+  ] =
     await Promise.all([
       prisma.userBook.groupBy({
         by: ["status"],
@@ -72,6 +84,13 @@ export async function GET() {
         ORDER BY count DESC
         LIMIT 8
       `,
+      // Same narrow-findMany-then-JS-reduce pattern as readRows above — feeds
+      // both the last-12-months minutesPerMonth chart and the this-year-vs-
+      // last-year time-read delta.
+      prisma.readingSession.findMany({
+        where: { userId: user.id, date: { gte: twoYearsAgoStart } },
+        select: { date: true, minutes: true },
+      }),
     ]);
 
   const byStatusCount: Record<string, number> = {};
@@ -89,24 +108,66 @@ export async function GET() {
 
   // Last 12 months buckets (oldest → newest), reduced from the narrow READ-only fetch.
   const now = new Date();
-  const months: { key: string; label: string; count: number }[] = [];
+  const months: { key: string; label: string; count: number; pages: number }[] = [];
   const monthIndex = new Map<string, number>();
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = d.toLocaleString(undefined, { month: "short" });
     monthIndex.set(key, months.length);
-    months.push({ key, label, count: 0 });
+    months.push({ key, label, count: 0, pages: 0 });
   }
 
+  // this-calendar-year vs last-calendar-year totals, bucketed from the same
+  // rows already fetched for booksPerMonth/pagesRead above — no extra query.
+  const thisYear = now.getFullYear();
+  const lastYear = thisYear - 1;
   let pagesRead = 0;
+  let booksThisYear = 0;
+  let booksLastYear = 0;
+  let pagesThisYear = 0;
+  let pagesLastYear = 0;
   for (const ub of readRows) {
-    pagesRead += ub.book.pageCount ?? 0;
+    const pages = ub.book.pageCount ?? 0;
+    pagesRead += pages;
     const fin = ub.finishDate ?? ub.updatedAt;
     const key = `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, "0")}`;
     const idx = monthIndex.get(key);
-    if (idx !== undefined) months[idx].count++;
+    if (idx !== undefined) {
+      months[idx].count++;
+      months[idx].pages += pages;
+    }
+
+    if (fin.getFullYear() === thisYear) {
+      booksThisYear++;
+      pagesThisYear += pages;
+    } else if (fin.getFullYear() === lastYear) {
+      booksLastYear++;
+      pagesLastYear += pages;
+    }
   }
+
+  // Last 12 months of logged reading minutes, same bucket shape as
+  // booksPerMonth, plus a this-year-vs-last-year total for the delta.
+  const minuteMonths: { key: string; label: string; minutes: number }[] = months.map((m) => ({
+    ...m,
+    minutes: 0,
+  }));
+  let minutesThisYear = 0;
+  let minutesLastYear = 0;
+  for (const s of sessionRows) {
+    const key = `${s.date.getFullYear()}-${String(s.date.getMonth() + 1).padStart(2, "0")}`;
+    const idx = monthIndex.get(key);
+    if (idx !== undefined) minuteMonths[idx].minutes += s.minutes ?? 0;
+
+    if (s.date.getFullYear() === thisYear) minutesThisYear += s.minutes ?? 0;
+    else if (s.date.getFullYear() === lastYear) minutesLastYear += s.minutes ?? 0;
+  }
+
+  // null when there's nothing to compare against (no history last year) —
+  // never a fabricated 0%.
+  const yoyPct = (thisVal: number, lastVal: number): number | null =>
+    lastVal > 0 ? Math.round(((thisVal - lastVal) / lastVal) * 100) : null;
 
   const stats: LibraryStats = {
     total,
@@ -127,12 +188,25 @@ export async function GET() {
       label: m.label,
       count: m.count,
     })),
+    pagesPerMonth: months.map((m) => ({
+      month: m.key,
+      label: m.label,
+      pages: m.pages,
+    })),
     topAuthors: topAuthors.map((a) => ({ name: a.name, count: Number(a.count) })),
     ratingDistribution: [1, 2, 3, 4, 5].map((r) => ({
       rating: r,
       count: ratingDist[r],
     })),
     genreBreakdown: genreBreakdown.map((g) => ({ name: g.name, count: Number(g.count) })),
+    minutesPerMonth: minuteMonths.map((m) => ({
+      month: m.key,
+      label: m.label,
+      minutes: m.minutes,
+    })),
+    timeReadYoyPct: yoyPct(minutesThisYear, minutesLastYear),
+    booksYoyPct: yoyPct(booksThisYear, booksLastYear),
+    pagesYoyPct: yoyPct(pagesThisYear, pagesLastYear),
   };
 
   return NextResponse.json(stats);

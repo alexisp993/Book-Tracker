@@ -46,6 +46,7 @@ export const queryKeys = {
   adminFeedbackDetail: (id: string) => ["adminFeedback", "detail", id] as const,
   betaStats: ["betaStats"] as const,
   goals: ["goals"] as const,
+  bookSearch: (q: string) => ["bookSearch", q] as const,
 };
 
 // --- Books ---
@@ -80,6 +81,19 @@ export function useBook(id: string) {
       }
       return undefined;
     },
+  });
+}
+
+// Free-text title/author search for Add a Book's "Search Books" flow.
+// Short staleTime — external provider results are cheap to re-fetch and
+// aren't worth caching long the way library data is.
+export function useBookSearch(q: string) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: queryKeys.bookSearch(query),
+    queryFn: () => api.searchBookMetadata(query),
+    enabled: query.length >= 2,
+    staleTime: 10_000,
   });
 }
 

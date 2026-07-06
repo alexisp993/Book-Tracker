@@ -3,18 +3,23 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Leaf,
-  LayoutDashboard,
-  LogOut,
-  MessageSquare,
-  Moon,
-  ShieldCheck,
-  Sun,
-  Timer,
+  BarChart3,
+  Cloud,
+  HelpCircle,
+  Palette,
+  Settings as SettingsIcon,
+  Target,
 } from "lucide-react";
-import { StatsView } from "@/components/StatsView";
-import { useTheme, type Theme } from "@/lib/theme";
 import { useCurrentUser } from "@/lib/queries";
+
+const MENU_ITEMS = [
+  { href: "/profile/stats", icon: BarChart3, label: "Reading Stats" },
+  { href: "/profile/goals", icon: Target, label: "Reading Goals" },
+  { href: "/profile/preferences", icon: Palette, label: "Reading Preferences" },
+  { href: "/profile/backup", icon: Cloud, label: "Backup & Sync" },
+  { href: "/profile/settings", icon: SettingsIcon, label: "Settings" },
+  { href: "/profile/help", icon: HelpCircle, label: "Help & Support" },
+];
 
 export function ProfileView() {
   const { data: me } = useCurrentUser();
@@ -28,198 +33,61 @@ export function ProfileView() {
         .toUpperCase()
     : me?.email?.[0]?.toUpperCase() ?? "?";
 
+  const memberSince = me?.createdAt
+    ? new Date(me.createdAt).toLocaleDateString(undefined, {
+        month: "short",
+        year: "numeric",
+      })
+    : null;
+
   return (
-    <div className="space-y-8">
-      {/* Account summary card */}
-      <div className="overflow-hidden rounded-2xl border bg-card">
-        <div className="h-16 bg-gradient-to-r from-primary/20 via-primary/10 to-warm/10" />
-        <div className="flex items-end gap-4 px-4 pb-4">
-          <div className="-mt-8 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground shadow-md ring-4 ring-card">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1 pt-2">
-            <div className="flex items-center gap-2">
-              {me?.name ? (
-                <p className="truncate font-display text-lg font-semibold leading-tight">
-                  {me.name}
-                </p>
-              ) : null}
-              {me?.isAdmin ? (
-                <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-300">
-                  Admin
-                </span>
-              ) : null}
-            </div>
-            <p className="truncate text-sm text-muted-foreground">{me?.email}</p>
-          </div>
+    <div className="space-y-6">
+      {/* Account card */}
+      <div className="flex items-center gap-3 rounded-2xl border bg-card p-4">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
+          {initials}
         </div>
-      </div>
-
-      {/* Reading stats */}
-      <section>
-        <SectionHeader title="Reading Stats" />
-        <StatsView />
-      </section>
-
-      {/* Reading history */}
-      <section className="space-y-2">
-        <SectionHeader title="Activity" />
-        <Link
-          href="/sessions"
-          className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-secondary"
-        >
-          <Timer className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="flex-1">
-            <p className="text-sm font-medium">Reading History</p>
-            <p className="text-xs text-muted-foreground">
-              All your logged sessions
-            </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {me?.name ? (
+              <p className="truncate font-display text-base font-semibold leading-tight">
+                {me.name}
+              </p>
+            ) : null}
+            {me?.isAdmin ? (
+              <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-300">
+                Admin
+              </span>
+            ) : null}
           </div>
-          <span className="text-xs text-muted-foreground">View →</span>
-        </Link>
-      </section>
-
-      {/* Appearance */}
-      <section className="space-y-2">
-        <SectionHeader title="Appearance" />
-        <AppearancePicker />
-      </section>
-
-      {/* Settings & Links */}
-      <section className="space-y-2">
-        <SectionHeader title="Settings" />
-        <div className="overflow-hidden rounded-xl border bg-card divide-y divide-border/60">
-          <SettingsLink
-            href="/feedback"
-            icon={<MessageSquare className="h-4 w-4" />}
-            label="Send Feedback"
-            description="Report a bug or request a feature"
-          />
-          <SettingsLink
-            href="/my-feedback"
-            icon={<MessageSquare className="h-4 w-4" />}
-            label="My Feedback"
-            description="View your submitted feedback"
-          />
-          {me?.isAdmin ? (
-            <>
-              <SettingsLink
-                href="/admin/dashboard"
-                icon={<LayoutDashboard className="h-4 w-4" />}
-                label="Beta Dashboard"
-                description="Usage stats and health metrics"
-              />
-              <SettingsLink
-                href="/admin/feedback"
-                icon={<ShieldCheck className="h-4 w-4" />}
-                label="Admin Feedback"
-                description="Review all user feedback"
-              />
-            </>
+          <p className="truncate text-sm text-muted-foreground">{me?.email}</p>
+          {memberSince ? (
+            <p className="truncate text-xs text-muted-foreground">Member since {memberSince}</p>
           ) : null}
         </div>
-      </section>
-
-      {/* Log out */}
-      <section>
-        <form action="/api/auth/logout" method="post">
-          <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-          >
-            <LogOut className="h-4 w-4" />
-            Log out
-          </button>
-        </form>
-      </section>
-    </div>
-  );
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-      {title}
-    </h2>
-  );
-}
-
-const THEMES: { value: Theme; label: string; icon: React.ReactNode; description: string }[] = [
-  {
-    value: "light",
-    label: "Light",
-    icon: <Sun className="h-4 w-4" />,
-    description: "Warm parchment",
-  },
-  {
-    value: "dark",
-    label: "Dark",
-    icon: <Moon className="h-4 w-4" />,
-    description: "Midnight ink",
-  },
-  {
-    value: "forest",
-    label: "Forest",
-    icon: <Leaf className="h-4 w-4" />,
-    description: "Deep woodland green",
-  },
-];
-
-function AppearancePicker() {
-  // Shared reactive theme (lib/theme.ts): always matches the applied theme
-  // and updates live if the header toggle (or another tab) changes it.
-  const { theme: current, setTheme: select } = useTheme();
-
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {THEMES.map((t) => (
-        <button
-          key={t.value}
-          type="button"
-          onClick={() => select(t.value)}
-          className={[
-            "flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors",
-            current === t.value
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-border bg-card hover:bg-secondary",
-          ].join(" ")}
-          aria-pressed={current === t.value}
+        <Link
+          href="/profile/settings"
+          aria-label="Settings"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background shadow-sm">
-            {t.icon}
-          </span>
-          <div>
-            <p className="text-xs font-semibold">{t.label}</p>
-            <p className="text-[10px] text-muted-foreground">{t.description}</p>
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SettingsLink({
-  href,
-  icon,
-  label,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-secondary"
-    >
-      <span className="shrink-0 text-muted-foreground">{icon}</span>
-      <div className="flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
+          <SettingsIcon className="h-5 w-5" />
+        </Link>
       </div>
-      <span className="text-xs text-muted-foreground">→</span>
-    </Link>
+
+      {/* Menu */}
+      <div className="overflow-hidden rounded-2xl border bg-card divide-y divide-border/60">
+        {MENU_ITEMS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-secondary"
+          >
+            <item.icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <span className="flex-1 text-sm font-medium">{item.label}</span>
+            <span className="text-muted-foreground">›</span>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }

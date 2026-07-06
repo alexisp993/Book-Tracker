@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function StatsPage() {
-  redirect("/profile");
+  redirect("/profile/stats");
 }

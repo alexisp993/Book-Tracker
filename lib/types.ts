@@ -134,9 +134,14 @@ export interface LibraryStats {
   ratedCount: number;
   byStatus: { status: string; label: string; count: number }[];
   booksPerMonth: { month: string; label: string; count: number }[];
+  pagesPerMonth: { month: string; label: string; pages: number }[];
   topAuthors: { name: string; count: number }[];
   ratingDistribution: { rating: number; count: number }[];
   genreBreakdown: { name: string; count: number }[];
+  minutesPerMonth: { month: string; label: string; minutes: number }[];
+  timeReadYoyPct: number | null;
+  booksYoyPct: number | null;
+  pagesYoyPct: number | null;
 }
 
 export interface GoalDTO {
@@ -156,6 +161,7 @@ export interface CurrentUser {
   name: string | null;
   email: string;
   isAdmin: boolean;
+  createdAt: string;
 }
 
 export interface BetaStats {
