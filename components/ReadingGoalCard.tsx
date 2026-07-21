@@ -3,6 +3,7 @@
 import * as React from "react";
 import { PartyPopper, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
@@ -20,7 +21,7 @@ export function ReadingGoalCard() {
 
   return (
     <>
-      <div className="rounded-2xl border bg-card p-4">
+      <Card>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" />
@@ -45,7 +46,7 @@ export function ReadingGoalCard() {
             Set a reading goal to track your progress.
           </p>
         )}
-      </div>
+      </Card>
 
       <GoalDialog
         open={open}

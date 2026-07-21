@@ -14,6 +14,7 @@ import {
   NotebookText,
 } from "lucide-react";
 import { TINTS } from "@/lib/constants";
+import { Card } from "@/components/ui/card";
 import { useCalendarRange, useSessionStats, useStats } from "@/lib/queries";
 import { formatDuration } from "@/lib/utils";
 import {
@@ -190,7 +191,7 @@ export function HomeReadingCalendarPreviewCard() {
 
       {/* Standalone heatmap card — header (range + nav), weekday/month labels,
           grid, legend. */}
-      <div className="rounded-2xl border bg-card p-4 sm:p-5">
+      <Card>
           {/* Header row */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{rangeLabel}</p>
@@ -302,10 +303,10 @@ export function HomeReadingCalendarPreviewCard() {
               </span>
             ))}
           </div>
-      </div>
+      </Card>
 
       {/* Standalone reading-summary card — stat row + a streak tip banner */}
-      <div className="space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
+      <Card className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatPill
             icon={<Flame className="h-4 w-4" />}
@@ -361,7 +362,7 @@ export function HomeReadingCalendarPreviewCard() {
             Add Reading
           </Link>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

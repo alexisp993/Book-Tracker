@@ -363,7 +363,7 @@ function Sparkline({
   const stroke = tint === "emerald" ? "rgb(16 185 129)" : "rgb(139 92 246)";
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <Card>
       <p className="text-xs text-muted-foreground">{title}</p>
       <p className="mt-0.5 font-display text-2xl font-semibold">{value}</p>
       <div className="mt-1">
@@ -379,7 +379,7 @@ function Sparkline({
           strokeLinejoin="round"
         />
       </svg>
-    </div>
+    </Card>
   );
 }
 

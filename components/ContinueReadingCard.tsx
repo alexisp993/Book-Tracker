@@ -3,6 +3,7 @@
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookCover } from "@/components/BookCover";
+import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/bar";
 import { useBooks, useSessionStats } from "@/lib/queries";
 import type { LibraryBook } from "@/lib/types";
@@ -40,7 +41,7 @@ export function ContinueReadingCard({
       : null;
 
   return (
-    <div className="flex items-center gap-4 rounded-2xl border bg-card p-4">
+    <Card className="flex items-center gap-4">
       <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
         <BookCover book={book} />
       </div>
@@ -73,6 +74,6 @@ export function ContinueReadingCard({
       >
         <BookOpen className="h-3.5 w-3.5" /> Continue
       </Button>
-    </div>
+    </Card>
   );
 }

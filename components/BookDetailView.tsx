@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 import { BackHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
@@ -138,7 +139,7 @@ export function BookDetailView({ id }: { id: string }) {
       <BackHeader href="/library" backLabel="Back to Library" />
 
       {/* Header card — explicit two-column hero: cover left, content right */}
-      <div className="grid grid-cols-[auto_1fr] gap-4 rounded-2xl border bg-card p-4">
+      <Card className="grid grid-cols-[auto_1fr] gap-4">
         <div className="aspect-[2/3] w-24 sm:w-28 shrink-0 overflow-hidden rounded-xl border bg-muted">
           <BookCover book={book} />
         </div>
@@ -234,7 +235,7 @@ export function BookDetailView({ id }: { id: string }) {
             ) : null}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Tab bar */}
       <SegmentedTabs value={tab} onChange={setTab} items={DETAIL_TABS} />

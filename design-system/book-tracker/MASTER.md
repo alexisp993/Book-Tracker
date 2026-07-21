@@ -97,7 +97,7 @@ All primitives live in `components/ui/`. **Never hand-roll these patterns again*
 | `Button` | `ui/button.tsx` | variants `default\|outline\|ghost\|destructive` × sizes `default\|sm\|icon` |
 | `Input` `Textarea` `Select` `Label` | `ui/input.tsx` | native passthrough, no variants |
 | `Dialog` | `ui/dialog.tsx` | Escape to close, scroll-lock, bottom sheet under `sm` |
-| `Card` | `ui/card.tsx` | `rounded-2xl border bg-card p-4 sm:p-5`; `title` optional |
+| `Card` | `ui/card.tsx` | `rounded-2xl border bg-card p-4 sm:p-5`; `title` optional; pass layout via `className` (it merges). Every content panel uses this — the only raw `rounded-2xl border bg-card` divs left are a `<button>` (AddBookLauncher option) and a `<form>` (FeedbackForm), which Card can't be |
 | `Stat` | `ui/stat.tsx` | tinted icon badge + value + label |
 | `ListContainer` / `ListRow` | `ui/list.tsx` | row `px-4 py-3`, icon `h-4 w-4` (Lucide component, not a node), `ChevronRight h-4 w-4` |
 | `SegmentedTabs` | `ui/tabs.tsx` | `rounded-xl bg-muted p-1`; active `bg-card shadow-sm` |

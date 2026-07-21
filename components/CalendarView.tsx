@@ -12,6 +12,7 @@ import {
   type MonthCalendarViewModel,
 } from "@/lib/calendarViewModel";
 import { formatDuration } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import type { CalendarDay } from "@/lib/api";
 
 // Canvas palette read from the active theme's CSS variables at export time,
@@ -114,11 +115,24 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // "Book Tracker" brand
+  // "Book Tracker" brand — a small vector book mark (a canvas can't render a
+  // Lucide component, so the glyph is drawn by hand) instead of an emoji, which
+  // renders inconsistently across platforms and reads as a UI icon.
+  const markY = PAD + 30;
+  ctx.fillStyle = palette.primary;
+  ctx.beginPath();
+  roundRect(ctx, PAD, markY, 26, 30, 4);
+  ctx.fill();
+  ctx.strokeStyle = palette.card;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PAD + 13, markY + 4);
+  ctx.lineTo(PAD + 13, markY + 26);
+  ctx.stroke();
   ctx.font = "600 28px -apple-system, system-ui, sans-serif";
   ctx.fillStyle = palette.primary;
   ctx.textAlign = "left";
-  ctx.fillText("📚 Book Tracker", PAD, PAD + 52);
+  ctx.fillText("Book Tracker", PAD + 40, PAD + 52);
 
   // Month + Year — same monthLabel string the live header shows
   ctx.font = `700 64px -apple-system, system-ui, sans-serif`;
@@ -477,7 +491,7 @@ export function CalendarView() {
 
 function DayDetail({ day }: { day: CalendarDay }) {
   return (
-    <div className="rounded-2xl border bg-card p-4 space-y-3">
+    <Card className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{day.date}</p>
         <div className="flex gap-3 text-xs text-muted-foreground">
@@ -524,6 +538,6 @@ function DayDetail({ day }: { day: CalendarDay }) {
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

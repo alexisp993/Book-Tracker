@@ -11,6 +11,7 @@ import {
   Target,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/queries";
+import { Card } from "@/components/ui/card";
 import { ListContainer, ListRow } from "@/components/ui/list";
 
 const MENU_ITEMS = [
@@ -44,7 +45,7 @@ export function ProfileView() {
   return (
     <div className="space-y-6">
       {/* Account card */}
-      <div className="flex items-center gap-3 rounded-2xl border bg-card p-4">
+      <Card className="flex items-center gap-3">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
           {initials}
         </div>
@@ -73,7 +74,7 @@ export function ProfileView() {
         >
           <SettingsIcon className="h-5 w-5" />
         </Link>
-      </div>
+      </Card>
 
       {/* Menu */}
       <ListContainer>

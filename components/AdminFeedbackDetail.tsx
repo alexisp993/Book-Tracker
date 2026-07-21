@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { BackHeader } from "@/components/ui/page-header";
 import { Label, Select, Textarea } from "@/components/ui/input";
 import { useAdminFeedbackDetail, useUpdateFeedbackStatus } from "@/lib/queries";
@@ -51,7 +52,7 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
     <div className="space-y-5">
       <BackHeader href="/admin/feedback" backLabel="Back to all feedback" />
 
-      <div className="rounded-2xl border bg-card p-5">
+      <Card>
         <p className="text-xs text-muted-foreground">
           {FEEDBACK_TYPE_LABELS[feedback.type as FeedbackType]} ·{" "}
           {formatDateTime(feedback.createdAt)}
@@ -94,9 +95,9 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
             <dd>{feedback.appVersion ?? "—"}</dd>
           </div>
         </dl>
-      </div>
+      </Card>
 
-      <div className="space-y-4 rounded-2xl border bg-card p-5">
+      <Card className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="status">Status</Label>
           <Select
@@ -129,7 +130,7 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
             <span className="text-sm text-emerald-600">Saved.</span>
           ) : null}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
