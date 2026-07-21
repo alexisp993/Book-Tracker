@@ -195,6 +195,8 @@ function ResultRow({
             src={result.coverUrl}
             alt=""
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
             onError={(e) => (e.currentTarget.style.display = "none")}
           />
         ) : null}

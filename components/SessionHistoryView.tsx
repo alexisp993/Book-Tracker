@@ -171,7 +171,10 @@ export function SessionHistoryView() {
               <div className="h-12 w-9 shrink-0 overflow-hidden rounded-md border bg-muted">
                 {s.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.coverUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={s.coverUrl} alt="" className="h-full w-full object-cover"
+      loading="lazy"
+      decoding="async"
+    />
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">

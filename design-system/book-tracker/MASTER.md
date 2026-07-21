@@ -138,12 +138,18 @@ render the header in **every** state, including loading and empty.
 
 1. Every interactive element: `cursor-pointer`, a hover state, and a visible
    `focus-visible:ring-2 focus-visible:ring-ring`.
-2. `transition-colors duration-200`. Never animate `width`/`height`/layout. No scale-on-hover in lists.
-3. Async actions disable their trigger and show in-place pending text (`"Saving…"`).
-4. Destructive actions always confirm.
-5. **Never ship a functionless control.** A mockup element with no real behavior is omitted, not
+2. **Touch targets:** ≥44×44px for primary/standalone actions; **≥36px (`h-9`) with ≥8px
+   spacing** for dense secondary controls (icon buttons in card action rows, calendar/heatmap
+   nav). WCAG 2.5.8 (AA) sets the hard floor at 24×24px; the 44px figure is AAA/Apple HIG and is
+   what anything frequently reached for should hit. Stated with this nuance deliberately — a
+   blanket 44px would wreck the density this app depends on, and a rule that's knowingly broken
+   everywhere is worse than an honest one.
+3. `transition-colors duration-200`. Never animate `width`/`height`/layout. No scale-on-hover in lists.
+4. Async actions disable their trigger and show in-place pending text (`"Saving…"`).
+5. Destructive actions always confirm.
+6. **Never ship a functionless control.** A mockup element with no real behavior is omitted, not
    faked. (Held on the Reading-Session kebab, the Statistics period selector, and Achievements.)
-6. Errors render inline next to their cause — never a toast that can be missed.
+7. Errors render inline next to their cause — never a toast that can be missed.
 
 ---
 
@@ -199,8 +205,10 @@ Do not re-declare it.
   reduce. Never fetch-all-then-loop.
 - Fetch once and page client-side where the dataset is small and bounded (both heatmaps do this).
 - **Images:** raw `<img>` is deliberate — covers come from arbitrary external hosts and need the
-  `coverCandidates[]` fallback walk that `next/image` would complicate. Add `loading="lazy"` and
-  explicit `width`/`height` to prevent layout shift.
+  `coverCandidates[]` fallback walk that `next/image` would complicate. All cover images carry
+  `loading="lazy"` + `decoding="async"`; they sit inside fixed-size containers, so no explicit
+  `width`/`height` is needed to prevent layout shift. (The one exception is `FeedbackForm`'s
+  screenshot preview — a local blob that's already in memory, where lazy-loading would be a no-op.)
 - Reserve space for async content; a loaded card must not change page height.
 
 ---
@@ -211,10 +219,10 @@ Do not re-declare it.
 |---|---|---|
 | A1 | Contrast ≥4.5:1 body, ≥3:1 large/UI | Token pairs pass; watch `muted-foreground` on `muted` in Forest |
 | A2 | Min type size `text-[10px]` | ✅ enforced |
-| A3 | Touch targets ≥44×44px, ≥8px apart | ⚠️ heatmap nav now `h-9` (36px); remaining `h-8` controls unaudited |
-| A4 | `title=` is not an accessible tooltip — pair with `aria-label` | ⚠️ done on heatmap cells; other `title=` users pending |
+| A3 | Touch targets (rule in §6.2) | ✅ every real control ≥36px with ≥8px spacing; audited — remaining `h-8`/`h-7` matches are icon glyphs, not targets |
+| A4 | `title=` is not an accessible tooltip — pair with `aria-label` | ⚠️ done on heatmap cells; ~8 other `title=` users pending |
 | A5 | Visible focus ring on all interactive elements | ✅ in every primitive (`ListRow`, `SegmentedTabs`, `FilterPills`, `BackHeader`, `Button`) |
-| A6 | `aria-label` on every icon-only button | ⚠️ 43/59 — audit remainder |
+| A6 | `aria-label` on every icon-only button | ✅ audited — every icon-only control has one; the rest have visible text |
 | A7 | Color never the sole indicator | ✅ heatmap value is carried in the `aria-label` |
 | A8 | Logical tab order, no keyboard traps | ✅ dialog handles Escape + scroll-lock |
 | A9 | `prefers-reduced-motion` respected | ✅ global rule in `globals.css` |

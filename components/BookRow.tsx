@@ -96,7 +96,7 @@ export const BookRow = React.memo(function BookRow({
             e.preventDefault();
             setMenuOpen((v) => !v);
           }}
-          className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
           aria-label={`Actions for ${book.title}`}
           aria-haspopup="menu"
           aria-expanded={menuOpen}

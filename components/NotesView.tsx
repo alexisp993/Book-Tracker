@@ -287,6 +287,8 @@ function NoteCard({
             src={note.coverUrl}
             alt=""
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
             onError={(e) => (e.currentTarget.style.display = "none")}
           />
         ) : (

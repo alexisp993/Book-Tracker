@@ -27,6 +27,8 @@ export function FallbackCoverImg({
       src={src}
       alt={alt}
       className={className ?? "h-full w-full object-cover"}
+      loading="lazy"
+      decoding="async"
       onError={() => setIdx((i) => i + 1)}
       onLoad={(e) => {
         if (e.currentTarget.naturalWidth <= 2) setIdx((i) => i + 1);

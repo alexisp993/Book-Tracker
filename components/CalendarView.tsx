@@ -353,7 +353,7 @@ export function CalendarView() {
         <button
           type="button"
           onClick={prevMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary"
           aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -366,7 +366,7 @@ export function CalendarView() {
             type="button"
             onClick={handleDownload}
             disabled={downloading || calData.length === 0}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
             aria-label="Download calendar image"
             title="Download as image"
           >
@@ -380,7 +380,7 @@ export function CalendarView() {
             type="button"
             onClick={nextMonth}
             disabled={!canGoNext()}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary disabled:opacity-40"
             aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />

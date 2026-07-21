@@ -110,12 +110,12 @@ export const BookCard = React.memo(function BookCard({
           </div>
         ) : null}
 
-        <div className="mt-1 flex items-center gap-1.5">
+        <div className="mt-1 flex items-center gap-2">
           {canStart && onStartReading ? (
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
+              className="h-9 w-9 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
               onClick={() => onStartReading(book)}
               aria-label={`Start reading ${book.title}`}
             >
@@ -125,7 +125,7 @@ export const BookCard = React.memo(function BookCard({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-9 w-9"
             onClick={() => onEdit(book)}
             aria-label={`Edit ${book.title}`}
           >
@@ -134,7 +134,7 @@ export const BookCard = React.memo(function BookCard({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
+            className="h-9 w-9 text-destructive hover:text-destructive"
             onClick={() => onDelete(book)}
             aria-label={`Delete ${book.title}`}
           >

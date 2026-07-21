@@ -109,7 +109,9 @@ function ShelfCard({ group }: { group: BookGroup }) {
                 src={url}
                 alt=""
                 className="h-full w-full object-cover"
-              />
+      loading="lazy"
+      decoding="async"
+    />
             ))}
           </div>
         ) : (
@@ -280,7 +282,7 @@ export function HomeView() {
           <button
             type="button"
             onClick={() => setCustomizerOpen(true)}
-            className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary"
+            className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary"
             aria-label="Customize home"
           >
             <Settings2 className="h-4 w-4 text-muted-foreground" />

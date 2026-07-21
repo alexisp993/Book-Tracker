@@ -71,7 +71,9 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
             src={feedback.screenshotUrl}
             alt="Feedback screenshot"
             className="mt-4 max-h-96 rounded-lg border object-contain"
-          />
+      loading="lazy"
+      decoding="async"
+    />
         ) : null}
 
         <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">

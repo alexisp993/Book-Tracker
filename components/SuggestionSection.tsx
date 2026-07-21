@@ -61,7 +61,9 @@ function SuggestionCard({ suggestion }: { suggestion: SuggestionItem }) {
             src={suggestion.coverUrl}
             alt={suggestion.title}
             className="h-full w-full object-cover"
-          />
+      loading="lazy"
+      decoding="async"
+    />
         ) : (
           <div className="flex h-full items-center justify-center bg-primary/10 p-3">
             <p className="text-center text-xs font-medium leading-snug text-primary/60">
