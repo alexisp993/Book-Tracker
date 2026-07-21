@@ -25,6 +25,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { BookRow } from "@/components/BookRow";
 import { LibraryToolbar, type LibraryFilters } from "@/components/LibraryToolbar";
 import { EmptyState } from "@/components/EmptyState";
+import { ListContainer } from "@/components/ui/list";
 import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import { StreakBanner } from "@/components/StreakBanner";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
@@ -367,7 +368,7 @@ export function LibraryView() {
           }
         />
       ) : view === "list" ? (
-        <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
+        <ListContainer inset>
           {items.map((book) => (
             <BookRow
               key={book.id}
@@ -377,7 +378,7 @@ export function LibraryView() {
               onStartReading={handleStartReading}
             />
           ))}
-        </div>
+        </ListContainer>
       ) : view === "compact" ? (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
           {items.map((book) => (

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StarRating } from "@/components/StarRating";
+import { ProgressBar } from "@/components/ui/bar";
 import { BookCover } from "@/components/BookCover";
 import { STATUS_DOT } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
@@ -102,12 +103,7 @@ export const BookCard = React.memo(function BookCard({
 
         {progress !== null && book.status === "CURRENTLY_READING" ? (
           <div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <ProgressBar value={progress} />
             <p className="mt-1 text-[11px] text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
             </p>

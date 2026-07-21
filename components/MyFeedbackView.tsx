@@ -3,6 +3,7 @@
 import { MessageSquareText } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
+import { ListContainer } from "@/components/ui/list";
 import { useMyFeedback } from "@/lib/queries";
 import {
   FEEDBACK_STATUS_LABELS,
@@ -29,7 +30,7 @@ export function MyFeedbackView() {
   }
 
   return (
-    <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
+    <ListContainer inset>
       {items.map((f) => (
         <div key={f.id} className="flex items-center gap-3 rounded-xl px-3 py-3">
           <div className="min-w-0 flex-1">
@@ -51,6 +52,6 @@ export function MyFeedbackView() {
           </span>
         </div>
       ))}
-    </div>
+    </ListContainer>
   );
 }

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { BackHeader } from "@/components/ui/page-header";
+import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
 import { BookCover } from "@/components/BookCover";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -172,12 +173,7 @@ export function BookDetailView({ id }: { id: string }) {
                 </p>
                 <p className="text-lg font-bold leading-none">{progress}%</p>
               </div>
-              <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              <ProgressBar value={progress} className="mt-1" />
             </div>
           ) : null}
 

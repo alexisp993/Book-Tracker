@@ -3,6 +3,7 @@
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookCover } from "@/components/BookCover";
+import { ProgressBar } from "@/components/ui/bar";
 import { useBooks, useSessionStats } from "@/lib/queries";
 import type { LibraryBook } from "@/lib/types";
 
@@ -55,12 +56,7 @@ export function ContinueReadingCard({
         </p>
         {progress !== null ? (
           <div className="mt-2">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <ProgressBar value={progress} />
             <p className="mt-1 text-[11px] text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
               {estimatedHours

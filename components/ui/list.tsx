@@ -5,17 +5,24 @@ import Link from "next/link";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Two forms, deliberately:
+//   default — flush rows, clipped by the container (settings/navigation lists)
+//   inset   — 1px of padding so rounded child rows show an inset hover
+//             highlight (record lists: books, feedback, sessions)
 export function ListContainer({
   children,
+  inset = false,
   className,
 }: {
   children: React.ReactNode;
+  inset?: boolean;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "divide-y divide-border/60 overflow-hidden rounded-2xl border bg-card",
+        "divide-y divide-border/60 rounded-2xl border bg-card",
+        inset ? "p-1" : "overflow-hidden",
         className,
       )}
     >

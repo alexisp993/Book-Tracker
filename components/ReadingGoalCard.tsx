@@ -3,6 +3,7 @@
 import * as React from "react";
 import { PartyPopper, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/lib/queries";
@@ -61,12 +62,7 @@ function GoalProgress({ goal }: { goal: GoalDTO }) {
 
   return (
     <div className="mt-3 space-y-1.5">
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={`h-full rounded-full transition-all ${done ? "bg-emerald-500" : "bg-primary"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <ProgressBar value={pct} fillClass={done ? "bg-emerald-500" : "bg-primary"} />
       <p className="flex items-center gap-1 text-xs text-muted-foreground">
         {done ? (
           <>

@@ -7,6 +7,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/EmptyState";
+import { ListContainer } from "@/components/ui/list";
 import { useAdminFeedbackList } from "@/lib/queries";
 import {
   FEEDBACK_STATUS_LABELS,
@@ -74,7 +75,7 @@ export function AdminFeedbackView() {
           description="Try a different search or clear the type filter."
         />
       ) : (
-        <div className="divide-y divide-border/60 rounded-2xl border bg-card p-1">
+        <ListContainer inset>
           {items.map((f) => (
             <Link
               key={f.id}
@@ -101,7 +102,7 @@ export function AdminFeedbackView() {
               </span>
             </Link>
           ))}
-        </div>
+        </ListContainer>
       )}
 
       <Pagination
