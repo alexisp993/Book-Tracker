@@ -220,8 +220,8 @@ Do not re-declare it.
 | A1 | Contrast ≥4.5:1 body, ≥3:1 large/UI | Token pairs pass; watch `muted-foreground` on `muted` in Forest |
 | A2 | Min type size `text-[10px]` | ✅ enforced |
 | A3 | Touch targets (rule in §6.2) | ✅ every real control ≥36px with ≥8px spacing; audited — remaining `h-8`/`h-7` matches are icon glyphs, not targets |
-| A4 | `title=` is not an accessible tooltip — pair with `aria-label` | ⚠️ done on heatmap cells; ~8 other `title=` users pending |
-| A5 | Visible focus ring on all interactive elements | ✅ in every primitive (`ListRow`, `SegmentedTabs`, `FilterPills`, `BackHeader`, `Button`) |
+| A4 | `title=` is not an accessible tooltip — pair with an accessible name | ✅ audited. Data-only tooltips now carry `aria-label` (heatmap cells, both stat charts); the `title=` that remain (refresh button, floating timer) sit on controls with visible text, so `title` is supplementary hint text, not the name |
+| A5 | Visible focus ring on all interactive elements | ✅ in every primitive (`ListRow`, `SegmentedTabs`, `FilterPills`, `BackHeader`, `Button`) and both stat charts' bars |
 | A6 | `aria-label` on every icon-only button | ✅ audited — every icon-only control has one; the rest have visible text |
 | A7 | Color never the sole indicator | ✅ heatmap value is carried in the `aria-label` |
 | A8 | Logical tab order, no keyboard traps | ✅ dialog handles Escape + scroll-lock |

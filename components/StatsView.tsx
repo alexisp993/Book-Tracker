@@ -131,6 +131,8 @@ export function StatsView() {
                 <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
                   <div className="flex w-full flex-1 items-end">
                     <div
+                      role="img"
+                      aria-label={`${m.label}: ${m.count} book${m.count === 1 ? "" : "s"}`}
                       className="w-full rounded-t-md bg-primary/80 transition-all"
                       style={{ height: `${(m.count / maxMonth) * 100}%` }}
                       title={`${m.count} in ${m.label}`}
@@ -317,8 +319,10 @@ function TimeReadChart({
               <button
                 type="button"
                 onClick={() => setFocusIndex(i)}
+                aria-label={`${m.label}: ${formatDuration(m.minutes)}`}
+                aria-pressed={i === focusIndex}
                 className={cn(
-                  "w-full rounded-t-md transition-all",
+                  "w-full rounded-t-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   i === focusIndex ? "bg-primary" : "bg-primary/40 hover:bg-primary/60",
                 )}
                 style={{ height: `${(m.minutes / max) * 100}%` }}
