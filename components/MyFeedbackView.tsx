@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageSquareText } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
 import { useMyFeedback } from "@/lib/queries";
 import {
@@ -10,14 +10,6 @@ import {
   FEEDBACK_TYPE_LABELS,
 } from "@/lib/constants";
 import type { FeedbackStatus, FeedbackType } from "@/lib/constants";
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 // Read-only — users cannot edit feedback after submission, per spec.
 export function MyFeedbackView() {

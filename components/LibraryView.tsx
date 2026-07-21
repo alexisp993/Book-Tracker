@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   BookPlus,
-  ChevronLeft,
-  ChevronRight,
   Library,
   RefreshCw,
   ScanBarcode,
@@ -14,6 +12,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { FilterPills } from "@/components/ui/tabs";
 import { Dialog } from "@/components/ui/dialog";
 import { BookCard } from "@/components/BookCard";
 import {
@@ -279,26 +279,13 @@ export function LibraryView() {
       {/* Status tabs — the primary filter; On Hold / Did Not Finish remain
           reachable via the search/filter sheet's status select. */}
       <div className="flex items-center gap-2">
-        <div className="flex flex-1 gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {STATUS_TABS.map((tab) => {
-            const active = filters.status === tab.value;
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setFilters({ ...filters, status: tab.value })}
-                className={cn(
-                  "shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <FilterPills
+          className="flex-1"
+          scrollable
+          value={filters.status}
+          onChange={(status) => setFilters({ ...filters, status })}
+          items={STATUS_TABS}
+        />
         <ViewToggle value={view} onChange={changeView} />
       </div>
 
@@ -411,29 +398,12 @@ export function LibraryView() {
         </div>
       )}
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1 || loading}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages || loading}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : null}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={setPage}
+        disabled={loading}
+      />
 
       <Dialog
         open={formOpen}

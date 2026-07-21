@@ -9,7 +9,8 @@ import {
   Users,
 } from "lucide-react";
 import { useBetaStats } from "@/lib/queries";
-import { Stat, Card } from "@/components/StatsView";
+import { Stat } from "@/components/ui/stat";
+import { Card } from "@/components/ui/card";
 
 // Intentionally lightweight per spec — counts and small top-5 lists, no
 // charts/real-time/advanced analytics.

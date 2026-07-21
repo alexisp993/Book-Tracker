@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronRight, Pencil, ScanBarcode, Search } from "lucide-react";
+import { ChevronRight, Pencil, ScanBarcode, Search } from "lucide-react";
+import { BackHeader } from "@/components/ui/page-header";
 
 interface LauncherOption {
   icon: React.ReactNode;
@@ -38,15 +39,7 @@ export function AddBookLauncher() {
 
   return (
     <div className="space-y-6">
-      <button
-        type="button"
-        onClick={() => router.push("/library")}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Library
-      </button>
-
-      <h1 className="font-display text-2xl font-bold tracking-tight">Add a Book</h1>
+      <BackHeader href="/library" backLabel="Back to Library" title="Add a Book" />
 
       <div className="space-y-3">
         <OptionCard

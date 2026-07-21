@@ -17,14 +17,19 @@ import { useSessionStats, useStats } from "@/lib/queries";
 import { STATUS_DOT } from "@/lib/constants";
 import { EmptyState } from "@/components/EmptyState";
 import { ReadingHeatmap } from "@/components/ReadingHeatmap";
+import { Card } from "@/components/ui/card";
+import { Stat } from "@/components/ui/stat";
+import { BarRow } from "@/components/ui/bar";
+import { PageHeader } from "@/components/ui/page-header";
+import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 
 type Tab = "overview" | "books" | "sessions" | "time";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "books", label: "Books" },
-  { key: "sessions", label: "Sessions" },
-  { key: "time", label: "Time" },
+const TABS: readonly TabItem<Tab>[] = [
+  { value: "overview", label: "Overview" },
+  { value: "books", label: "Books" },
+  { value: "sessions", label: "Sessions" },
+  { value: "time", label: "Time" },
 ];
 
 export function StatsView() {
@@ -33,16 +38,22 @@ export function StatsView() {
   const [calendarOffset, setCalendarOffset] = useState(0);
   const [tab, setTab] = useState<Tab>("overview");
 
-  if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
-  }
-  if (!stats || stats.total === 0) {
+  // The header renders in every state — loading and empty included — so the
+  // screen never appears untitled while data resolves.
+  if (loading || !stats || stats.total === 0) {
     return (
-      <EmptyState
-        icon={BookOpen}
-        title="No stats yet"
-        description="Add and finish some books to see your reading insights."
-      />
+      <div className="space-y-6">
+        <PageHeader title="Statistics" />
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : (
+          <EmptyState
+            icon={BookOpen}
+            title="No stats yet"
+            description="Add and finish some books to see your reading insights."
+          />
+        )}
+      </div>
     );
   }
 
@@ -57,30 +68,12 @@ export function StatsView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Statistics</h1>
-        <span className="text-sm text-muted-foreground">This Year</span>
-      </div>
+      <PageHeader
+        title="Statistics"
+        actions={<span className="text-sm text-muted-foreground">This Year</span>}
+      />
 
-      {/* Segmented tabs */}
-      <div className="flex gap-1 rounded-xl bg-muted p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={cn(
-              "flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors",
-              tab === t.key
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs value={tab} onChange={setTab} items={TABS} />
 
       {tab === "overview" ? (
         <div className="space-y-6">
@@ -153,23 +146,13 @@ export function StatsView() {
             <Card title="By status">
               <div className="space-y-2.5">
                 {stats.byStatus.map((s) => (
-                  <div key={s.status} className="flex items-center gap-3">
-                    <span className="w-28 shrink-0 text-xs text-muted-foreground">
-                      {s.label}
-                    </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={cn(
-                          "h-full rounded-full",
-                          STATUS_DOT[s.status as keyof typeof STATUS_DOT],
-                        )}
-                        style={{ width: `${(s.count / maxStatus) * 100}%` }}
-                      />
-                    </div>
-                    <span className="w-6 shrink-0 text-right text-xs font-medium">
-                      {s.count}
-                    </span>
-                  </div>
+                  <BarRow
+                    key={s.status}
+                    label={s.label}
+                    value={s.count}
+                    max={maxStatus}
+                    fillClass={STATUS_DOT[s.status as keyof typeof STATUS_DOT]}
+                  />
                 ))}
               </div>
             </Card>
@@ -177,21 +160,19 @@ export function StatsView() {
             <Card title="Ratings" subtitle={`${stats.ratedCount} rated`}>
               <div className="space-y-2.5">
                 {[...stats.ratingDistribution].reverse().map((r) => (
-                  <div key={r.rating} className="flex items-center gap-3">
-                    <span className="flex w-12 shrink-0 items-center gap-0.5 text-xs text-muted-foreground">
-                      {r.rating}
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-amber-400"
-                        style={{ width: `${(r.count / maxRating) * 100}%` }}
-                      />
-                    </div>
-                    <span className="w-6 shrink-0 text-right text-xs font-medium">
-                      {r.count}
-                    </span>
-                  </div>
+                  <BarRow
+                    key={r.rating}
+                    label={
+                      <>
+                        {r.rating}
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      </>
+                    }
+                    labelClassName="flex w-12 items-center gap-0.5"
+                    value={r.count}
+                    max={maxRating}
+                    fillClass="bg-amber-400"
+                  />
                 ))}
               </div>
             </Card>
@@ -201,20 +182,13 @@ export function StatsView() {
             <Card title="Favorite genres">
               <div className="space-y-2.5">
                 {stats.genreBreakdown.map((g) => (
-                  <div key={g.name} className="flex items-center gap-3">
-                    <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
-                      {g.name}
-                    </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-violet-500"
-                        style={{ width: `${(g.count / maxGenre) * 100}%` }}
-                      />
-                    </div>
-                    <span className="w-6 shrink-0 text-right text-xs font-medium">
-                      {g.count}
-                    </span>
-                  </div>
+                  <BarRow
+                    key={g.name}
+                    label={g.name}
+                    value={g.count}
+                    max={maxGenre}
+                    fillClass="bg-violet-500"
+                  />
                 ))}
               </div>
             </Card>
@@ -428,68 +402,5 @@ function LongestStreakCard({
         </div>
       </div>
     </Card>
-  );
-}
-
-export const TINTS = {
-  blue: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
-  emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-  amber: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-  violet: "bg-violet-500/15 text-violet-600 dark:text-violet-300",
-  rose: "bg-rose-500/15 text-rose-600 dark:text-rose-300",
-  teal: "bg-teal-500/15 text-teal-600 dark:text-teal-300",
-} as const;
-
-export function Stat({
-  icon,
-  label,
-  value,
-  tint = "blue",
-  caption,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-  tint?: keyof typeof TINTS;
-  caption?: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border bg-card p-4">
-      <span
-        className={cn(
-          "inline-flex h-8 w-8 items-center justify-center rounded-full",
-          TINTS[tint],
-        )}
-      >
-        {icon}
-      </span>
-      <p className="mt-2.5 text-xs text-muted-foreground">{label}</p>
-      <p className="mt-0.5 font-display text-2xl font-semibold">{value}</p>
-      {caption ? (
-        <p className="mt-0.5 text-[11px] text-muted-foreground">{caption}</p>
-      ) : null}
-    </div>
-  );
-}
-
-export function Card({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border bg-card p-4 sm:p-5">
-      <div className="mb-4 flex items-baseline justify-between">
-        <h2 className="font-display text-lg font-semibold">{title}</h2>
-        {subtitle ? (
-          <span className="text-xs text-muted-foreground">{subtitle}</span>
-        ) : null}
-      </div>
-      {children}
-    </div>
   );
 }

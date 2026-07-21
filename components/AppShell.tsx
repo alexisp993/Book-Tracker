@@ -35,6 +35,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen">
+      {/* Keyboard users land here first — a persistent header plus a bottom tab
+          bar is a lot of tab stops to wade through on every page. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
+
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
@@ -76,7 +85,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-14 sm:pt-8">
+      <main
+        id="main"
+        tabIndex={-1}
+        className="mx-auto max-w-6xl px-4 pb-28 pt-6 focus:outline-none sm:px-6 sm:pb-14 sm:pt-8"
+      >
         {children}
       </main>
 

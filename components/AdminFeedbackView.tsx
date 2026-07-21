@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MessageSquareText, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MessageSquareText, Search } from "lucide-react";
+import { cn, formatDate } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/EmptyState";
 import { useAdminFeedbackList } from "@/lib/queries";
 import {
@@ -15,13 +15,6 @@ import {
   FEEDBACK_TYPE_LABELS,
 } from "@/lib/constants";
 import type { FeedbackStatus, FeedbackType } from "@/lib/constants";
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export function AdminFeedbackView() {
   const [type, setType] = React.useState("");
@@ -111,29 +104,11 @@ export function AdminFeedbackView() {
         </div>
       )}
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : null}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={setPage}
+      />
     </div>
   );
 }

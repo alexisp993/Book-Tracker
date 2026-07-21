@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Target } from "lucide-react";
+import { PartyPopper, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
@@ -67,10 +67,15 @@ function GoalProgress({ goal }: { goal: GoalDTO }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="text-xs text-muted-foreground">
-        {done
-          ? `🎉 Goal complete! ${goal.progress} / ${goal.target} books`
-          : `${goal.progress} / ${goal.target} books · ${pct}%`}
+      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        {done ? (
+          <>
+            <PartyPopper className="h-3 w-3 shrink-0 text-emerald-500" aria-hidden />
+            {`Goal complete! ${goal.progress} / ${goal.target} books`}
+          </>
+        ) : (
+          `${goal.progress} / ${goal.target} books · ${pct}%`
+        )}
       </p>
     </div>
   );

@@ -1,23 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock, Download } from "lucide-react";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { useCalendar } from "@/lib/queries";
 import { FallbackCoverImg, CellCover } from "@/components/FallbackCoverImg";
 import {
   buildMonthCalendarViewModel,
+  BUCKET_ALPHA,
+  BUCKET_CLASS,
   type MonthCalendarViewModel,
 } from "@/lib/calendarViewModel";
+import { formatDuration } from "@/lib/utils";
 import type { CalendarDay } from "@/lib/api";
-
-const BUCKET_BG = [
-  "",
-  "bg-primary/20",
-  "bg-primary/40",
-  "bg-primary/65",
-  "bg-primary",
-];
 
 // Canvas palette read from the active theme's CSS variables at export time,
 // so the downloaded image mirrors whatever theme is live (default / dark /
@@ -31,7 +26,7 @@ interface CanvasPalette {
   foreground: string;
   mutedForeground: string;
   primary: string;
-  bucketFill: string[]; // [0..4], matching the live BUCKET_BG intensity ramp
+  bucketFill: string[]; // [0..4], mirroring the shared BUCKET_CLASS ramp
   emptyCell: string;
   texture: string;
   badgeBg: string;
@@ -53,27 +48,16 @@ function readThemePalette(): CanvasPalette {
     foreground: hsl("--foreground"),
     mutedForeground: hsl("--muted-foreground"),
     primary: hsl("--primary"),
-    // Same intensity ramp the live grid's BUCKET_BG uses: muted for empty,
-    // primary at increasing opacity for 1-4.
-    bucketFill: [
-      hsl("--muted", 0.35),
-      hsl("--primary", 0.2),
-      hsl("--primary", 0.4),
-      hsl("--primary", 0.65),
-      hsl("--primary", 1),
-    ],
+    // The shared app-wide intensity ramp (lib/calendarViewModel.ts) expressed
+    // as canvas colours: muted for empty, primary at increasing opacity for
+    // 1-4. Driven by BUCKET_ALPHA so the export can't drift from the screen.
+    bucketFill: BUCKET_ALPHA.map((alpha, i) =>
+      hsl(i === 0 ? "--muted" : "--primary", alpha),
+    ),
     emptyCell: hsl("--muted", 0.2),
     texture: hsl("--foreground", 0.03),
     badgeBg: hsl("--background", 0.8),
   };
-}
-
-function formatDuration(minutes: number | null): string {
-  if (!minutes) return "";
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 // ---------------------------------------------------------------------------
@@ -437,7 +421,7 @@ export function CalendarView() {
                     ? "border-border/40 hover:border-border"
                     : "border-transparent hover:border-border/40",
                   !cell.hasCover && cell.bucket > 0
-                    ? BUCKET_BG[cell.bucket]
+                    ? BUCKET_CLASS[cell.bucket]
                     : !cell.hasData
                     ? "bg-muted/20"
                     : "",
@@ -498,10 +482,16 @@ function DayDetail({ day }: { day: CalendarDay }) {
         <p className="text-sm font-semibold">{day.date}</p>
         <div className="flex gap-3 text-xs text-muted-foreground">
           {day.totalMinutes > 0 ? (
-            <span>⏱ {formatDuration(day.totalMinutes)}</span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3 shrink-0" aria-hidden />
+              {formatDuration(day.totalMinutes)}
+            </span>
           ) : null}
           {day.totalPages > 0 ? (
-            <span>📖 {day.totalPages} pages</span>
+            <span className="flex items-center gap-1">
+              <BookOpen className="h-3 w-3 shrink-0" aria-hidden />
+              {day.totalPages} pages
+            </span>
           ) : null}
         </div>
       </div>

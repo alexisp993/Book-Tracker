@@ -13,52 +13,26 @@ import {
   Lightbulb,
   NotebookText,
 } from "lucide-react";
-import { bucket, BUCKET_CLASS, isoLocalDate } from "@/components/ReadingHeatmap";
-import { TINTS } from "@/components/StatsView";
+import { TINTS } from "@/lib/constants";
 import { useCalendarRange, useSessionStats, useStats } from "@/lib/queries";
+import { formatDuration } from "@/lib/utils";
+import {
+  addDays,
+  bucket,
+  BUCKET_CLASS,
+  BUCKET_LEGEND,
+  isoLocalDate,
+  LABELED_WEEKDAY_ROWS,
+  SHORT_MONTHS,
+  sundayOf,
+  WEEKDAY_INITIALS,
+  WEEKDAY_LABELS,
+} from "@/lib/calendarViewModel";
 import type { CalendarDay } from "@/lib/api";
 
 const WEEKS = 53; // columns shown per page — a full rolling year (GitHub-style)
-const ROWS = 7; // Mon..Sun
+const ROWS = 7; // Sun..Sat
 const BUFFER_DAYS = (WEEKS * 2 + 2) * 7; // ~2 years, so the 2-page nav (this year / last year) works
-
-const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
-
-const SHORT_MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-const LEGEND = [
-  { label: "None", cls: "bg-muted" },
-  { label: "1–30m", cls: "bg-primary/15" },
-  { label: "30–60m", cls: "bg-primary/40" },
-  { label: "1–2h", cls: "bg-primary/70" },
-  { label: "2h+", cls: "bg-primary" },
-];
-
-function formatDuration(minutes: number): string {
-  if (minutes <= 0) return "0m";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-function addDays(d: Date, n: number): Date {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-
-// Monday of the week containing d (Monday-first weeks).
-function mondayOf(d: Date): Date {
-  const x = new Date(d);
-  const dow = (x.getDay() + 6) % 7; // 0 = Mon .. 6 = Sun
-  x.setDate(x.getDate() - dow);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
 
 // Soft full-card pastel backgrounds, one per tint used on this card's stat
 // row — same color families as TINTS's icon-badge classes, just a lower
@@ -140,10 +114,10 @@ export function HomeReadingCalendarPreviewCard() {
   today.setHours(0, 0, 0, 0);
   const todayKey = isoLocalDate(today);
 
-  // Monday-aligned columns so the weekday labels are truthful. The newest
-  // page ends at the week containing today; each page back shifts 13 weeks.
-  const latestMonday = mondayOf(today);
-  const lastColMonday = addDays(latestMonday, -pageOffset * WEEKS * 7);
+  // Sunday-aligned columns so the weekday labels are truthful. The newest
+  // page ends at the week containing today; each page back shifts 53 weeks.
+  const latestSunday = sundayOf(today);
+  const lastColMonday = addDays(latestSunday, -pageOffset * WEEKS * 7);
   const firstColMonday = addDays(lastColMonday, -(WEEKS - 1) * 7);
 
   const columns: { date: string; data: CalendarDay | undefined; isFuture: boolean }[][] = [];
@@ -225,16 +199,16 @@ export function HomeReadingCalendarPreviewCard() {
                 type="button"
                 onClick={() => setPageOffset((o) => o + 1)}
                 disabled={!canGoBack}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
                 aria-label="Earlier weeks"
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setPageOffset(0)}
                 disabled={!canGoForward}
-                className="rounded-lg border bg-background px-2 py-1 text-xs font-medium transition-colors hover:bg-secondary disabled:opacity-40"
+                className="h-9 rounded-lg border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-secondary disabled:opacity-40"
               >
                 Today
               </button>
@@ -242,10 +216,10 @@ export function HomeReadingCalendarPreviewCard() {
                 type="button"
                 onClick={() => setPageOffset((o) => Math.max(0, o - 1))}
                 disabled={!canGoForward}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
                 aria-label="Later weeks"
               >
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -257,16 +231,19 @@ export function HomeReadingCalendarPreviewCard() {
               utility combo as HomeView's BookScrollRow) so it reads as a clean
               swipeable timeline. An effect scrolls it to the far right (newest
               weeks) on load. */}
-          <div className="mt-4 flex gap-[2px]">
-            {/* Weekday labels (Monday-first) — pinned outside the scroll region. */}
-            <div className="flex shrink-0 flex-col gap-[2px] pr-1">
-              <div className="h-3" /> {/* spacer aligning with the month-label row */}
+          <div className="mt-4 flex gap-[3px]">
+            {/* Weekday axis (Sunday-first) — pinned outside the scroll region.
+                Only Mon/Wed/Fri are labelled, per GitHub, so the type can stay
+                at a legible 10px rather than being crammed to 8px. */}
+            <div className="flex shrink-0 flex-col gap-[3px] pr-1">
+              <div className="h-3" aria-hidden /> {/* aligns with the month-label row */}
               {WEEKDAY_INITIALS.map((d, i) => (
                 <span
                   key={i}
-                  className="flex h-3 items-center text-[8px] leading-none text-muted-foreground"
+                  className="flex h-3 items-center text-[10px] leading-none text-muted-foreground"
+                  aria-hidden
                 >
-                  {d}
+                  {LABELED_WEEKDAY_ROWS.includes(i) ? d : ""}
                 </span>
               ))}
             </div>
@@ -275,19 +252,33 @@ export function HomeReadingCalendarPreviewCard() {
               ref={scrollRef}
               className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <div className="flex w-max gap-[2px]">
+              <div className="flex w-max gap-[3px]">
                 {columns.map((col, ci) => (
-                  <div key={ci} className="flex w-3 shrink-0 flex-col gap-[2px]">
-                    <span className="h-3 w-3 overflow-visible whitespace-nowrap text-[8px] font-medium leading-none text-muted-foreground">
+                  <div key={ci} className="flex w-3 shrink-0 flex-col gap-[3px]">
+                    <span className="h-3 w-3 overflow-visible whitespace-nowrap text-[10px] font-medium leading-none text-muted-foreground">
                       {monthLabels[ci] ?? ""}
                     </span>
                     {col.map((cell) => {
                       const isToday = cell.date === todayKey;
                       const minutes = cell.data?.totalMinutes ?? 0;
+                      const weekday = WEEKDAY_LABELS[new Date(cell.date).getDay()];
                       return (
                         <div
                           key={cell.date}
-                          title={cell.isFuture ? cell.date : `${cell.date} · ${minutes} min`}
+                          title={
+                            cell.isFuture
+                              ? cell.date
+                              : `${cell.date} · ${formatDuration(minutes)}`
+                          }
+                          // Colour alone can't convey the value, so each cell
+                          // carries a readable label for assistive tech.
+                          aria-label={
+                            cell.isFuture
+                              ? undefined
+                              : `${weekday} ${cell.date}: ${
+                                  minutes > 0 ? formatDuration(minutes) : "no reading"
+                                }`
+                          }
                           className={[
                             "h-3 w-3 rounded-[3px]",
                             cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(minutes)],
@@ -304,7 +295,7 @@ export function HomeReadingCalendarPreviewCard() {
 
           {/* Legend */}
           <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
-            {LEGEND.map((l) => (
+            {BUCKET_LEGEND.map((l) => (
               <span key={l.label} className="inline-flex items-center gap-1">
                 <span className={`h-2 w-2 rounded-sm ${l.cls}`} />
                 {l.label}

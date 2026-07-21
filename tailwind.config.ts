@@ -48,7 +48,15 @@ const config: Config = {
           foreground: "hsl(var(--warm-foreground))",
         },
       },
+      // All of these derive from --radius so a theme can actually change the
+      // app's roundness. xl/2xl previously fell through to stock Tailwind
+      // constants, which meant Forest's `--radius: 1rem` override reached
+      // almost nothing. The offsets below are chosen so light/dark render
+      // byte-identically to the old stock values (xl 0.75rem, 2xl 1rem) —
+      // only Forest gets the rounder corners it was always asking for.
       borderRadius: {
+        "2xl": "calc(var(--radius) + 0.15rem)",
+        xl: "calc(var(--radius) - 0.1rem)",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",

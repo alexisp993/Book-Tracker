@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { Download } from "lucide-react";
-import { ProfileSubpageHeader } from "@/components/ProfileSubpageHeader";
+import { BackHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export function ProfileBackupView() {
   const [downloading, setDownloading] = React.useState(false);
@@ -31,9 +32,9 @@ export function ProfileBackupView() {
 
   return (
     <div className="space-y-6">
-      <ProfileSubpageHeader title="Backup & Sync" />
+      <BackHeader href="/profile" backLabel="Back to Profile" title="Backup & Sync" />
 
-      <div className="rounded-2xl border bg-card p-4">
+      <Card>
         <p className="text-sm text-muted-foreground">
           Download a copy of your library, reading sessions, notes, and goals as a JSON file —
           a personal backup you can keep for your own records.
@@ -47,7 +48,7 @@ export function ProfileBackupView() {
             {error}
           </p>
         ) : null}
-      </div>
+      </Card>
     </div>
   );
 }

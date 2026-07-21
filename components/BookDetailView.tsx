@@ -3,13 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   BookOpen,
   ChevronDown,
   Heart,
   Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
+import { BackHeader } from "@/components/ui/page-header";
 import { Dialog } from "@/components/ui/dialog";
 import { BookCover } from "@/components/BookCover";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -34,6 +35,12 @@ import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/utils";
 
 type Tab = "info" | "sessions" | "notes";
+
+const DETAIL_TABS: readonly TabItem<Tab>[] = [
+  { value: "info", label: "Info" },
+  { value: "sessions", label: "Sessions" },
+  { value: "notes", label: "Notes" },
+];
 
 export function BookDetailView({ id }: { id: string }) {
   const { data: book, isLoading } = useBook(id);
@@ -127,13 +134,7 @@ export function BookDetailView({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Back nav */}
-      <Link
-        href="/library"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Library
-      </Link>
+      <BackHeader href="/library" backLabel="Back to Library" />
 
       {/* Header card — explicit two-column hero: cover left, content right */}
       <div className="grid grid-cols-[auto_1fr] gap-4 rounded-2xl border bg-card p-4">
@@ -240,22 +241,7 @@ export function BookDetailView({ id }: { id: string }) {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 rounded-xl border bg-muted/50 p-1">
-        {(["info", "sessions", "notes"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`flex-1 rounded-lg py-1.5 text-sm font-medium capitalize transition-colors ${
-              tab === t
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs value={tab} onChange={setTab} items={DETAIL_TABS} />
 
       {/* Tab content */}
       {tab === "info" && <InfoTab book={book} />}
@@ -364,8 +350,9 @@ function SessionsTab({ userBookId }: { userBookId: string }) {
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{formatDate(s.date)}</p>
-              <p className="text-xs text-muted-foreground">
-                📖 {formatDuration(s.minutes)}
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <BookOpen className="h-3 w-3 shrink-0" aria-hidden />
+                {formatDuration(s.minutes)}
                 {s.pagesRead ? ` · ${s.pagesRead} pages` : ""}
                 {s.mood ? ` · ${MOOD_EMOJI[s.mood]} ${MOOD_LABELS[s.mood]}` : ""}
               </p>

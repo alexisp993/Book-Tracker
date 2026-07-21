@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BackHeader } from "@/components/ui/page-header";
 import { Label, Select, Textarea } from "@/components/ui/input";
 import { useAdminFeedbackDetail, useUpdateFeedbackStatus } from "@/lib/queries";
 import {
@@ -50,12 +49,7 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/admin/feedback"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to all feedback
-      </Link>
+      <BackHeader href="/admin/feedback" backLabel="Back to all feedback" />
 
       <div className="rounded-2xl border bg-card p-5">
         <p className="text-xs text-muted-foreground">

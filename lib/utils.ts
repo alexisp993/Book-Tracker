@@ -76,9 +76,12 @@ export function formatDate(value: string | Date | null | undefined): string {
   });
 }
 
+// THE duration format for the whole app. Two components previously carried
+// their own copies of this, so the same session read "45 min" on /sessions and
+// "45m" on /calendar. Import this one; don't re-declare it.
 export function formatDuration(minutes: number | null): string {
   if (minutes === null) return "In progress";
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;

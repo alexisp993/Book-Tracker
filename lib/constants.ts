@@ -167,3 +167,15 @@ export const FEEDBACK_STATUS_STYLES: Record<FeedbackStatus, string> = {
   FIXED: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
   CLOSED: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
 };
+
+// Semantic accent tints — the ONE sanctioned use of raw Tailwind palette
+// colors in this app (design-system MASTER.md §1). Used for stat-tile icon
+// badges and category identity, never for structural UI.
+export const TINTS = {
+  blue: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+  amber: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+  violet: "bg-violet-500/15 text-violet-600 dark:text-violet-300",
+  rose: "bg-rose-500/15 text-rose-600 dark:text-rose-300",
+  teal: "bg-teal-500/15 text-teal-600 dark:text-teal-300",
+} as const;

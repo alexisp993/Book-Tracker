@@ -2,7 +2,7 @@
 
 import type * as React from "react";
 import { Leaf, Moon, Sun } from "lucide-react";
-import { ProfileSubpageHeader } from "@/components/ProfileSubpageHeader";
+import { BackHeader } from "@/components/ui/page-header";
 import { useTheme, type Theme } from "@/lib/theme";
 
 const THEMES: { value: Theme; label: string; icon: React.ReactNode; description: string }[] = [
@@ -33,7 +33,11 @@ export function ProfilePreferencesView() {
 
   return (
     <div className="space-y-6">
-      <ProfileSubpageHeader title="Reading Preferences" />
+      <BackHeader
+        href="/profile"
+        backLabel="Back to Profile"
+        title="Reading Preferences"
+      />
 
       <div className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">

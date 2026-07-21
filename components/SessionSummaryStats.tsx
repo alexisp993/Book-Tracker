@@ -1,7 +1,7 @@
 "use client";
 
 import { BookOpen, Clock, Flame } from "lucide-react";
-import { Stat } from "@/components/StatsView";
+import { Stat } from "@/components/ui/stat";
 import { useSessionStats } from "@/lib/queries";
 
 // Today / this week / streak tiles, mirroring StatsView's own stat-card

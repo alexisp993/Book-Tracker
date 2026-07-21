@@ -2,55 +2,36 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Card } from "@/components/StatsView";
-import { useCalendarRange, useSessionStats } from "@/lib/queries";
+import { Card } from "@/components/ui/card";
+import { useCalendarRange } from "@/lib/queries";
+import { formatDuration } from "@/lib/utils";
+import {
+  addDays,
+  bucket,
+  BUCKET_CLASS,
+  BUCKET_LEGEND,
+  isoLocalDate,
+  LABELED_WEEKDAY_ROWS,
+  SHORT_MONTHS,
+  sundayOf,
+  WEEKDAY_INITIALS,
+  WEEKDAY_LABELS,
+} from "@/lib/calendarViewModel";
 
-const COLS = 13; // weeks
-const ROWS = 7; // days per week
-const DAYS = COLS * ROWS; // 91 days per window
+const COLS = 13; // weeks per page
+const ROWS = 7; // Sun..Sat
+const PAGES = 4; // ~1 year of history reachable via Prev
+const BUFFER_DAYS = (COLS * PAGES + 2) * 7; // fetched once; paging is client-side
 
-const SHORT_MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-// Minutes-that-day -> intensity bucket (0-4). Thresholds chosen to match
-// the legend copy exactly (1-30 / 30-60 / 1-2 hrs / 2+ hrs). Exported for
-// reuse by components/HomeReadingCalendarPreviewCard.tsx's mini grid, which
-// shares this classification logic without sharing this component's UI.
-export function bucket(minutes: number): number {
-  if (minutes <= 0) return 0;
-  if (minutes <= 30) return 1;
-  if (minutes <= 60) return 2;
-  if (minutes <= 120) return 3;
-  return 4;
-}
-
-export const BUCKET_CLASS = [
-  "bg-muted",
-  "bg-primary/15",
-  "bg-primary/40",
-  "bg-primary/70",
-  "bg-primary",
-];
-
-const LEGEND = [
-  { label: "No reading", cls: "bg-muted" },
-  { label: "1–30 mins", cls: "bg-primary/15" },
-  { label: "30–60 mins", cls: "bg-primary/40" },
-  { label: "1–2 hrs", cls: "bg-primary/70" },
-  { label: "2+ hrs", cls: "bg-primary" },
-];
-
-export function isoLocalDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// GitHub-style 13-week x 7-day contribution grid with month range label,
-// Prev/Next navigation, and a legend. Backed by the shared calendar-data
-// builder (lib/calendarData.ts) via useCalendarRange, the same source used
-// by the full calendar page and its export — so this heatmap always agrees
-// with the rest of the app. Used by /stats and /sessions.
+// GitHub-style contribution grid: Sunday-first week-aligned columns, sparse
+// weekday labels (Mon/Wed/Fri), a month label above each month's first
+// column, Prev/Today/Next paging, and the shared intensity legend.
+//
+// Columns are real Sun-Sat weeks, so a cell's ROW is its weekday — that's what
+// makes the vertical axis (and its labels) mean anything. Backed by the shared
+// calendar-data builder (lib/calendarData.ts) and the shared intensity scale
+// (lib/calendarViewModel.ts), so it can never disagree with /calendar or the
+// Home preview card. Used by /sessions and /profile/stats.
 export function ReadingHeatmap({
   offset,
   onOffsetChange,
@@ -60,91 +41,152 @@ export function ReadingHeatmap({
   onOffsetChange: (next: number) => void;
   showCard?: boolean;
 }) {
-  const { data: stats } = useSessionStats();
-  const { data: rangeDays = [] } = useCalendarRange(offset, DAYS);
+  // One generous fetch; Prev/Next page through it client-side with no refetch.
+  const { data: rangeDays = [] } = useCalendarRange(0, BUFFER_DAYS);
 
-  if (!stats) return null;
-  if (stats.sessionCount === 0) return null;
-
-  const minutesByDay = new Map(rangeDays.map((d) => [d.date, d.totalMinutes]));
+  const byDay = new Map(rangeDays.map((d) => [d.date, d]));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const windowEnd = new Date(today);
-  windowEnd.setDate(windowEnd.getDate() - offset * DAYS);
+  const todayKey = isoLocalDate(today);
 
-  const cells: { date: string; minutes: number }[] = [];
-  for (let i = DAYS - 1; i >= 0; i--) {
-    const d = new Date(windowEnd);
-    d.setDate(d.getDate() - i);
-    const key = isoLocalDate(d);
-    cells.push({ date: key, minutes: minutesByDay.get(key) ?? 0 });
-  }
+  const lastColSunday = addDays(sundayOf(today), -offset * COLS * 7);
+  const firstColSunday = addDays(lastColSunday, -(COLS - 1) * 7);
 
-  const columns: { date: string; minutes: number }[][] = [];
+  const columns: { date: string; minutes: number; isFuture: boolean }[][] = [];
   for (let c = 0; c < COLS; c++) {
-    columns.push(cells.slice(c * ROWS, c * ROWS + ROWS));
+    const col = [];
+    for (let r = 0; r < ROWS; r++) {
+      const cellDate = addDays(firstColSunday, c * 7 + r);
+      const key = isoLocalDate(cellDate);
+      col.push({
+        date: key,
+        minutes: byDay.get(key)?.totalMinutes ?? 0,
+        isFuture: cellDate > today,
+      });
+    }
+    columns.push(col);
   }
 
+  // One label above the first column containing a day of a not-yet-seen
+  // month. Keyed by "YYYY-MM" so a window spanning a year boundary labels
+  // both occurrences of the same month name.
+  const seenMonths = new Set<string>();
+  const monthLabels = columns.map((col) => {
+    for (const cell of col) {
+      const [y, mm] = cell.date.split("-");
+      const key = `${y}-${mm}`;
+      if (!seenMonths.has(key)) {
+        seenMonths.add(key);
+        return SHORT_MONTHS[Number(mm) - 1].toUpperCase();
+      }
+    }
+    return null;
+  });
+
+  const firstCell = columns[0][0].date;
+  const lastCell = columns[COLS - 1][ROWS - 1].date;
   const rangeLabel = (() => {
-    const first = new Date(cells[0].date);
-    const last = new Date(cells[cells.length - 1].date);
-    const startMonth = SHORT_MONTHS[first.getMonth()];
-    const endMonth = SHORT_MONTHS[last.getMonth()];
-    const monthPart =
-      startMonth === endMonth ? startMonth : `${startMonth} – ${endMonth}`;
-    return first.getFullYear() === last.getFullYear()
-      ? `${monthPart} ${last.getFullYear()}`
-      : `${first.getFullYear()} – ${last.getFullYear()}`;
+    const [fy, fm] = firstCell.split("-").map(Number);
+    const [ly, lm] = lastCell.split("-").map(Number);
+    const start = fy === ly ? SHORT_MONTHS[fm - 1] : `${SHORT_MONTHS[fm - 1]} ${fy}`;
+    return `${start} – ${SHORT_MONTHS[lm - 1]} ${ly}`;
   })();
 
-  const todayKey = isoLocalDate(today);
+  const canGoBack = offset < PAGES - 1;
+  const canGoForward = offset > 0;
 
   const body = (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => onOffsetChange(offset + 1)}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary"
-          aria-label="Earlier weeks"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{rangeLabel}</p>
-        <button
-          type="button"
-          onClick={() => onOffsetChange(Math.max(0, offset - 1))}
-          disabled={offset === 0}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
-          aria-label="Later weeks"
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onOffsetChange(offset + 1)}
+            disabled={!canGoBack}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
+            aria-label="Earlier weeks"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onOffsetChange(0)}
+            disabled={!canGoForward}
+            className="h-9 rounded-lg border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-secondary disabled:opacity-40"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => onOffsetChange(Math.max(0, offset - 1))}
+            disabled={!canGoForward}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-secondary disabled:opacity-40"
+            aria-label="Later weeks"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-[3px] overflow-x-auto">
-        {columns.map((week, i) => (
-          <div key={i} className="flex flex-col gap-[3px]">
-            {week.map((day) => (
-              <div
-                key={day.date}
-                title={`${day.date} · ${day.minutes} min`}
-                className={[
-                  "h-[11px] w-[11px] shrink-0 rounded-sm",
-                  BUCKET_CLASS[bucket(day.minutes)],
-                  day.date === todayKey ? "ring-1 ring-primary" : "",
-                ].join(" ")}
-              />
-            ))}
+        {/* Weekday axis — only Mon/Wed/Fri are labelled (GitHub's convention),
+            which keeps the type at a legible 10px instead of cramming all
+            seven. Row heights mirror the cells so the axis stays aligned. */}
+        <div className="flex shrink-0 flex-col gap-[3px] pr-1">
+          <div className="h-3" aria-hidden /> {/* aligns with the month-label row */}
+          {WEEKDAY_INITIALS.map((d, i) => (
+            <span
+              key={i}
+              className="flex h-[11px] items-center text-[10px] leading-none text-muted-foreground"
+              aria-hidden
+            >
+              {LABELED_WEEKDAY_ROWS.includes(i) ? d : ""}
+            </span>
+          ))}
+        </div>
+
+        {columns.map((col, ci) => (
+          <div key={ci} className="flex shrink-0 flex-col gap-[3px]">
+            <span className="h-3 w-[11px] overflow-visible whitespace-nowrap text-[10px] font-medium leading-none text-muted-foreground">
+              {monthLabels[ci] ?? ""}
+            </span>
+            {col.map((cell) => {
+              const weekday = WEEKDAY_LABELS[new Date(cell.date).getDay()];
+              return (
+                <div
+                  key={cell.date}
+                  title={
+                    cell.isFuture
+                      ? cell.date
+                      : `${cell.date} · ${formatDuration(cell.minutes)}`
+                  }
+                  // Colour alone can't convey the value, so each cell carries a
+                  // readable label for assistive tech.
+                  aria-label={
+                    cell.isFuture
+                      ? undefined
+                      : `${weekday} ${cell.date}: ${
+                          cell.minutes > 0 ? formatDuration(cell.minutes) : "no reading"
+                        }`
+                  }
+                  className={[
+                    "h-[11px] w-[11px] shrink-0 rounded-sm",
+                    cell.isFuture ? "bg-muted/30" : BUCKET_CLASS[bucket(cell.minutes)],
+                    cell.date === todayKey ? "ring-1 ring-primary" : "",
+                  ].join(" ")}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-        {LEGEND.map((l) => (
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
+        {BUCKET_LEGEND.map((l) => (
           <span key={l.label} className="inline-flex items-center gap-1">
-            <span className={`h-2.5 w-2.5 rounded-sm ${l.cls}`} />
+            <span className={`h-2 w-2 rounded-sm ${l.cls}`} />
             {l.label}
           </span>
         ))}

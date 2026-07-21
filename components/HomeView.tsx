@@ -269,7 +269,7 @@ export function HomeView() {
         {/* Greeting header with customize button */}
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="font-display text-2xl font-bold tracking-tight">
               {greeting()}
               {name ? `, ${name}` : ""}
             </h1>

@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, NotebookPen, Plus } from "lucide-react";
+import { BookOpen, NotebookPen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/input";
 import { SessionForm } from "@/components/SessionForm";
@@ -177,8 +178,9 @@ export function SessionHistoryView() {
                 <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
                   {s.title}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  📖 {formatDuration(s.minutes)}
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <BookOpen className="h-3 w-3 shrink-0" aria-hidden />
+                  {formatDuration(s.minutes)}
                   {s.pagesRead ? ` · ${s.pagesRead} pages` : ""}
                   {s.mood ? ` · ${MOOD_EMOJI[s.mood]} ${MOOD_LABELS[s.mood]}` : ""}
                 </p>
@@ -192,29 +194,12 @@ export function SessionHistoryView() {
         </div>
       )}
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1 || loading}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages || loading}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : null}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={setPage}
+        disabled={loading}
+      />
 
       <Dialog
         open={formOpen}

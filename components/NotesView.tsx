@@ -5,6 +5,7 @@ import { NotebookPen, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { FilterPills, type TabItem } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/EmptyState";
 import { NoteForm } from "@/components/NoteForm";
@@ -41,6 +42,19 @@ function formatRelativeDate(iso: string): string {
   if (diffDays === 1) return "Yesterday";
   return formatDate(iso);
 }
+
+const VIEW_MODE_TABS: readonly TabItem<"all" | "byBook">[] = [
+  { value: "all", label: "All Notes" },
+  { value: "byBook", label: "Book Notes" },
+];
+
+const TYPE_FILTER_ITEMS: readonly TabItem<NoteType | "">[] = [
+  { value: "", label: "All" },
+  ...NOTE_TYPES.map((t) => ({
+    value: t as NoteType | "",
+    label: `${NOTE_TYPE_EMOJI[t]} ${NOTE_TYPE_LABELS[t]}`,
+  })),
+];
 
 export function NotesView({ userBookId }: { userBookId?: string }) {
   const [viewMode, setViewMode] = React.useState<ViewMode>("all");
@@ -174,59 +188,21 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
           ) : null}
 
           {/* All Notes / Book Notes tabs */}
-          <div className="flex gap-1">
-            {(
-              [
-                { value: "all", label: "All Notes" },
-                { value: "byBook", label: "Book Notes" },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setViewMode(t.value)}
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                  viewMode === t.value
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <FilterPills
+            value={viewMode}
+            onChange={setViewMode}
+            items={VIEW_MODE_TABS}
+          />
         </>
       ) : null}
 
       {/* Type chip filter — secondary refinement row */}
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => setTypeFilter("")}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            typeFilter === ""
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          All
-        </button>
-        {NOTE_TYPES.map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTypeFilter(t === typeFilter ? "" : t)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              typeFilter === t
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {NOTE_TYPE_EMOJI[t]} {NOTE_TYPE_LABELS[t]}
-          </button>
-        ))}
-      </div>
+      <FilterPills
+        size="sm"
+        value={typeFilter}
+        onChange={setTypeFilter}
+        items={TYPE_FILTER_ITEMS}
+      />
 
       {/* Count */}
       {!isLoading && data ? (
