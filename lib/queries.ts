@@ -216,7 +216,7 @@ export function useGroup(base: GroupBasePath, id: string | undefined) {
 export function useCreateGroup(base: GroupBasePath) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; description?: string }) =>
+    mutationFn: (input: api.GroupInput & { name: string }) =>
       api.createGroup(base, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.groups(base) }),
   });
@@ -230,7 +230,7 @@ export function useUpdateGroup(base: GroupBasePath) {
       input,
     }: {
       id: string;
-      input: { name?: string; description?: string };
+      input: api.GroupInput;
     }) => api.updateGroup(base, id, input),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.groups(base) });

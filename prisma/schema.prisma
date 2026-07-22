@@ -162,7 +162,13 @@ model Shelf {
   id        String      @id @default(cuid())
   userId    String
   name      String
+  description String?
+  // Presentation (all optional; unset falls back to a name-derived tint).
+  imageUrl  String? // uploaded header image (Vercel Blob URL)
+  icon      String? // a key into the app's curated Lucide icon set
+  color     String? // a key into GROUP_TINTS
   createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   books ShelfBook[]
@@ -190,7 +196,12 @@ model Collection {
   userId      String
   name        String
   description String?
+  // Presentation (all optional; unset falls back to a name-derived tint).
+  imageUrl    String? // uploaded header image (Vercel Blob URL)
+  icon        String? // a key into the app's curated Lucide icon set
+  color       String? // a key into GROUP_TINTS
   createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   books CollectionBook[]

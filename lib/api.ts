@@ -149,6 +149,16 @@ export async function searchBookMetadata(
 // --- Shelves & Collections (groups) ---
 export type GroupBasePath = "shelves" | "collections";
 
+// Presentation fields accepted on create/update. `null` clears a value on
+// update; `undefined`/omitted leaves it unchanged.
+export interface GroupInput {
+  name?: string;
+  description?: string;
+  imageUrl?: string | null;
+  icon?: string | null;
+  color?: string | null;
+}
+
 export async function listGroups(base: GroupBasePath): Promise<BookGroup[]> {
   const res = await fetch(`/api/${base}`, { cache: "no-store" });
   return handle<BookGroup[]>(res);
@@ -156,7 +166,7 @@ export async function listGroups(base: GroupBasePath): Promise<BookGroup[]> {
 
 export async function createGroup(
   base: GroupBasePath,
-  input: { name: string; description?: string },
+  input: GroupInput & { name: string },
 ): Promise<BookGroup> {
   const res = await fetch(`/api/${base}`, {
     method: "POST",
@@ -164,6 +174,15 @@ export async function createGroup(
     body: JSON.stringify(input),
   });
   return handle<BookGroup>(res);
+}
+
+// Upload a header image, returning its public URL (two-step: upload → save URL).
+export async function uploadGroupImage(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/groups/image", { method: "POST", body: fd });
+  const { url } = await handle<{ url: string }>(res);
+  return url;
 }
 
 export async function getGroup(
@@ -177,7 +196,7 @@ export async function getGroup(
 export async function updateGroup(
   base: GroupBasePath,
   id: string,
-  input: { name?: string; description?: string },
+  input: GroupInput,
 ): Promise<BookGroup> {
   const res = await fetch(`/api/${base}/${id}`, {
     method: "PATCH",

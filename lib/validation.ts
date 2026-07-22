@@ -98,6 +98,20 @@ export const groupCreateSchema = z.object({
     emptyToUndefined,
     z.string().trim().max(500).optional(),
   ),
+  // Presentation. All optional; null/empty means "unset" (client sends null
+  // for an unpicked image/icon/color).
+  imageUrl: z.preprocess(
+    emptyToUndefined,
+    z.string().url().max(2000).nullable().optional(),
+  ),
+  icon: z.preprocess(
+    emptyToUndefined,
+    z.string().max(40).nullable().optional(),
+  ),
+  color: z.preprocess(
+    emptyToUndefined,
+    z.string().max(40).nullable().optional(),
+  ),
 });
 
 export const groupUpdateSchema = groupCreateSchema.partial().extend({

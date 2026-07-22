@@ -33,12 +33,7 @@ export function listHandlers(kind: GroupKind) {
       );
     }
     try {
-      const group = await createGroup(
-        user.id,
-        kind,
-        parsed.data.name,
-        parsed.data.description,
-      );
+      const group = await createGroup(user.id, kind, parsed.data);
       return NextResponse.json(group, { status: 201 });
     } catch (err) {
       if (

@@ -37,6 +37,11 @@ export interface BookGroup {
   count: number;
   // a few cover candidates for a preview stack
   covers: string[];
+  // presentation (all optional; unset → name-derived tint fallback)
+  imageUrl: string | null; // uploaded header image
+  icon: string | null; // key into COLLECTION_ICONS
+  color: string | null; // key into GROUP_TINTS
+  updatedAt: string; // ISO — drives "Updated X ago" and default sort
 }
 
 export interface NoteDTO {

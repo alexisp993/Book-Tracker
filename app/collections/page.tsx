@@ -7,7 +7,7 @@ export default function CollectionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Collections"
-        subtitle="Curated lists — favorites, best of the year, books to buy."
+        subtitle="Organize your books into collections that matter to you."
       />
       <GroupsView base="collections" singular="collection" />
       <SuggestionSection />

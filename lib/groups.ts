@@ -44,7 +44,20 @@ function toGroup(row: any): BookGroup {
     description: row.description ?? null,
     count: row._count?.books ?? 0,
     covers,
+    imageUrl: row.imageUrl ?? null,
+    icon: row.icon ?? null,
+    color: row.color ?? null,
+    updatedAt: (row.updatedAt ?? row.createdAt).toISOString(),
   };
+}
+
+// The presentation fields a caller may set on create/update.
+export interface GroupInput {
+  name?: string;
+  description?: string;
+  imageUrl?: string | null;
+  icon?: string | null;
+  color?: string | null;
 }
 
 export async function listGroups(
@@ -53,7 +66,9 @@ export async function listGroups(
 ): Promise<BookGroup[]> {
   const rows = await model(kind).findMany({
     where: { userId },
-    orderBy: { name: "asc" },
+    // Newest activity first — the mockup's default "Recently Updated" sort.
+    // The client can re-sort by name or size without a refetch.
+    orderBy: { updatedAt: "desc" },
     include: previewInclude,
   });
   return rows.map(toGroup);
@@ -62,11 +77,17 @@ export async function listGroups(
 export async function createGroup(
   userId: string,
   kind: GroupKind,
-  name: string,
-  description?: string,
+  input: GroupInput & { name: string },
 ): Promise<BookGroup> {
   const row = await model(kind).create({
-    data: { userId, name, description },
+    data: {
+      userId,
+      name: input.name,
+      description: input.description,
+      imageUrl: input.imageUrl ?? undefined,
+      icon: input.icon ?? undefined,
+      color: input.color ?? undefined,
+    },
     include: previewInclude,
   });
   return toGroup(row);
@@ -98,12 +119,14 @@ export async function updateGroup(
   userId: string,
   kind: GroupKind,
   id: string,
-  data: { name?: string; description?: string },
+  data: GroupInput,
 ): Promise<BookGroup | null> {
   const existing = await model(kind).findFirst({ where: { id, userId } });
   if (!existing) return null;
   const row = await model(kind).update({
     where: { id },
+    // Pass fields through as-is: `null` clears image/icon/color, `undefined`
+    // leaves them untouched (Prisma ignores undefined).
     data,
     include: previewInclude,
   });
