@@ -28,7 +28,6 @@ export function SessionHistoryView() {
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const [calendarOffset, setCalendarOffset] = React.useState(0);
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ReadingSessionDTO | null>(null);
@@ -95,7 +94,7 @@ export function SessionHistoryView() {
   return (
     <div className="space-y-6">
       <SessionSummaryStats />
-      <ReadingHeatmap offset={calendarOffset} onOffsetChange={setCalendarOffset} />
+      <ReadingHeatmap />
       <MoodBreakdown />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

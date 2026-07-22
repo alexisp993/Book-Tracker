@@ -164,12 +164,15 @@ made the same 40-minute session read as level 1 on `/calendar` and level 2 on th
 |---|---|
 | Layout | **CSS Grid** — one grid holds a weekday gutter column, a month-label row, and the 7×N cells. No fixed pixel widths, no absolute positioning, no `justify-between`. |
 | Fill + square | Columns are `minmax(0,1fr)` so the grid **fills its container**; cells are `aspect-square` so height derives from the resolved column width. No dead space on the right. |
+| Window | **One calendar year** (Jan 1 → Dec 31 of the selected year), not a rolling 12 months. Arrows step whole years; **Today** → current year. Days from boundary weeks / the future render faded (`opacity-40`). |
+| Header | Year label left (`{year}`); nav is **one grouped control** right (`[← Today →]`, a single bordered container). |
 | Alignment | Week-aligned columns, **Sunday-first**. Row index = weekday. |
-| Month labels | Placed at `grid-column: startWeek+2` (gutter is col 1), so each label sits above the exact week its month begins, and re-aligns for free as the width changes. Skip a label within 3 columns of the previous (declutter). |
+| Month labels | All 12 (Jan–Dec), placed at `grid-column: firstWeekOfMonth+2` (gutter is col 1), above the exact week each month begins; re-align for free as width changes. A `1.5rem` label row leaves a ~12px gap to the grid. |
 | Weekday labels | Gutter column, **Mon / Wed / Fri only** (`LABELED_WEEKDAY_ROWS`), `text-[10px]`. |
 | Palette | **A dedicated green ramp** — `--heat-0…4` CSS vars in `globals.css`, theme-aware (light/dark/forest), **independent of `--primary`** (which stays blue for actions). `BUCKET_CLASS = bg-[var(--heat-N)]`. GitHub-style green in every theme; **never blue**. |
 | Buckets | `0 / ≤30 / ≤60 / ≤120 / >120` min → `BUCKET_CLASS`. |
-| Legend | `Less ▢▢▢▢▢ More` (swatch-only, GitHub-style), below the grid. |
+| Legend | A `Daily Reading` caption over a `Less ▢▢▢▢▢ More` scale, below the grid. |
+| Empty | No sessions ever → a friendly "No reading activity yet" message replaces the grid (parent passes `isEmpty`). A year that merely has no data still shows an all-level-0 grid. |
 | Today | `ring-1 ring-foreground` (not a heat color). |
 | Future days | `bg-[var(--heat-0)] opacity-40`, never interactive. |
 | Nav | Prev / **Today** / Next; chevrons `h-4 w-4`; buttons `h-9`. |

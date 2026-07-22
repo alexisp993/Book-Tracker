@@ -17,9 +17,8 @@ import { Heatmap } from "@/components/Heatmap";
 import { useCalendarRange, useSessionStats, useStats } from "@/lib/queries";
 import { formatDuration } from "@/lib/utils";
 
-const WEEKS = 53; // a full rolling year (GitHub-style)
-const PAGES = 2; // this year / last year
-const BUFFER_DAYS = (WEEKS * PAGES + 2) * 7; // one fetch covers both pages
+const YEARS_BACK = 2; // how far the year nav can page back
+const BUFFER_DAYS = (YEARS_BACK + 1) * 371; // one fetch covers every navigable year
 
 // Soft full-card pastel backgrounds, one per tint used on this card's stat
 // row — same color families as TINTS's icon-badge classes, just a lower
@@ -69,7 +68,8 @@ function StatPill({
 // and a reading-summary card of stats + a streak tip. Deep history lives behind
 // "See all" → /calendar.
 export function HomeReadingCalendarPreviewCard() {
-  const [pageOffset, setPageOffset] = React.useState(0);
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = React.useState(currentYear);
   const { data: stats } = useSessionStats();
   const { data: libStats } = useStats();
   const { data: rangeDays = [] } = useCalendarRange(0, BUFFER_DAYS);
@@ -103,10 +103,10 @@ export function HomeReadingCalendarPreviewCard() {
       <Card>
         <Heatmap
           minutesByDate={minutesByDate}
-          weeks={WEEKS}
-          offset={pageOffset}
-          onOffsetChange={setPageOffset}
-          pages={PAGES}
+          year={year}
+          onYearChange={setYear}
+          minYear={currentYear - YEARS_BACK}
+          isEmpty={stats.sessionCount === 0}
         />
       </Card>
 

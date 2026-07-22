@@ -35,7 +35,6 @@ const TABS: readonly TabItem<Tab>[] = [
 export function StatsView() {
   const { data: stats, isLoading: loading } = useStats();
   const { data: sessionStats } = useSessionStats();
-  const [calendarOffset, setCalendarOffset] = useState(0);
   const [tab, setTab] = useState<Tab>("overview");
 
   // The header renders in every state — loading and empty included — so the
@@ -244,7 +243,7 @@ export function StatsView() {
             </Card>
           ) : null}
 
-          <ReadingHeatmap offset={calendarOffset} onOffsetChange={setCalendarOffset} />
+          <ReadingHeatmap />
         </div>
       ) : null}
 
