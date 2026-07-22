@@ -155,28 +155,29 @@ render the header in **every** state, including loading and empty.
 
 ## 7. Heatmap rules — GitHub's contribution graph is the reference
 
-**All reading-intensity surfaces import from `lib/calendarViewModel.ts`. Do not re-declare
-`bucket()` or a color ramp anywhere else.** Three divergent copies previously made the same
-40-minute session render as level 1 on `/calendar` and level 2 on the heatmaps.
+**One component: `components/Heatmap.tsx`.** The Home card, `/sessions`, and `/profile/stats` all
+render it (via `ReadingHeatmap`) — they pass data + paging, nothing else. `bucket()` and the color
+ramp live only in `lib/calendarViewModel.ts`; never re-declare them (three divergent copies once
+made the same 40-minute session read as level 1 on `/calendar` and level 2 on the heatmaps).
 
 | Rule | Spec |
 |---|---|
-| Alignment | Week-aligned columns, **Sunday-first**, always. Row index = weekday, guaranteed. |
-| Cell | compact `h-[11px] w-[11px] rounded-sm` · default `h-3 w-3 rounded-[3px]` |
-| Gap | `gap-[3px]` uniformly |
-| Weekday labels | **Mon / Wed / Fri only** (`LABELED_WEEKDAY_ROWS`), `text-[10px]` |
-| Month labels | One above the first column containing a not-yet-seen `YYYY-MM` |
-| Buckets | `0 / ≤30 / ≤60 / ≤120 / >120` min → `BUCKET_CLASS` |
-| Legend | Always present, below the grid: `None · 1–30m · 30–60m · 1–2h · 2h+`, swatch `h-2 w-2` |
-| Today | `ring-1 ring-primary` |
-| Future days | `bg-muted/30`, never interactive |
-| Nav | Prev / **Today** / Next; chevrons `h-4 w-4`; buttons `h-9` |
-| Overflow | Horizontal scroll, hidden scrollbar, auto-scroll to newest on mount |
-| Empty data | **Always render the grid.** Never self-hide — it causes a layout jump on first session. |
-| A11y | Cells carry `aria-label` (not only `title`); the weekday axis is `aria-hidden` |
+| Layout | **CSS Grid** — one grid holds a weekday gutter column, a month-label row, and the 7×N cells. No fixed pixel widths, no absolute positioning, no `justify-between`. |
+| Fill + square | Columns are `minmax(0,1fr)` so the grid **fills its container**; cells are `aspect-square` so height derives from the resolved column width. No dead space on the right. |
+| Alignment | Week-aligned columns, **Sunday-first**. Row index = weekday. |
+| Month labels | Placed at `grid-column: startWeek+2` (gutter is col 1), so each label sits above the exact week its month begins, and re-aligns for free as the width changes. Skip a label within 3 columns of the previous (declutter). |
+| Weekday labels | Gutter column, **Mon / Wed / Fri only** (`LABELED_WEEKDAY_ROWS`), `text-[10px]`. |
+| Palette | **A dedicated green ramp** — `--heat-0…4` CSS vars in `globals.css`, theme-aware (light/dark/forest), **independent of `--primary`** (which stays blue for actions). `BUCKET_CLASS = bg-[var(--heat-N)]`. GitHub-style green in every theme; **never blue**. |
+| Buckets | `0 / ≤30 / ≤60 / ≤120 / >120` min → `BUCKET_CLASS`. |
+| Legend | `Less ▢▢▢▢▢ More` (swatch-only, GitHub-style), below the grid. |
+| Today | `ring-1 ring-foreground` (not a heat color). |
+| Future days | `bg-[var(--heat-0)] opacity-40`, never interactive. |
+| Nav | Prev / **Today** / Next; chevrons `h-4 w-4`; buttons `h-9`. |
+| Responsive | Fills on desktop; a `min-w-[760px]` wrapper makes it **scroll on mobile rather than shrink cells** below ~11px. Scrollbar hidden; auto-scroll to newest on mount. |
+| A11y | Cells carry `aria-label` (not only `title`); the weekday axis is `aria-hidden`. |
 
-**Canvas export** (`downloadCalendarImage`) reads the live CSS-variable palette and derives its
-fills from `BUCKET_ALPHA`, so the PNG always matches the screen. Keep that coupling.
+**Canvas export** (`downloadCalendarImage`) reads the same `--heat-*` vars (via `BUCKET_VARS`), so
+the exported PNG uses the identical green ramp. Keep that coupling.
 
 **Duration text** always comes from `formatDuration` in `lib/utils.ts` (`"45m"`, `"1h 30m"`).
 Do not re-declare it.

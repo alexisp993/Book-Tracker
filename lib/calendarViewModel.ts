@@ -39,17 +39,26 @@ export function bucket(minutes: number): number {
   return 4;
 }
 
+// A dedicated GitHub-style green ramp (theme-aware via CSS vars in
+// globals.css), independent of --primary. Level 0 = empty; 1-4 ramp with
+// reading duration.
 export const BUCKET_CLASS = [
-  "bg-muted",
-  "bg-primary/15",
-  "bg-primary/40",
-  "bg-primary/70",
-  "bg-primary",
+  "bg-[var(--heat-0)]",
+  "bg-[var(--heat-1)]",
+  "bg-[var(--heat-2)]",
+  "bg-[var(--heat-3)]",
+  "bg-[var(--heat-4)]",
 ];
 
-// Canvas can't read Tailwind classes, so the exported image mirrors the ramp
-// above as raw alpha values. Index 0 uses --muted; 1-4 use --primary.
-export const BUCKET_ALPHA = [0.35, 0.15, 0.4, 0.7, 1];
+// The CSS-variable names the canvas export reads (a <canvas> can't consume
+// Tailwind classes), so the downloaded image uses the same green ramp.
+export const BUCKET_VARS = [
+  "--heat-0",
+  "--heat-1",
+  "--heat-2",
+  "--heat-3",
+  "--heat-4",
+];
 
 export const BUCKET_LEGEND = [
   { label: "None", cls: BUCKET_CLASS[0] },

@@ -7,7 +7,7 @@ import { useCalendar } from "@/lib/queries";
 import { FallbackCoverImg, CellCover } from "@/components/FallbackCoverImg";
 import {
   buildMonthCalendarViewModel,
-  BUCKET_ALPHA,
+  BUCKET_VARS,
   BUCKET_CLASS,
   type MonthCalendarViewModel,
 } from "@/lib/calendarViewModel";
@@ -42,6 +42,9 @@ function readThemePalette(): CanvasPalette {
     // hsla(H, S%, L%, A) — the most cross-browser-safe canvas color form.
     return `hsla(${h}, ${s}, ${l}, ${alpha})`;
   };
+  // The green heat vars are stored as plain hex, usable directly as canvas
+  // fillStyle (no HSL conversion needed).
+  const raw = (name: string): string => cs.getPropertyValue(name).trim();
   return {
     background: hsl("--background"),
     card: hsl("--card"),
@@ -49,12 +52,9 @@ function readThemePalette(): CanvasPalette {
     foreground: hsl("--foreground"),
     mutedForeground: hsl("--muted-foreground"),
     primary: hsl("--primary"),
-    // The shared app-wide intensity ramp (lib/calendarViewModel.ts) expressed
-    // as canvas colours: muted for empty, primary at increasing opacity for
-    // 1-4. Driven by BUCKET_ALPHA so the export can't drift from the screen.
-    bucketFill: BUCKET_ALPHA.map((alpha, i) =>
-      hsl(i === 0 ? "--muted" : "--primary", alpha),
-    ),
+    // The shared green intensity ramp (lib/calendarViewModel.ts) read straight
+    // from its CSS vars, so the exported image matches the on-screen heatmap.
+    bucketFill: BUCKET_VARS.map(raw),
     emptyCell: hsl("--muted", 0.2),
     texture: hsl("--foreground", 0.03),
     badgeBg: hsl("--background", 0.8),

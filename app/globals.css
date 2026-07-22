@@ -27,6 +27,15 @@
   --input: 30 16% 85%;
   --ring: 221 83% 53%;
   --radius: 0.85rem;
+
+  /* Reading-heatmap intensity ramp — a dedicated GitHub-contribution green
+     scale, independent of --primary (which is blue for actions). Level 0 is
+     the empty/no-reading cell; 1-4 ramp with reading duration. */
+  --heat-0: #ebedf0;
+  --heat-1: #d3f0d8;
+  --heat-2: #97d99f;
+  --heat-3: #4bab5c;
+  --heat-4: #238b45;
 }
 
 .dark {
@@ -49,6 +58,12 @@
   --border: 22 12% 19%;
   --input: 22 12% 22%;
   --ring: 217 91% 64%;
+
+  --heat-0: #20242b;
+  --heat-1: #0e4429;
+  --heat-2: #006d32;
+  --heat-3: #26a641;
+  --heat-4: #39d353;
 }
 
 /* Forest — a deep, cosy woodland palette: mossy dark greens, soft sage
@@ -74,6 +89,12 @@
   --input: 150 14% 23%;
   --ring: 142 44% 52%;
   --radius: 1rem;
+
+  --heat-0: #17271e;
+  --heat-1: #1c4a30;
+  --heat-2: #2a7d47;
+  --heat-3: #35b45c;
+  --heat-4: #48e06e;
 }
 
 * {
