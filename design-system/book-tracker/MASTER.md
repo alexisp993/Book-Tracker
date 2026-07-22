@@ -84,7 +84,12 @@ shrink the type. (That's exactly why the heatmap weekday axis labels only Mon/We
 - Radius: `2xl` = cards/containers · `xl` = rows, buttons, popovers · `full` = pills, avatars, badges
 - **Depth = border + background, never shadow.** `bg-background` → `bg-card` → `bg-muted`
 - `shadow-sm` only on raised/filled buttons. Cards use borders.
-- Container: `max-w-6xl` + `px-4 sm:px-6` (set in `AppShell`)
+- Shell: **desktop (`lg:`+) uses a fixed ~240px left sidebar** (`AppShell`), content offset by
+  `lg:pl-60` inside `max-w-[1600px] mx-auto`. Below `lg:` it's the sticky top bar + fixed 4-tab
+  bottom bar. Page content still uses `px-4 sm:px-6 lg:px-8`.
+- The Home page is a **config-driven dashboard grid** (`lg:grid-cols-6`, `grid-auto-flow: row
+  dense`); each section declares a `SECTION_SPAN` (`lib/homeConfig.ts`) and the grid reflows when
+  the customizer hides/reorders sections.
 
 ---
 

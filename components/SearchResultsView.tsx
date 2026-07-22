@@ -14,10 +14,10 @@ import type { BookSearchResult } from "@/lib/metadata";
 // Self-contained: owns its own create-book mutation and form dialog rather
 // than threading a chosen result back into LibraryView across routes — the
 // same reusable BookForm/Dialog/useCreateBook LibraryView itself uses.
-export function SearchResultsView() {
+export function SearchResultsView({ initialQ = "" }: { initialQ?: string }) {
   const router = useRouter();
-  const [q, setQ] = React.useState("");
-  const [debouncedQ, setDebouncedQ] = React.useState("");
+  const [q, setQ] = React.useState(initialQ);
+  const [debouncedQ, setDebouncedQ] = React.useState(initialQ);
   const [prefill, setPrefill] = React.useState<BookPrefill | undefined>(undefined);
   const [resolving, setResolving] = React.useState<string | null>(null); // isbn13 being resolved
   const [formOpen, setFormOpen] = React.useState(false);

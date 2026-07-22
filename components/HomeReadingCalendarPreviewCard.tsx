@@ -67,7 +67,13 @@ function StatPill({
 // shared <Heatmap> — same grid the /sessions and /profile/stats heatmaps use),
 // and a reading-summary card of stats + a streak tip. Deep history lives behind
 // "See all" → /calendar.
-export function HomeReadingCalendarPreviewCard() {
+export function HomeReadingCalendarPreviewCard({
+  showSummary = true,
+}: {
+  // The dashboard hides the stat-pill + tip summary (its KPI row and Reading
+  // Insights already cover those), showing just the heatmap card.
+  showSummary?: boolean;
+}) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = React.useState(currentYear);
   const { data: stats } = useSessionStats();
@@ -111,6 +117,7 @@ export function HomeReadingCalendarPreviewCard() {
       </Card>
 
       {/* Reading-summary card — stat row + a streak tip banner */}
+      {showSummary ? (
       <Card className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatPill
@@ -168,6 +175,7 @@ export function HomeReadingCalendarPreviewCard() {
           </Link>
         </div>
       </Card>
+      ) : null}
     </div>
   );
 }

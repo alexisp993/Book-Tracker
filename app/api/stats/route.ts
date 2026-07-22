@@ -207,6 +207,12 @@ export async function GET() {
     timeReadYoyPct: yoyPct(minutesThisYear, minutesLastYear),
     booksYoyPct: yoyPct(booksThisYear, booksLastYear),
     pagesYoyPct: yoyPct(pagesThisYear, pagesLastYear),
+    // Calendar-year totals (already computed above for the YoY deltas) — the
+    // dashboard KPIs / Reading Insights show real this-year numbers rather than
+    // all-time or a rolling-12-month approximation.
+    booksThisYear,
+    pagesThisYear,
+    minutesThisYear,
   };
 
   return NextResponse.json(stats);

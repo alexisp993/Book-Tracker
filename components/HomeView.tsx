@@ -3,25 +3,24 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  BookOpen,
-  CalendarDays,
-  Library,
-  ScanBarcode,
-  Settings2,
-} from "lucide-react";
+import { ArrowRight, BookOpen, Search, Settings2 } from "lucide-react";
 import { StreakBanner } from "@/components/StreakBanner";
 import { ContinueReadingCard } from "@/components/ContinueReadingCard";
-import { SessionSummaryStats } from "@/components/SessionSummaryStats";
+import { KpiCards } from "@/components/dashboard/KpiCards";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { ReadingInsights } from "@/components/dashboard/ReadingInsights";
+import { RecentNotesCard } from "@/components/dashboard/RecentNotesCard";
 import { ReadingGoalCard } from "@/components/ReadingGoalCard";
 import { HomeReadingCalendarPreviewCard } from "@/components/HomeReadingCalendarPreviewCard";
 import { HomeCustomizer } from "@/components/HomeCustomizer";
-import { BookCover } from "@/components/BookCover";
+import { BookScrollRow } from "@/components/BookScrollRow";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useCurrentUser, useBooks, useGroups, useHomeConfig } from "@/lib/queries";
-import type { LibraryBook, BookGroup } from "@/lib/types";
+import type { BookGroup } from "@/lib/types";
 import type { HomeSectionKey } from "@/lib/homeConfig";
-import { DEFAULT_HOME_CONFIG } from "@/lib/homeConfig";
+import { DEFAULT_HOME_CONFIG, SECTION_SPAN } from "@/lib/homeConfig";
+import { cn } from "@/lib/utils";
 
 function greeting() {
   const h = new Date().getHours();
@@ -30,75 +29,35 @@ function greeting() {
   return "Good evening";
 }
 
-function SectionHeader({
+function ShelfCard({
   title,
   seeAllHref,
+  children,
 }: {
   title: string;
-  seeAllHref?: string;
+  seeAllHref: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      {seeAllHref ? (
+    <Card
+      title={title}
+      actions={
         <Link
           href={seeAllHref}
           className="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           See All <ArrowRight className="h-3 w-3" />
         </Link>
-      ) : null}
-    </div>
-  );
-}
-
-function MiniBookCard({
-  book,
-  showTitle = true,
-}: {
-  book: LibraryBook;
-  showTitle?: boolean;
-}) {
-  return (
-    <Link
-      href={`/books/${book.id}`}
-      className="group flex w-[88px] shrink-0 flex-col gap-1.5"
+      }
     >
-      <div className="h-[132px] w-[88px] overflow-hidden rounded-xl border bg-muted shadow-sm transition-transform group-hover:scale-[1.02]">
-        <BookCover book={book} />
-      </div>
-      {showTitle ? (
-        <p className="line-clamp-2 text-[11px] font-medium leading-tight text-foreground/80">
-          {book.title}
-        </p>
-      ) : null}
-    </Link>
+      {children}
+    </Card>
   );
 }
 
-function BookScrollRow({
-  books,
-  showTitle = true,
-}: {
-  books: LibraryBook[];
-  showTitle?: boolean;
-}) {
-  if (books.length === 0) return null;
+function ShelfPreview({ group }: { group: BookGroup }) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {books.map((b) => (
-        <MiniBookCard key={b.id} book={b} showTitle={showTitle} />
-      ))}
-    </div>
-  );
-}
-
-function ShelfCard({ group }: { group: BookGroup }) {
-  return (
-    <Link
-      href="/shelves"
-      className="group flex w-[120px] shrink-0 flex-col gap-2"
-    >
+    <Link href="/shelves" className="group flex w-[120px] shrink-0 flex-col gap-2">
       <div className="h-[80px] w-[120px] overflow-hidden rounded-xl border bg-muted shadow-sm transition-transform group-hover:scale-[1.02]">
         {group.covers.length > 0 ? (
           <div className="grid h-full grid-cols-2 gap-px">
@@ -109,9 +68,9 @@ function ShelfCard({ group }: { group: BookGroup }) {
                 src={url}
                 alt=""
                 className="h-full w-full object-cover"
-      loading="lazy"
-      decoding="async"
-    />
+                loading="lazy"
+                decoding="async"
+              />
             ))}
           </div>
         ) : (
@@ -135,6 +94,7 @@ export function HomeView() {
   const { data: user } = useCurrentUser();
   const { data: homeConfig } = useHomeConfig();
   const [customizerOpen, setCustomizerOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   const name = user?.name?.split(" ")[0] ?? null;
 
@@ -144,21 +104,9 @@ export function HomeView() {
     .sort((a, b) => a.order - b.order)
     .map((s) => s.key);
 
-  const visibleSet = new Set<HomeSectionKey>(orderedVisible);
-
-  const { data: currentlyReading } = useBooks({
-    status: "CURRENTLY_READING",
-    pageSize: 8,
-  });
-  const { data: wantToRead } = useBooks({
-    status: "WANT_TO_READ",
-    pageSize: 10,
-  });
-  const { data: recentlyAdded } = useBooks({
-    sort: "createdAt",
-    order: "desc",
-    pageSize: 8,
-  });
+  const { data: currentlyReading } = useBooks({ status: "CURRENTLY_READING", pageSize: 8 });
+  const { data: wantToRead } = useBooks({ status: "WANT_TO_READ", pageSize: 10 });
+  const { data: recentlyAdded } = useBooks({ sort: "createdAt", order: "desc", pageSize: 8 });
   const { data: shelves } = useGroups("shelves");
 
   const currentlyReadingBooks = currentlyReading?.items ?? [];
@@ -166,100 +114,63 @@ export function HomeView() {
   const recentlyAddedBooks = recentlyAdded?.items ?? [];
   const shelvesData = shelves ?? [];
 
-  function renderSection(key: HomeSectionKey) {
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = search.trim();
+    router.push(q ? `/library/search?q=${encodeURIComponent(q)}` : "/library/search");
+  }
+
+  function renderSection(key: HomeSectionKey): React.ReactNode {
     switch (key) {
-      case "streak":
-        return <StreakBanner />;
-
-      case "continueReading":
-        return (
-          <ContinueReadingCard
-            onContinue={(book) => router.push(`/books/${book.id}`)}
-          />
-        );
-
       case "todayProgress":
-        return <SessionSummaryStats />;
-
+        return <KpiCards />;
+      case "quickActions":
+        return <QuickActions />;
+      case "continueReading":
+        return <ContinueReadingCard onContinue={(book) => router.push(`/books/${book.id}`)} />;
       case "readingGoal":
-        return <ReadingGoalCard />;
-
+        return <ReadingGoalCard variant="ring" />;
+      case "calendar":
+        return <HomeReadingCalendarPreviewCard showSummary={false} />;
+      case "insights":
+        return (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">Reading Insights</h2>
+            <ReadingInsights />
+          </section>
+        );
       case "currentlyReading":
         return currentlyReadingBooks.length > 0 ? (
-          <section className="space-y-3">
-            <SectionHeader
-              title="Currently Reading"
-              seeAllHref="/library?status=CURRENTLY_READING"
-            />
-            <BookScrollRow books={currentlyReadingBooks} />
-          </section>
+          <ShelfCard title="Currently Reading" seeAllHref="/library?status=CURRENTLY_READING">
+            <BookScrollRow books={currentlyReadingBooks} showProgress />
+          </ShelfCard>
         ) : null;
-
       case "wantToRead":
         return wantToReadBooks.length > 0 ? (
-          <section className="space-y-3">
-            <SectionHeader
-              title="Want to Read"
-              seeAllHref="/library?status=WANT_TO_READ"
-            />
+          <ShelfCard title="Want to Read" seeAllHref="/library?status=WANT_TO_READ">
             <BookScrollRow books={wantToReadBooks} />
-          </section>
+          </ShelfCard>
         ) : null;
-
+      case "recentNotes":
+        return <RecentNotesCard />;
       case "recentlyAdded":
         return recentlyAddedBooks.length > 0 ? (
-          <section className="space-y-3">
-            <SectionHeader title="Recently Added" seeAllHref="/library" />
-            {/* Clean uniform row of vertical covers, no text below (blueprint) */}
+          <ShelfCard title="Recently Added" seeAllHref="/library">
             <BookScrollRow books={recentlyAddedBooks} showTitle={false} />
-          </section>
+          </ShelfCard>
         ) : null;
-
       case "myShelves":
         return shelvesData.length > 0 ? (
-          <section className="space-y-3">
-            <SectionHeader title="My Shelves" seeAllHref="/shelves" />
+          <ShelfCard title="My Shelves" seeAllHref="/shelves">
             <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {shelvesData.map((g) => (
-                <ShelfCard key={g.id} group={g} />
+                <ShelfPreview key={g.id} group={g} />
               ))}
             </div>
-          </section>
+          </ShelfCard>
         ) : null;
-
-      case "calendar":
-        return <HomeReadingCalendarPreviewCard />;
-
-      case "quickActions":
-        return (
-          <section className="space-y-3">
-            <SectionHeader title="Quick Actions" />
-            <div className="grid grid-cols-3 gap-3">
-              <Link
-                href="/library?scan=1"
-                className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center transition-colors hover:bg-secondary"
-              >
-                <ScanBarcode className="h-5 w-5 text-primary" />
-                <span className="text-xs font-medium">Scan Book</span>
-              </Link>
-              <Link
-                href="/library"
-                className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center transition-colors hover:bg-secondary"
-              >
-                <Library className="h-5 w-5 text-primary" />
-                <span className="text-xs font-medium">My Library</span>
-              </Link>
-              <Link
-                href="/sessions"
-                className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center transition-colors hover:bg-secondary"
-              >
-                <CalendarDays className="h-5 w-5 text-primary" />
-                <span className="text-xs font-medium">Sessions</span>
-              </Link>
-            </div>
-          </section>
-        );
-
+      case "streak":
+        return <StreakBanner />;
       default:
         return null;
     }
@@ -268,40 +179,55 @@ export function HomeView() {
   return (
     <>
       <div className="space-y-6">
-        {/* Greeting header with customize button */}
-        <div className="flex items-start justify-between gap-2">
+        {/* Dashboard header — greeting + search + customize */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight">
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
               {greeting()}
               {name ? `, ${name}` : ""}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ready to read something great?
+              Every page you read today is a step forward.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setCustomizerOpen(true)}
-            className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary"
-            aria-label="Customize home"
-          >
-            <Settings2 className="h-4 w-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-2">
+            <form onSubmit={submitSearch} className="relative flex-1 lg:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search books, authors, genres…"
+                className="pl-9"
+                aria-label="Search books"
+              />
+            </form>
+            <button
+              type="button"
+              onClick={() => setCustomizerOpen(true)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-card transition-colors hover:bg-secondary"
+              aria-label="Customize home"
+            >
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
 
-        {/* Config-ordered, visibility-filtered sections */}
-        {orderedVisible.map((key) => {
-          const rendered = renderSection(key);
-          return rendered ? (
-            <React.Fragment key={key}>{rendered}</React.Fragment>
-          ) : null;
-        })}
+        {/* Config-driven dashboard grid — sections declare a column span; the
+            grid reflows automatically when the customizer hides/reorders them. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-6 [grid-auto-flow:row_dense]">
+          {orderedVisible.map((key) => {
+            const rendered = renderSection(key);
+            if (!rendered) return null;
+            return (
+              <div key={key} className={cn("min-w-0", SECTION_SPAN[key])}>
+                {rendered}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <HomeCustomizer
-        open={customizerOpen}
-        onClose={() => setCustomizerOpen(false)}
-      />
+      <HomeCustomizer open={customizerOpen} onClose={() => setCustomizerOpen(false)} />
     </>
   );
 }

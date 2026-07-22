@@ -147,6 +147,10 @@ export interface LibraryStats {
   timeReadYoyPct: number | null;
   booksYoyPct: number | null;
   pagesYoyPct: number | null;
+  // Calendar-year totals for the dashboard (this Jan 1 → now).
+  booksThisYear: number;
+  pagesThisYear: number;
+  minutesThisYear: number;
 }
 
 export interface GoalDTO {

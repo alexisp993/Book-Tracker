@@ -10,7 +10,11 @@ import { Input, Label } from "@/components/ui/input";
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/lib/queries";
 import type { GoalDTO } from "@/lib/types";
 
-export function ReadingGoalCard() {
+export function ReadingGoalCard({
+  variant = "bar",
+}: {
+  variant?: "bar" | "ring";
+}) {
   const { data: goals = [], isLoading } = useGoals();
   const [open, setOpen] = React.useState(false);
 
@@ -40,7 +44,11 @@ export function ReadingGoalCard() {
         </div>
 
         {yearGoal ? (
-          <GoalProgress goal={yearGoal} />
+          variant === "ring" ? (
+            <GoalRing goal={yearGoal} />
+          ) : (
+            <GoalProgress goal={yearGoal} />
+          )
         ) : (
           <p className="mt-2 text-sm text-muted-foreground">
             Set a reading goal to track your progress.
@@ -54,6 +62,81 @@ export function ReadingGoalCard() {
         onClose={() => setOpen(false)}
       />
     </>
+  );
+}
+
+// Circular progress + the derived pacing stats from the mockup (days left in
+// the year, avg books/month so far, books to go). All from the goal's existing
+// server-computed `progress` — no new data.
+function GoalRing({ goal }: { goal: GoalDTO }) {
+  const pct = Math.min(100, Math.round((goal.progress / goal.target) * 100));
+  const done = goal.progress >= goal.target;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const endOfYear = new Date(year, 11, 31);
+  const daysLeft = Math.max(
+    0,
+    Math.round((endOfYear.getTime() - now.getTime()) / 86_400_000),
+  );
+  const startOfYear = new Date(year, 0, 1);
+  const monthsElapsed = Math.max(
+    1,
+    (now.getTime() - startOfYear.getTime()) / (86_400_000 * 30.44),
+  );
+  const avgPerMonth = (goal.progress / monthsElapsed).toFixed(1);
+  const booksToGo = Math.max(0, goal.target - goal.progress);
+
+  const R = 32;
+  const C = 2 * Math.PI * R;
+  const stroke = done ? "rgb(16 185 129)" : "hsl(var(--primary))";
+
+  return (
+    <div className="mt-4 flex items-center gap-4">
+      <div className="relative shrink-0">
+        <svg width="84" height="84" viewBox="0 0 84 84" className="-rotate-90">
+          <circle cx="42" cy="42" r={R} fill="none" strokeWidth="8" className="stroke-muted" />
+          <circle
+            cx="42"
+            cy="42"
+            r={R}
+            fill="none"
+            strokeWidth="8"
+            stroke={stroke}
+            strokeLinecap="round"
+            strokeDasharray={C}
+            strokeDashoffset={C - (pct / 100) * C}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-display text-lg font-bold leading-none">{pct}%</span>
+          <span className="text-[10px] text-muted-foreground">of goal</span>
+        </div>
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">
+          {done ? "Goal complete! 🎉" : "You're on track! 🌱"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {goal.progress} / {goal.target} books
+        </p>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <Metric value={daysLeft} label="Days left" />
+          <Metric value={avgPerMonth} label="Avg/month" />
+          <Metric value={booksToGo} label="Books to go" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ value, label }: { value: React.ReactNode; label: string }) {
+  return (
+    <div>
+      <p className="font-display text-base font-semibold leading-none">{value}</p>
+      <p className="mt-0.5 text-[10px] text-muted-foreground">{label}</p>
+    </div>
   );
 }
 
