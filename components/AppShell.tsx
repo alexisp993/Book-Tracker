@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
           {NAV.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
@@ -80,20 +80,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   active
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                 )}
               >
-                <Icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
+                <Icon
+                  className={cn("h-5 w-5 shrink-0", active ? "text-primary" : "")}
+                  strokeWidth={active ? 2.2 : 1.8}
+                />
                 {item.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="flex items-center justify-between gap-2 border-t border-border/70 px-4 py-3">
+        <div className="flex items-center justify-between gap-2 border-t border-border/70 px-3 py-3">
           <ThemeToggle />
           <AccountMenu />
         </div>

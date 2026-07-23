@@ -12,7 +12,7 @@ export function ReadingInsights() {
   const { data: session } = useSessionStats();
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid h-full flex-1 grid-cols-2 grid-rows-2 gap-3">
       <InsightCard
         icon={<BookOpen className="h-4 w-4" />}
         tint="emerald"
@@ -72,7 +72,7 @@ function InsightCard({
   caption?: string;
 }) {
   return (
-    <div className="rounded-2xl border bg-card p-3">
+    <div className="flex h-full flex-col rounded-2xl border bg-card p-4">
       <div className="flex items-center gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}>
           {icon}
@@ -85,7 +85,7 @@ function InsightCard({
       {yoyPct != null ? (
         <p
           className={cn(
-            "mt-1.5 text-[11px] font-medium",
+            "mt-auto pt-1.5 text-[11px] font-medium",
             yoyPct >= 0
               ? "text-emerald-600 dark:text-emerald-400"
               : "text-rose-600 dark:text-rose-400",
@@ -94,7 +94,7 @@ function InsightCard({
           {yoyPct >= 0 ? "▲" : "▼"} {Math.abs(yoyPct)}% vs last year
         </p>
       ) : caption ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">{caption}</p>
+        <p className="mt-auto pt-1.5 text-[11px] text-muted-foreground">{caption}</p>
       ) : null}
     </div>
   );

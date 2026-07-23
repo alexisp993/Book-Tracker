@@ -41,6 +41,7 @@ function ShelfCard({
   return (
     <Card
       title={title}
+      className="h-full"
       actions={
         <Link
           href={seeAllHref}
@@ -134,7 +135,7 @@ export function HomeView() {
         return <HomeReadingCalendarPreviewCard showSummary={false} />;
       case "insights":
         return (
-          <section className="space-y-3">
+          <section className="flex h-full flex-col gap-3">
             <h2 className="text-sm font-semibold">Reading Insights</h2>
             <ReadingInsights />
           </section>
@@ -190,8 +191,8 @@ export function HomeView() {
               Every page you read today is a step forward.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <form onSubmit={submitSearch} className="relative flex-1 lg:w-72">
+          <div className="flex items-center gap-2 lg:w-full lg:max-w-md lg:justify-end">
+            <form onSubmit={submitSearch} className="relative flex-1 lg:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
@@ -213,13 +214,14 @@ export function HomeView() {
         </div>
 
         {/* Config-driven dashboard grid — sections declare a column span; the
-            grid reflows automatically when the customizer hides/reorders them. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-6 [grid-auto-flow:row_dense]">
+            grid reflows automatically when the customizer hides/reorders them.
+            `items-stretch` (default) + `h-full` cells give equal-height rows. */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6 [grid-auto-flow:row_dense]">
           {orderedVisible.map((key) => {
             const rendered = renderSection(key);
             if (!rendered) return null;
             return (
-              <div key={key} className={cn("min-w-0", SECTION_SPAN[key])}>
+              <div key={key} className={cn("min-w-0 h-full", SECTION_SPAN[key])}>
                 {rendered}
               </div>
             );

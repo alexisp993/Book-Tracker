@@ -12,8 +12,9 @@ export function KpiCards() {
   const { data: stats } = useStats();
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4">
       <Stat
+        className="h-full"
         icon={<Flame className="h-4 w-4" />}
         label="Day streak"
         tint="amber"
@@ -21,18 +22,21 @@ export function KpiCards() {
         caption={session && session.streakDays > 0 ? "Keep it going!" : "Start today!"}
       />
       <Stat
+        className="h-full"
         icon={<FileText className="h-4 w-4" />}
         label="Pages today"
         tint="violet"
         value={session?.pagesToday ?? 0}
       />
       <Stat
+        className="h-full"
         icon={<Clock className="h-4 w-4" />}
         label="Read this week"
         tint="teal"
         value={`${session?.hoursThisWeek ?? 0}h`}
       />
       <Stat
+        className="h-full"
         icon={<BookCheck className="h-4 w-4" />}
         label="Books finished"
         tint="emerald"

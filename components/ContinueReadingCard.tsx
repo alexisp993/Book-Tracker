@@ -41,7 +41,7 @@ export function ContinueReadingCard({
       : null;
 
   return (
-    <Card className="flex items-center gap-4">
+    <Card className="flex h-full items-center gap-4">
       <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
         <BookCover book={book} />
       </div>

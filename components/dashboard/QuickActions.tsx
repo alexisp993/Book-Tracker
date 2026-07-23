@@ -22,7 +22,7 @@ export function QuickActions() {
   }
 
   return (
-    <Card title="Quick Actions">
+    <Card title="Quick Actions" className="h-full">
       <div className="grid grid-cols-2 gap-3">
         <Tile href="/library/search" icon={<Search className="h-5 w-5" />} label="Search Books" tint="blue" />
         <Tile href="/library?scan=1" icon={<ScanBarcode className="h-5 w-5" />} label="Scan Barcode" tint="teal" />

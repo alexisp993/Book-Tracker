@@ -15,6 +15,7 @@ export function RecentNotesCard() {
   return (
     <Card
       title="Recent Notes"
+      className="h-full"
       actions={
         <Link
           href="/notes"

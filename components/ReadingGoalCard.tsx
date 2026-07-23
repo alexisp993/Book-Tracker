@@ -25,7 +25,7 @@ export function ReadingGoalCard({
 
   return (
     <>
-      <Card>
+      <Card className={variant === "ring" ? "flex h-full flex-col" : undefined}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" />
@@ -45,7 +45,9 @@ export function ReadingGoalCard({
 
         {yearGoal ? (
           variant === "ring" ? (
-            <GoalRing goal={yearGoal} />
+            <div className="flex flex-1 items-center">
+              <GoalRing goal={yearGoal} />
+            </div>
           ) : (
             <GoalProgress goal={yearGoal} />
           )
@@ -92,7 +94,7 @@ function GoalRing({ goal }: { goal: GoalDTO }) {
   const stroke = done ? "rgb(16 185 129)" : "hsl(var(--primary))";
 
   return (
-    <div className="mt-4 flex items-center gap-4">
+    <div className="mt-4 flex w-full items-center gap-4">
       <div className="relative shrink-0">
         <svg width="84" height="84" viewBox="0 0 84 84" className="-rotate-90">
           <circle cx="42" cy="42" r={R} fill="none" strokeWidth="8" className="stroke-muted" />

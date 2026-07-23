@@ -10,15 +10,17 @@ export function Stat({
   value,
   tint = "blue",
   caption,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
   tint?: keyof typeof TINTS;
   caption?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className={cn("rounded-2xl border bg-card p-4", className)}>
       <span
         className={cn(
           "inline-flex h-8 w-8 items-center justify-center rounded-full",
