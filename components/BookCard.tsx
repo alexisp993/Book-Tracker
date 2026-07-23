@@ -2,14 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BookOpen, Heart, Pencil, Trash2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StarRating } from "@/components/StarRating";
 import { ProgressBar } from "@/components/ui/bar";
 import { BookCover } from "@/components/BookCover";
-import { STATUS_DOT } from "@/lib/constants";
+import { BookActionsMenu } from "@/components/BookActionsMenu";
+import { STATUS_DOT, STATUS_LABELS, STATUS_TEXT } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
 
 // Rendered once per book in grid views (up to ~100/page) — memoized so a
@@ -23,15 +23,15 @@ export const BookCard = React.memo(function BookCard({
   onEdit,
   onDelete,
   onStartReading,
+  onToggleFavorite,
 }: {
   book: LibraryBook;
   compact?: boolean;
   onEdit: (book: LibraryBook) => void;
   onDelete: (book: LibraryBook) => void;
   onStartReading?: (book: LibraryBook) => void;
+  onToggleFavorite?: (book: LibraryBook) => void;
 }) {
-  const canStart =
-    book.status === "WANT_TO_READ" || book.status === "ON_HOLD";
   const progress =
     book.pageCount && book.pageCount > 0
       ? Math.min(100, Math.round((book.currentPage / book.pageCount) * 100))
@@ -91,55 +91,35 @@ export const BookCard = React.memo(function BookCard({
           <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-tight">
             {book.title}
           </h3>
-          <div className="mt-0.5 flex items-center gap-2">
-            <p className="line-clamp-1 text-xs text-muted-foreground">
-              {book.authors.length > 0 ? book.authors.join(", ") : "Unknown author"}
-            </p>
-            {book.rating ? (
-              <StarRating value={book.rating} size={11} />
-            ) : null}
-          </div>
+          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+            {book.authors.length > 0 ? book.authors.join(", ") : "Unknown author"}
+          </p>
         </Link>
 
+        {/* Shelf-aware meta: reading → progress; read → stars; else status. */}
         {progress !== null && book.status === "CURRENTLY_READING" ? (
-          <div>
+          <div className="mt-0.5">
             <ProgressBar value={progress} />
             <p className="mt-1 text-[11px] text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
             </p>
           </div>
+        ) : book.status === "READ" && book.rating ? (
+          <StarRating value={book.rating} size={13} />
         ) : null}
 
-        <div className="mt-1 flex items-center gap-2">
-          {canStart && onStartReading ? (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 border-warm/30 bg-warm/10 text-warm hover:bg-warm/20"
-              onClick={() => onStartReading(book)}
-              aria-label={`Start reading ${book.title}`}
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => onEdit(book)}
-            aria-label={`Edit ${book.title}`}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 text-destructive hover:text-destructive"
-            onClick={() => onDelete(book)}
-            aria-label={`Delete ${book.title}`}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-medium", STATUS_TEXT[book.status])}>
+            <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[book.status])} />
+            {STATUS_LABELS[book.status]}
+          </span>
+          <BookActionsMenu
+            book={book}
+            onStartReading={onStartReading}
+            onEdit={onEdit}
+            onToggleFavorite={onToggleFavorite}
+            onDelete={onDelete}
+          />
         </div>
       </div>
     </div>

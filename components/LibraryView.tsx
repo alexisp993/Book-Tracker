@@ -4,14 +4,15 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
   BookPlus,
   Library,
   RefreshCw,
   ScanBarcode,
   Search,
-  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { FilterPills } from "@/components/ui/tabs";
 import { Dialog } from "@/components/ui/dialog";
@@ -23,24 +24,30 @@ import {
 } from "@/components/BookForm";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { BookRow } from "@/components/BookRow";
-import { LibraryToolbar, type LibraryFilters } from "@/components/LibraryToolbar";
+import { BookScrollRow } from "@/components/BookScrollRow";
 import { EmptyState } from "@/components/EmptyState";
 import { ListContainer } from "@/components/ui/list";
-import { ContinueReadingCard } from "@/components/ContinueReadingCard";
-import { StreakBanner } from "@/components/StreakBanner";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
 import { ApiRequestError } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { BOOK_SORTS, SORT_LABELS } from "@/lib/constants";
 import {
   queryKeys,
   useBooks,
   useCreateBook,
   useDeleteBook,
   useEnrichBooks,
+  useStats,
   useUpdateBook,
 } from "@/lib/queries";
 import type { LibraryBook } from "@/lib/types";
 import type { BookMetadata } from "@/lib/metadata";
+
+interface LibraryFilters {
+  q: string;
+  status: string; // "" = all
+  sort: string;
+  order: "asc" | "desc";
+}
 
 const DEFAULT_FILTERS: LibraryFilters = {
   q: "",
@@ -49,21 +56,11 @@ const DEFAULT_FILTERS: LibraryFilters = {
   order: "desc",
 };
 
-// The primary status filter, surfaced as tabs. On Hold / Did Not Finish stay
-// reachable via the search/filter sheet's existing status select.
-const STATUS_TABS: { value: string; label: string }[] = [
-  { value: "", label: "All" },
-  { value: "CURRENTLY_READING", label: "Currently Reading" },
-  { value: "WANT_TO_READ", label: "Want to Read" },
-  { value: "READ", label: "Read" },
-];
-
 export function LibraryView() {
   const [filters, setFilters] = React.useState<LibraryFilters>(DEFAULT_FILTERS);
   const [view, setView] = React.useState<LibraryViewMode>("list");
   const [page, setPage] = React.useState(1);
 
-  // Persist the chosen view density across sessions.
   React.useEffect(() => {
     const saved = localStorage.getItem("bt_view");
     if (saved === "comfortable" || saved === "compact" || saved === "list") {
@@ -75,28 +72,14 @@ export function LibraryView() {
     localStorage.setItem("bt_view", mode);
   }
 
-  // dialog state
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<LibraryBook | null>(null);
-  const [prefill, setPrefill] = React.useState<BookPrefill | undefined>(
-    undefined,
-  );
+  const [prefill, setPrefill] = React.useState<BookPrefill | undefined>(undefined);
   const [formError, setFormError] = React.useState<string | null>(null);
-
-  // barcode scanner state
   const [scannerOpen, setScannerOpen] = React.useState(false);
-
-  // metadata enrichment state
   const [enrichMsg, setEnrichMsg] = React.useState<string | null>(null);
-
-  // delete confirm state
   const [toDelete, setToDelete] = React.useState<LibraryBook | null>(null);
 
-  // mobile-only filter sheet (search/status/sort collapse into this on small screens)
-  const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
-  const filtersActive = filters.q !== "" || filters.status !== "";
-
-  // Debounce the search box; reset to page 1 whenever filters change.
   const [debouncedQ, setDebouncedQ] = React.useState(filters.q);
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(filters.q), 300);
@@ -107,6 +90,12 @@ export function LibraryView() {
     setPage(1);
   }, [debouncedQ, filters.status, filters.sort, filters.order]);
 
+  // The "All" tab (no search) shows browsable shelf sections; any specific
+  // status or a search shows the full paginated grid/list instead.
+  const showShelves = filters.status === "" && !debouncedQ.trim();
+
+  const { data: stats } = useStats();
+
   const queryParams = {
     q: debouncedQ || undefined,
     status: filters.status || undefined,
@@ -114,8 +103,26 @@ export function LibraryView() {
     order: filters.order,
     page,
   };
-  const { data, isLoading: loading, isError, error, refetch } =
-    useBooks(queryParams);
+  const { data, isLoading: loading, isError, error, refetch } = useBooks(
+    queryParams,
+    { enabled: !showShelves },
+  );
+
+  // Shelf previews (only fetched on the All view).
+  const reading = useBooks(
+    { status: "CURRENTLY_READING", pageSize: 12 },
+    { enabled: showShelves },
+  );
+  const wantToRead = useBooks(
+    { status: "WANT_TO_READ", pageSize: 12 },
+    { enabled: showShelves },
+  );
+  const read = useBooks({ status: "READ", pageSize: 12 }, { enabled: showShelves });
+  const recentlyAdded = useBooks(
+    { sort: "createdAt", order: "desc", pageSize: 12 },
+    { enabled: showShelves },
+  );
+
   const listError = isError
     ? error instanceof Error
       ? error.message
@@ -135,9 +142,6 @@ export function LibraryView() {
     setFormOpen(true);
   }, []);
 
-  // Deep-link entry points from the Add a Book launcher (and Home's existing
-  // "Scan Book" quick action, which already linked to ?scan=1 but had no
-  // handler here until now) — auto-open the matching dialog on arrival.
   const router = useRouter();
   const searchParams = useSearchParams();
   React.useEffect(() => {
@@ -158,7 +162,6 @@ export function LibraryView() {
     setFormOpen(true);
   }, []);
 
-  // A barcode scan resolved metadata → open the add form prefilled with it.
   function handleScanResolved(metadata: BookMetadata) {
     setScannerOpen(false);
     setEditing(null);
@@ -195,16 +198,16 @@ export function LibraryView() {
     }
   }
 
-  // Depend on `.mutate` itself (stable across renders) rather than the whole
-  // mutation result object (whose identity TanStack Query may recreate every
-  // render), so this callback's identity stays stable for React.memo below.
   const updateBookMutate = updateMutation.mutate;
   const handleStartReading = React.useCallback(
     (book: LibraryBook) => {
-      updateBookMutate({
-        id: book.id,
-        input: { status: "CURRENTLY_READING" },
-      });
+      updateBookMutate({ id: book.id, input: { status: "CURRENTLY_READING" } });
+    },
+    [updateBookMutate],
+  );
+  const handleToggleFavorite = React.useCallback(
+    (book: LibraryBook) => {
+      updateBookMutate({ id: book.id, input: { favorite: !book.favorite } });
     },
     [updateBookMutate],
   );
@@ -241,101 +244,100 @@ export function LibraryView() {
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
-  const isEmpty = !loading && items.length === 0;
+  const isEmpty = !showShelves && !loading && items.length === 0;
   const submitting = createMutation.isPending || updateMutation.isPending;
   const deleting = deleteMutation.isPending;
   const enriching = enrichMutation.isPending;
 
+  const count = (n: number | undefined) => (n != null ? ` (${n})` : "");
+  const statusTabs = [
+    { value: "", label: `All${count(stats?.total)}` },
+    { value: "CURRENTLY_READING", label: `Currently Reading${count(stats?.reading)}` },
+    { value: "WANT_TO_READ", label: `Want to Read${count(stats?.wantToRead)}` },
+    { value: "READ", label: `Read${count(stats?.read)}` },
+  ];
+
+  const readingBooks = reading.data?.items ?? [];
+  const wantToReadBooks = wantToRead.data?.items ?? [];
+  const readBooks = read.data?.items ?? [];
+  const recentlyAddedBooks = recentlyAdded.data?.items ?? [];
+  const shelvesEmpty =
+    showShelves &&
+    !reading.isLoading &&
+    !recentlyAdded.isLoading &&
+    recentlyAddedBooks.length === 0;
+
   return (
-    <div className="space-y-3 sm:space-y-6">
-      <StreakBanner />
-      <ContinueReadingCard onContinue={openEdit} />
-
-      {/* Page title + search/filter icon actions */}
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Library</h1>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setFilterSheetOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full border bg-card text-muted-foreground transition-colors hover:text-foreground"
+    <div className="space-y-4">
+      {/* Compact toolbar: title + search + sort + view + add + scan */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="mr-auto font-display text-2xl font-bold tracking-tight">
+          Library
+        </h1>
+        <div className="relative order-last w-full sm:order-none sm:w-56">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+            placeholder="Search title, author, ISBN…"
+            className="h-9 pl-9"
             aria-label="Search library"
-          >
-            <Search className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterSheetOpen(true)}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border bg-card text-muted-foreground transition-colors hover:text-foreground"
-            aria-label="Filter and sort"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            {filtersActive ? (
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-            ) : null}
-          </button>
+          />
         </div>
-      </div>
-
-      {/* Status tabs — the primary filter; On Hold / Did Not Finish remain
-          reachable via the search/filter sheet's status select. */}
-      <div className="flex items-center gap-2">
-        <FilterPills
-          className="flex-1"
-          scrollable
-          value={filters.status}
-          onChange={(status) => setFilters({ ...filters, status })}
-          items={STATUS_TABS}
-        />
-        <ViewToggle value={view} onChange={changeView} />
-      </div>
-
-      {/* Prominent Add Book CTA — opens the Scan/Search/Manual launcher */}
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={() => router.push("/library/add")}
-          className="h-11 flex-1 rounded-full text-[15px]"
+        <Select
+          value={`${filters.sort}:${filters.order}`}
+          onChange={(e) => {
+            const [sort, order] = e.target.value.split(":");
+            setFilters({ ...filters, sort, order: order as "asc" | "desc" });
+          }}
+          className="h-9 w-auto text-sm"
+          aria-label="Sort books"
         >
-          <BookPlus className="h-4 w-4" /> Add book
+          {BOOK_SORTS.flatMap((s) => {
+            const orders: ("asc" | "desc")[] =
+              s === "title" ? ["asc", "desc"] : ["desc", "asc"];
+            return orders.map((o) => (
+              <option key={`${s}:${o}`} value={`${s}:${o}`}>
+                {SORT_LABELS[s]} ({o === "asc" ? "↑" : "↓"})
+              </option>
+            ));
+          })}
+        </Select>
+        <ViewToggle value={view} onChange={changeView} />
+        <Button size="sm" onClick={() => router.push("/library/add")}>
+          <BookPlus className="h-4 w-4" /> Add Book
         </Button>
         <Button
           variant="outline"
           size="icon"
+          className="h-9 w-9"
           onClick={() => setScannerOpen(true)}
-          className="h-11 w-11 shrink-0 rounded-full"
           aria-label="Scan barcode"
         >
           <ScanBarcode className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Count + unobtrusive refresh-details link */}
-      <div className="flex items-center gap-3">
-        <p className="text-xs text-muted-foreground">
-          {loading && !data ? "Loading…" : `${total} book${total === 1 ? "" : "s"}`}
-        </p>
-        {total > 0 ? (
+      {/* Status pills with live counts */}
+      <div className="flex items-center gap-2">
+        <FilterPills
+          className="flex-1"
+          scrollable
+          value={filters.status}
+          onChange={(status) => setFilters({ ...filters, status })}
+          items={statusTabs}
+        />
+        {total > 0 && !showShelves ? (
           <button
             onClick={handleEnrich}
             disabled={enriching}
-            className="inline-flex items-center gap-1 truncate text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="Fetch missing covers and details from Open Library / Google Books"
+            className="hidden shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 sm:inline-flex"
           >
-            <RefreshCw
-              className={`h-3.5 w-3.5 shrink-0 ${enriching ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`h-3.5 w-3.5 ${enriching ? "animate-spin" : ""}`} />
             {enriching ? "Refreshing…" : enrichMsg ?? "Refresh details"}
           </button>
         ) : null}
       </div>
-
-      <Dialog
-        open={filterSheetOpen}
-        onClose={() => setFilterSheetOpen(false)}
-        title="Search & filter"
-      >
-        <LibraryToolbar filters={filters} onChange={setFilters} />
-      </Dialog>
 
       {listError ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -346,65 +348,85 @@ export function LibraryView() {
         </div>
       ) : null}
 
-      {isEmpty ? (
-        <EmptyState
-          icon={Library}
-          title={
-            filters.q || filters.status
-              ? "No books match your filters"
-              : "Your library is waiting"
-          }
-          description={
-            filters.q || filters.status
-              ? "Try clearing the search or status filter."
-              : "Start building your personal reading collection."
-          }
-          action={
-            !filters.q && !filters.status ? (
+      {/* All view → shelf sections; a status/search → the full grid/list. */}
+      {showShelves ? (
+        shelvesEmpty ? (
+          <EmptyState
+            icon={Library}
+            title="Your library is waiting"
+            description="Start building your personal reading collection."
+            action={
               <Button onClick={openAdd}>
                 <BookPlus className="h-4 w-4" /> Add book
               </Button>
-            ) : undefined
-          }
+            }
+          />
+        ) : (
+          <div className="space-y-6">
+            <Shelf title="Recently Added" books={recentlyAddedBooks} />
+            <Shelf
+              title="Continue Reading"
+              books={readingBooks}
+              showProgress
+              onSeeAll={() => setFilters({ ...filters, status: "CURRENTLY_READING" })}
+            />
+            <Shelf
+              title="Want to Read"
+              books={wantToReadBooks}
+              onSeeAll={() => setFilters({ ...filters, status: "WANT_TO_READ" })}
+            />
+            <Shelf
+              title="Read"
+              books={readBooks}
+              onSeeAll={() => setFilters({ ...filters, status: "READ" })}
+            />
+          </div>
+        )
+      ) : isEmpty ? (
+        <EmptyState
+          icon={Library}
+          title="No books match your filters"
+          description="Try clearing the search or picking a different status."
         />
-      ) : view === "list" ? (
-        <ListContainer inset>
-          {items.map((book) => (
-            <BookRow
-              key={book.id}
-              book={book}
-              onEdit={openEdit}
-              onDelete={setToDelete}
-              onStartReading={handleStartReading}
-            />
-          ))}
-        </ListContainer>
-      ) : view === "compact" ? (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-          {items.map((book) => (
-            <BookCard key={book.id} book={book} compact onEdit={openEdit} onDelete={setToDelete} />
-          ))}
-        </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {items.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              onEdit={openEdit}
-              onDelete={setToDelete}
-              onStartReading={handleStartReading}
-            />
-          ))}
-        </div>
-      )}
+        <>
+          {view === "list" ? (
+            <ListContainer inset>
+              {items.map((book) => (
+                <BookRow
+                  key={book.id}
+                  book={book}
+                  onEdit={openEdit}
+                  onDelete={setToDelete}
+                  onStartReading={handleStartReading}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              ))}
+            </ListContainer>
+          ) : view === "compact" ? (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+              {items.map((book) => (
+                <BookCard key={book.id} book={book} compact onEdit={openEdit} onDelete={setToDelete} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {items.map((book) => (
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  onEdit={openEdit}
+                  onDelete={setToDelete}
+                  onStartReading={handleStartReading}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              ))}
+            </div>
+          )}
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onChange={setPage}
-        disabled={loading}
-      />
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} disabled={loading} />
+        </>
+      )}
 
       <Dialog
         open={formOpen}
@@ -455,24 +477,50 @@ export function LibraryView() {
       >
         <p className="text-sm text-muted-foreground">
           Remove{" "}
-          <span className="font-medium text-foreground">
-            {toDelete?.title}
-          </span>{" "}
+          <span className="font-medium text-foreground">{toDelete?.title}</span>{" "}
           from your library? This deletes your reading entry for it.
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setToDelete(null)}>
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
             {deleting ? "Removing…" : "Remove"}
           </Button>
         </div>
       </Dialog>
     </div>
+  );
+}
+
+// A titled horizontal shelf of book covers; hides itself when empty.
+function Shelf({
+  title,
+  books,
+  showProgress = false,
+  onSeeAll,
+}: {
+  title: string;
+  books: LibraryBook[];
+  showProgress?: boolean;
+  onSeeAll?: () => void;
+}) {
+  if (books.length === 0) return null;
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {onSeeAll ? (
+          <button
+            type="button"
+            onClick={onSeeAll}
+            className="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            See all <ArrowRight className="h-3 w-3" />
+          </button>
+        ) : null}
+      </div>
+      <BookScrollRow books={books} showProgress={showProgress} />
+    </section>
   );
 }
