@@ -4,6 +4,7 @@ import { MessageSquareText } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
 import { ListContainer } from "@/components/ui/list";
+import { Loading } from "@/components/ui/loading";
 import { useMyFeedback } from "@/lib/queries";
 import {
   FEEDBACK_STATUS_LABELS,
@@ -17,7 +18,7 @@ export function MyFeedbackView() {
   const { data: items, isLoading } = useMyFeedback();
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
+    return <Loading />;
   }
   if (!items || items.length === 0) {
     return (

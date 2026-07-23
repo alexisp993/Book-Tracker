@@ -119,6 +119,25 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Restrained entrance motion for overlays/menus — transform + opacity only,
+   short, springy-out. The reduced-motion block below neutralises all of it. */
+@keyframes bt-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bt-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes bt-menu-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes bt-rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useBetaStats } from "@/lib/queries";
 import { Stat } from "@/components/ui/stat";
+import { Loading } from "@/components/ui/loading";
 import { Card } from "@/components/ui/card";
 
 // Intentionally lightweight per spec — counts and small top-5 lists, no
@@ -17,7 +18,7 @@ import { Card } from "@/components/ui/card";
 export function BetaDashboardView() {
   const { data: stats, isLoading } = useBetaStats();
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (isLoading) return <Loading />;
   if (!stats) return null;
 
   return (

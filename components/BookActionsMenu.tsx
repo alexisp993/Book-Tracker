@@ -61,7 +61,7 @@ export function BookActionsMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-9 z-20 w-40 overflow-hidden rounded-xl border bg-card py-1 shadow-lg"
+          className="absolute right-0 top-9 z-20 w-40 origin-top-right overflow-hidden rounded-xl border bg-card py-1 shadow-lg animate-[bt-menu-in_140ms_ease-out]"
         >
           {canStart && onStartReading ? (
             <Item

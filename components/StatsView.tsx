@@ -18,6 +18,7 @@ import { STATUS_DOT } from "@/lib/constants";
 import { EmptyState } from "@/components/EmptyState";
 import { ReadingHeatmap } from "@/components/ReadingHeatmap";
 import { Card } from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
 import { Stat } from "@/components/ui/stat";
 import { BarRow } from "@/components/ui/bar";
 import { PageHeader } from "@/components/ui/page-header";
@@ -44,7 +45,7 @@ export function StatsView() {
       <div className="space-y-6">
         <PageHeader title="Statistics" />
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <Loading />
         ) : (
           <EmptyState
             icon={BookOpen}

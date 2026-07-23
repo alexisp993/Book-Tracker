@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 import { Card } from "@/components/ui/card";
 import { BackHeader } from "@/components/ui/page-header";
 import { Label, Select, Textarea } from "@/components/ui/input";
@@ -45,7 +46,7 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
     setTimeout(() => setSaved(false), 3000);
   }
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (isLoading) return <Loading />;
   if (!feedback) return <p className="text-sm text-muted-foreground">Not found.</p>;
 
   return (

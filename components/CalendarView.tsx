@@ -13,6 +13,7 @@ import {
 } from "@/lib/calendarViewModel";
 import { formatDuration } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
 import type { CalendarDay } from "@/lib/api";
 
 // Canvas palette read from the active theme's CSS variables at export time,
@@ -413,7 +414,7 @@ export function CalendarView() {
 
       {/* Calendar grid */}
       {isLoading ? (
-        <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
+        <Loading />
       ) : (
         <div className="grid grid-cols-7 gap-1">
           {viewModel.cells.map((cell, i) => {

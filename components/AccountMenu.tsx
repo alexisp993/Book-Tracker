@@ -49,7 +49,7 @@ export function AccountMenu() {
 
       {open ? (
         <div
-          className="absolute right-0 top-full z-40 mt-2 w-52 overflow-hidden rounded-xl border bg-card p-1 shadow-lg"
+          className="absolute right-0 top-full z-40 mt-2 w-52 origin-top-right overflow-hidden rounded-xl border bg-card p-1 shadow-lg animate-[bt-menu-in_140ms_ease-out]"
           role="menu"
         >
           {me ? (

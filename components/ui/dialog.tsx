@@ -39,7 +39,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm animate-[bt-overlay-in_150ms_ease-out] sm:items-center sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -49,7 +49,7 @@ export function Dialog({
     >
       <div
         className={cn(
-          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border bg-card text-card-foreground shadow-lg sm:max-w-lg sm:rounded-2xl",
+          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border bg-card text-card-foreground shadow-lg animate-[bt-dialog-in_200ms_cubic-bezier(0.16,1,0.3,1)] sm:max-w-lg sm:rounded-2xl",
           className,
         )}
       >

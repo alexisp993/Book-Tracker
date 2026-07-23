@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -140,7 +141,7 @@ export function GroupsView({
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <Loading />
       ) : !groups || groups.length === 0 ? (
         <EmptyState
           icon={Library}
@@ -207,7 +208,7 @@ export function GroupsView({
         description={detail?.group.description ?? openMeta?.description ?? undefined}
       >
         {openLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <Loading />
         ) : !detail || detail.books.length === 0 ? (
           <EmptyState
             icon={BookOpen}
@@ -443,7 +444,7 @@ function KebabMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-36 overflow-hidden rounded-xl border bg-card py-1 shadow-lg"
+          className="absolute right-0 top-full z-10 mt-1 w-36 origin-top-right overflow-hidden rounded-xl border bg-card py-1 shadow-lg animate-[bt-menu-in_140ms_ease-out]"
         >
           <button
             type="button"

@@ -9,6 +9,7 @@ import {
   Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { BackHeader } from "@/components/ui/page-header";
@@ -106,7 +107,7 @@ export function BookDetailView({ id }: { id: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <Loading />
       </div>
     );
   }
@@ -207,7 +208,7 @@ export function BookDetailView({ id }: { id: string }) {
             {progressMenuOpen && (book.status !== "READ" || activeSession) ? (
               <div
                 role="menu"
-                className="absolute left-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-xl border bg-card py-1 shadow-lg"
+                className="absolute left-0 top-full z-20 mt-1 w-56 origin-top-left overflow-hidden rounded-xl border bg-card py-1 shadow-lg animate-[bt-menu-in_140ms_ease-out]"
               >
                 <button
                   type="button"
@@ -321,7 +322,7 @@ function SessionsTab({ userBookId }: { userBookId: string }) {
   const items = data?.items ?? [];
 
   if (isLoading) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>;
+    return <Loading />;
   }
 
   if (items.length === 0) {

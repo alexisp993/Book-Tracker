@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MessageSquareText, Search } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
+import { Loading } from "@/components/ui/loading";
 import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/EmptyState";
 import { ListContainer } from "@/components/ui/list";
@@ -67,7 +68,7 @@ export function AdminFeedbackView() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <Loading />
       ) : items.length === 0 ? (
         <EmptyState
           icon={MessageSquareText}
