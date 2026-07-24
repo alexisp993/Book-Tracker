@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { BookOpen, Play } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { BookCover } from "@/components/BookCover";
@@ -37,6 +38,7 @@ function clockLabel(ms: number): string {
 // (`useActiveSession`, staleTime 0), fetched once and on mutation
 // invalidation; the ticking clock stays local, exactly as before.
 export function ReadingTimer() {
+  const pathname = usePathname();
   const { data: active, isLoading: loadingActive } = useActiveSession();
   const [now, setNow] = React.useState(Date.now());
 
@@ -111,6 +113,12 @@ export function ReadingTimer() {
 
   if (loadingActive) return null;
 
+  // /sessions already leads with its own "Log session" action, and the FAB
+  // is fixed bottom-right — it sat directly on top of that button. The idle
+  // launcher is redundant there; the active-session pill below still shows
+  // everywhere, since that one is live status, not a duplicate CTA.
+  const hideIdleLauncher = pathname === "/sessions";
+
   const starting = startMutation.isPending;
   const activeClock = active
     ? getActiveElapsedMs(active.id, active.date, now)
@@ -137,7 +145,7 @@ export function ReadingTimer() {
             {activeClock?.paused ? "Paused" : clockLabel(activeClock?.elapsedMs ?? 0)}
           </span>
         </button>
-      ) : (
+      ) : hideIdleLauncher ? null : (
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
