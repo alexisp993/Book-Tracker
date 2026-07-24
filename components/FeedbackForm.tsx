@@ -106,7 +106,7 @@ export function FeedbackForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border bg-card p-5"
+      className="space-y-4 rounded-2xl border bg-card p-5 shadow-card"
     >
       <div className="space-y-1.5">
         <Label htmlFor="feedback-type">Feedback Type</Label>

@@ -362,7 +362,10 @@ export function CalendarView() {
   }
 
   return (
-    <div className="space-y-4">
+    // Capped and centred: the day cells are aspect-[2/3], so in the full-width
+    // sidebar shell seven of them stretched to ~178x265px and one month ran
+    // ~2000px tall. At max-w-3xl a cell lands near its intended ~100px.
+    <div className="mx-auto w-full max-w-3xl space-y-4">
       {/* Month navigation + download */}
       <div className="flex items-center justify-between">
         <button
@@ -449,20 +452,20 @@ export function CalendarView() {
                     stored Book.coverUrl still shows art here. */}
                 {cell.hasCover ? <CellCover candidates={cell.coverCandidates} /> : null}
 
-                {/* Gradient so the day number stays readable over any cover */}
-                {cell.hasCover ? (
-                  <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 rounded-t-xl bg-gradient-to-b from-black/60 to-transparent" />
-                ) : null}
-
-                {/* Day number */}
+                {/* Day number. Over a cover it sits in a translucent chip
+                    rather than relying on a top gradient + white text: every
+                    cover candidate can still fail to load (CellCover then
+                    renders nothing), which left a dark bar and invisible white
+                    text on an otherwise empty cell. A chip reads correctly
+                    whether or not artwork actually painted. */}
                 <span
                   className={[
-                    "relative z-20 px-1 pt-0.5 text-[10px] font-semibold leading-none self-start",
+                    "relative z-20 text-[10px] font-semibold leading-none self-start",
                     cell.hasCover
-                      ? "text-white drop-shadow-sm"
+                      ? "m-1 rounded-md bg-background/85 px-1 py-0.5 text-foreground backdrop-blur-sm"
                       : cell.isToday
-                      ? "text-primary"
-                      : "text-foreground",
+                      ? "px-1 pt-0.5 text-primary"
+                      : "px-1 pt-0.5 text-foreground",
                   ].join(" ")}
                 >
                   {cell.day}

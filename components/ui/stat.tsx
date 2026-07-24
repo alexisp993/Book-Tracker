@@ -20,7 +20,7 @@ export function Stat({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl border bg-card p-4", className)}>
+    <div className={cn("rounded-2xl border bg-card p-4 shadow-card", className)}>
       <span
         className={cn(
           "inline-flex h-8 w-8 items-center justify-center rounded-full",

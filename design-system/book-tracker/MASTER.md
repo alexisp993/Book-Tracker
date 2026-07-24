@@ -40,7 +40,11 @@ Themes are **classes on `<html>`** (`.dark`, `.forest`), applied pre-paint from
 - The one sanctioned exception is the **semantic accent set** used for stat tints and status
   colors (`amber / emerald / teal / violet / rose / blue`), centralized in `TINTS`.
 - `--warm` is reserved for streak / motivational surfaces.
-- There are no `--space-*` or `--shadow-*` tokens. Use Tailwind's scale.
+- There are no `--space-*` tokens. Use Tailwind's scale.
+- **`--shadow-1/2/3` are real tokens**, defined per theme in `globals.css` and exposed
+  as `shadow-card` / `shadow-card-hover` / `shadow-cover` via `tailwind.config.ts`.
+  Dark and forest use much higher alphas — a shadow has little to darken on a dark
+  background, so depth there also relies on `--card` sitting well above `--background`.
 
 ### Radius derives from `--radius` (fixed in Phase 2)
 
@@ -82,8 +86,15 @@ shrink the type. (That's exactly why the heatmap weekday axis labels only Mon/We
 
 - Card padding `p-4 sm:p-5` · list-row padding `px-4 py-3` · card gap `gap-3` · section gap `space-y-6`
 - Radius: `2xl` = cards/containers · `xl` = rows, buttons, popovers · `full` = pills, avatars, badges
-- **Depth = border + background, never shadow.** `bg-background` → `bg-card` → `bg-muted`
-- `shadow-sm` only on raised/filled buttons. Cards use borders.
+- **Depth = elevation + surface + border.** Surfaces stack `bg-background` → `bg-card`
+  → `bg-muted`; cards carry `shadow-card` on top of their border. Border alone read as
+  flat, which is what this rule previously mandated — it was reversed deliberately.
+- **Interactive surfaces lift**: `hover:shadow-card-hover hover:-translate-y-px` with a
+  `transition-[box-shadow,transform]`. Applies to book cards, list rows, quick-action
+  tiles, and collection cards.
+- **Book covers use `shadow-cover`** everywhere they appear. Books are physical objects;
+  this is the single strongest depth cue in the app.
+- Never animate layout properties for elevation — only `box-shadow` and `transform`.
 - Shell: **desktop (`lg:`+) uses a fixed ~240px left sidebar** (`AppShell`), content offset by
   `lg:pl-60` inside `max-w-[1600px] mx-auto`. Below `lg:` it's the sticky top bar + fixed 4-tab
   bottom bar. Page content still uses `px-4 sm:px-6 lg:px-8`.

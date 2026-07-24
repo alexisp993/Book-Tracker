@@ -136,12 +136,15 @@ export function BookDetailView({ id }: { id: string }) {
       : null;
 
   return (
-    <div className="space-y-6">
+    // Book Detail is a reading surface, not a dashboard — capped so the hero
+    // doesn't strand ~1000px of empty space beside the cover and the metadata
+    // grid doesn't stretch six cells across the full shell.
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <BackHeader href="/library" backLabel="Back to Library" />
 
       {/* Header card — explicit two-column hero: cover left, content right */}
       <Card className="grid grid-cols-[auto_1fr] gap-4">
-        <div className="aspect-[2/3] w-24 sm:w-28 shrink-0 overflow-hidden rounded-xl border bg-muted">
+        <div className="aspect-[2/3] w-24 sm:w-28 shrink-0 overflow-hidden rounded-xl border bg-muted shadow-cover">
           <BookCover book={book} />
         </div>
         <div className="min-w-0">
@@ -290,7 +293,9 @@ function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }
     <div className="space-y-4">
       <div>
         <h2 className="mb-1.5 text-sm font-semibold">About</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground line-clamp-6">
+        {/* Capped to a readable measure — in the full-width shell this ran to
+            ~1250px per line. */}
+        <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground line-clamp-6">
           {book.description || "No description available."}
         </p>
       </div>
@@ -306,7 +311,7 @@ function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }
 
 function InfoCell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border bg-card p-3">
+    <div className="rounded-xl border bg-card p-3 shadow-card">
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
@@ -344,7 +349,7 @@ function SessionsTab({ userBookId }: { userBookId: string }) {
         {items.map((s) => (
           <div
             key={s.id}
-            className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2.5"
+            className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2.5 shadow-card"
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{formatDate(s.date)}</p>

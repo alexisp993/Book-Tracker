@@ -44,7 +44,7 @@ export const BookCard = React.memo(function BookCard({
         href={`/books/${book.id}`}
         className="group flex flex-col gap-2 text-left"
       >
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border bg-muted transition-shadow group-hover:shadow-md">
+        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border bg-muted shadow-cover transition-shadow group-hover:shadow-card-hover">
           <BookCover book={book} />
           <span
             className={cn(

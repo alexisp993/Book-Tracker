@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 export interface TabItem<T extends string> {
   value: T;
   label: string;
+  /** Optional leading icon, rendered before the label (Notes' type chips). */
+  icon?: React.ReactNode;
 }
 
 // Enclosed segmented control — the primary "switch the whole view" pattern.
@@ -86,7 +88,7 @@ export function FilterPills<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(t.value)}
             className={cn(
-              "shrink-0 whitespace-nowrap rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sm ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
               active
                 ? sm
@@ -97,6 +99,7 @@ export function FilterPills<T extends string>({
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
           >
+            {t.icon}
             {t.label}
           </button>
         );

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import {
   NOTE_TYPES,
-  NOTE_TYPE_EMOJI,
   NOTE_TYPE_LABELS,
 } from "@/lib/constants";
 import type { NoteType } from "@/lib/constants";
@@ -58,7 +57,7 @@ export function NoteForm({
         >
           {NOTE_TYPES.map((t) => (
             <option key={t} value={t}>
-              {NOTE_TYPE_EMOJI[t]} {NOTE_TYPE_LABELS[t]}
+              {NOTE_TYPE_LABELS[t]}
             </option>
           ))}
         </Select>

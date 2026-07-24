@@ -124,14 +124,6 @@ export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
   BOOKMARK: "Bookmark",
 };
 
-export const NOTE_TYPE_EMOJI: Record<NoteType, string> = {
-  HIGHLIGHT: "🌟",
-  QUOTE: "💬",
-  THOUGHT: "💭",
-  REVIEW: "⭐",
-  BOOKMARK: "🔖",
-};
-
 // Beta feedback.
 export const FEEDBACK_TYPES = ["BUG", "FEATURE_REQUEST", "GENERAL"] as const;
 export type FeedbackType = (typeof FEEDBACK_TYPES)[number];

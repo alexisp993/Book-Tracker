@@ -165,7 +165,7 @@ export function SessionHistoryView() {
               key={s.id}
               type="button"
               onClick={() => openEdit(s)}
-              className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+              className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left hover:bg-secondary shadow-card transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover"
             >
               <div className="h-12 w-9 shrink-0 overflow-hidden rounded-md border bg-muted">
                 {s.coverUrl ? (

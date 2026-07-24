@@ -9,6 +9,7 @@ import { FilterPills, type TabItem } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/EmptyState";
 import { NoteForm } from "@/components/NoteForm";
+import { NoteTypeIcon } from "@/components/NoteTypeIcon";
 import { ApiRequestError } from "@/lib/api";
 import { cn, formatDate } from "@/lib/utils";
 import {
@@ -19,7 +20,6 @@ import {
 } from "@/lib/queries";
 import {
   NOTE_TYPES,
-  NOTE_TYPE_EMOJI,
   NOTE_TYPE_LABELS,
 } from "@/lib/constants";
 import type { NoteType } from "@/lib/constants";
@@ -52,7 +52,8 @@ const TYPE_FILTER_ITEMS: readonly TabItem<NoteType | "">[] = [
   { value: "", label: "All" },
   ...NOTE_TYPES.map((t) => ({
     value: t as NoteType | "",
-    label: `${NOTE_TYPE_EMOJI[t]} ${NOTE_TYPE_LABELS[t]}`,
+    label: NOTE_TYPE_LABELS[t],
+    icon: <NoteTypeIcon type={t} className="h-3 w-3" />,
   })),
 ];
 
@@ -148,7 +149,10 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
   const groupedView = standalone && viewMode === "byBook";
 
   return (
-    <div className="space-y-4">
+    // Notes are prose — capped on the standalone page so lines stay readable
+    // in the full-width shell. Embedded in Book Detail it inherits that page's
+    // own width, so no cap there.
+    <div className={standalone ? "mx-auto w-full max-w-4xl space-y-4" : "space-y-4"}>
       {standalone ? (
         <>
           {/* Page title + icon-only search/add actions */}
@@ -278,7 +282,7 @@ function NoteCard({
     <button
       type="button"
       onClick={() => onEdit(note)}
-      className="flex w-full items-start gap-3 rounded-xl border bg-card px-3 py-3 text-left transition-colors hover:bg-secondary"
+      className="flex w-full items-start gap-3 rounded-xl border bg-card px-3 py-3 text-left hover:bg-secondary shadow-card transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover"
     >
       <div className="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
         {note.coverUrl ? (
@@ -310,8 +314,12 @@ function NoteCard({
               {NOTE_TYPE_LABELS[note.type]}
             </span>
           )}
-          <span className="shrink-0 text-sm" title={NOTE_TYPE_LABELS[note.type]}>
-            {NOTE_TYPE_EMOJI[note.type]}
+          <span
+            className="shrink-0 text-muted-foreground"
+            title={NOTE_TYPE_LABELS[note.type]}
+            aria-label={NOTE_TYPE_LABELS[note.type]}
+          >
+            <NoteTypeIcon type={note.type} />
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground">

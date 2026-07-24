@@ -16,7 +16,7 @@ function OptionCard({ icon, title, subtitle, onClick }: LauncherOption) {
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors hover:bg-secondary"
+      className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left hover:bg-secondary shadow-card transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
         {icon}

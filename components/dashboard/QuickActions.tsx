@@ -31,7 +31,7 @@ export function QuickActions() {
           type="button"
           onClick={openRandom}
           disabled={books.length === 0}
-          className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center transition-colors hover:bg-secondary disabled:opacity-50"
+          className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center shadow-card transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:bg-secondary hover:shadow-card-hover disabled:opacity-50"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300">
             <Shuffle className="h-5 w-5" />
@@ -63,7 +63,7 @@ function Tile({
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center transition-colors hover:bg-secondary"
+      className="flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-center shadow-card transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:bg-secondary hover:shadow-card-hover"
     >
       <span className={`flex h-10 w-10 items-center justify-center rounded-full ${TINTS[tint]}`}>
         {icon}

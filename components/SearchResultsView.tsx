@@ -187,7 +187,7 @@ function ResultRow({
   onPick: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2.5 shadow-card">
       <div className="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
         {result.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

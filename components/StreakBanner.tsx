@@ -12,7 +12,7 @@ export function StreakBanner() {
   if (!data || data.sessionCount === 0) return null;
 
   return (
-    <div className="flex items-center gap-4 overflow-x-auto rounded-2xl border bg-card px-4 py-3 text-sm">
+    <div className="flex items-center gap-4 overflow-x-auto rounded-2xl border bg-card px-4 py-3 text-sm shadow-card">
       <span className="inline-flex shrink-0 items-center gap-1.5 font-medium">
         <Flame
           className={

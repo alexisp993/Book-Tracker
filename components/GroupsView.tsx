@@ -254,7 +254,7 @@ function CollectionCard({
   const extra = group.count - group.covers.length;
 
   return (
-    <article className="group overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-md">
+    <article className="group overflow-hidden rounded-2xl border bg-card shadow-card transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover">
       {/* Header band — uploaded image, else a soft tint. Whole band opens
           the collection. */}
       <button
@@ -351,7 +351,7 @@ function CollectionRow({
   const tint = tintFor(group);
   const Icon = iconComponent(group.icon);
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
+    <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-card">
       <button
         type="button"
         onClick={onOpen}

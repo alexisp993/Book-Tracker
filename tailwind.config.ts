@@ -61,6 +61,13 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // Elevation, defined per theme in globals.css so dark/forest can use
+      // much stronger alphas than the light parchment palette.
+      boxShadow: {
+        card: "var(--shadow-1)",
+        "card-hover": "var(--shadow-2)",
+        cover: "var(--shadow-3)",
+      },
     },
   },
   plugins: [],

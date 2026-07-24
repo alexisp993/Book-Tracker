@@ -21,7 +21,7 @@ export function ListContainer({
   return (
     <div
       className={cn(
-        "divide-y divide-border/60 rounded-2xl border bg-card",
+        "divide-y divide-border/60 rounded-2xl border bg-card shadow-card",
         inset ? "p-1" : "overflow-hidden",
         className,
       )}

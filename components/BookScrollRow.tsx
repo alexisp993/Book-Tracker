@@ -26,7 +26,7 @@ export function MiniBookCard({
       href={`/books/${book.id}`}
       className="group flex w-[88px] shrink-0 flex-col gap-1.5"
     >
-      <div className="h-[132px] w-[88px] overflow-hidden rounded-xl border bg-muted shadow-sm transition-transform group-hover:scale-[1.02]">
+      <div className="h-[132px] w-[88px] overflow-hidden rounded-xl border bg-muted shadow-cover transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover">
         <BookCover book={book} />
       </div>
       {showTitle ? (

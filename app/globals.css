@@ -7,9 +7,9 @@
    sparingly (favorites, highlights, the "currently reading" quick action) so
    the app doesn't read as flat black/white/blue. */
 :root {
-  --background: 36 28% 97%;
+  --background: 36 28% 96%;
   --foreground: 20 14% 11%;
-  --card: 36 33% 99%;
+  --card: 36 33% 100%;
   --card-foreground: 20 14% 11%;
   --primary: 221 83% 53%;
   --primary-foreground: 0 0% 100%;
@@ -28,6 +28,18 @@
   --ring: 221 83% 53%;
   --radius: 0.85rem;
 
+  /* Elevation scale. Two layers each: a tight contact shadow that anchors the
+     surface, plus a wider soft one that gives it lift. Tinted with the warm
+     palette rather than pure black so cards don't grey out the parchment.
+     --shadow-3 is for book covers, which should read as physical objects. */
+  --shadow-color: 30 25% 35%;
+  --shadow-1: 0 1px 2px hsl(var(--shadow-color) / 0.05),
+    0 4px 12px -2px hsl(var(--shadow-color) / 0.07);
+  --shadow-2: 0 2px 4px hsl(var(--shadow-color) / 0.06),
+    0 10px 24px -4px hsl(var(--shadow-color) / 0.12);
+  --shadow-3: 0 1px 2px hsl(var(--shadow-color) / 0.10),
+    0 8px 18px -4px hsl(var(--shadow-color) / 0.20);
+
   /* Reading-heatmap intensity ramp — a dedicated GitHub-contribution green
      scale, independent of --primary (which is blue for actions). Level 0 is
      the empty/no-reading cell; 1-4 ramp with reading duration. */
@@ -41,7 +53,7 @@
 .dark {
   --background: 22 16% 8%;
   --foreground: 36 20% 96%;
-  --card: 22 14% 11%;
+  --card: 22 14% 13%;
   --card-foreground: 36 20% 96%;
   --primary: 217 91% 64%;
   --primary-foreground: 220 40% 10%;
@@ -59,6 +71,17 @@
   --input: 22 12% 22%;
   --ring: 217 91% 64%;
 
+  /* On a dark background a shadow has almost nothing to darken, so depth here
+     comes mainly from the raised --card above; these stay deliberately strong
+     and tight so edges still read as lifted rather than glowing. */
+  --shadow-color: 0 0% 0%;
+  --shadow-1: 0 1px 2px hsl(var(--shadow-color) / 0.40),
+    0 4px 12px -2px hsl(var(--shadow-color) / 0.45);
+  --shadow-2: 0 2px 4px hsl(var(--shadow-color) / 0.45),
+    0 10px 24px -4px hsl(var(--shadow-color) / 0.55);
+  --shadow-3: 0 1px 2px hsl(var(--shadow-color) / 0.50),
+    0 8px 18px -4px hsl(var(--shadow-color) / 0.60);
+
   --heat-0: #20242b;
   --heat-1: #0e4429;
   --heat-2: #006d32;
@@ -71,7 +94,7 @@
 .forest {
   --background: 150 22% 8%;
   --foreground: 120 14% 91%;
-  --card: 150 18% 12%;
+  --card: 150 18% 14%;
   --card-foreground: 120 14% 91%;
   --primary: 142 44% 52%;
   --primary-foreground: 150 30% 7%;
@@ -89,6 +112,16 @@
   --input: 150 14% 23%;
   --ring: 142 44% 52%;
   --radius: 1rem;
+
+  /* Same reasoning as .dark, tinted green so shadows sit in the woodland
+     palette instead of reading as neutral grey. */
+  --shadow-color: 150 40% 2%;
+  --shadow-1: 0 1px 2px hsl(var(--shadow-color) / 0.40),
+    0 4px 12px -2px hsl(var(--shadow-color) / 0.45);
+  --shadow-2: 0 2px 4px hsl(var(--shadow-color) / 0.45),
+    0 10px 24px -4px hsl(var(--shadow-color) / 0.55);
+  --shadow-3: 0 1px 2px hsl(var(--shadow-color) / 0.50),
+    0 8px 18px -4px hsl(var(--shadow-color) / 0.60);
 
   --heat-0: #17271e;
   --heat-1: #1c4a30;

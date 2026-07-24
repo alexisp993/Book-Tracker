@@ -75,7 +75,7 @@ function InsightCard({
     // Centred, not top-aligned: these tiles stretch to match the Calendar's
     // height, so anchoring content to the top left a large void underneath —
     // especially on tiles with no YoY delta to anchor the bottom.
-    <div className="flex h-full flex-col justify-center rounded-2xl border bg-card p-4">
+    <div className="flex h-full flex-col justify-center rounded-2xl border bg-card p-4 shadow-card">
       <div className="flex items-center gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}>
           {icon}
