@@ -254,7 +254,10 @@ function CollectionCard({
   const extra = group.count - group.covers.length;
 
   return (
-    <article className="group overflow-hidden rounded-2xl border bg-card shadow-card transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover">
+    // No overflow-hidden here: it clipped the kebab dropdown (which opens near
+    // the card's bottom edge). The header band is clipped by its own inner
+    // wrapper instead, and the article's border-radius still rounds the card.
+    <article className="group rounded-2xl border bg-card shadow-card transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-card-hover">
       {/* Header band — uploaded image, else a soft tint. Whole band opens
           the collection. */}
       <button
@@ -263,18 +266,22 @@ function CollectionCard({
         className="relative block h-28 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         aria-label={`Open ${group.name}`}
       >
-        {group.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={group.imageUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <span className={cn("block h-full w-full", GROUP_TINTS[tint].badge)} />
-        )}
+        {/* Only the band is clipped to the top corners, so the badge below can
+            still protrude past it. */}
+        <span className="absolute inset-0 overflow-hidden rounded-t-2xl">
+          {group.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={group.imageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className={cn("block h-full w-full", GROUP_TINTS[tint].badge)} />
+          )}
+        </span>
         {/* Icon badge — half over the seam between image and body. */}
         <span
           className={cn(
