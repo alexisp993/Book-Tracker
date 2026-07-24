@@ -261,11 +261,17 @@ export function LibraryView() {
   const wantToReadBooks = wantToRead.data?.items ?? [];
   const readBooks = read.data?.items ?? [];
   const recentlyAddedBooks = recentlyAdded.data?.items ?? [];
-  const shelvesEmpty =
+  // The shelf queries can take several seconds on a cold serverless start.
+  // Without an explicit loading branch every Shelf renders null and the page
+  // sits completely blank — visually identical to an empty library.
+  const shelvesLoading =
     showShelves &&
-    !reading.isLoading &&
-    !recentlyAdded.isLoading &&
-    recentlyAddedBooks.length === 0;
+    (recentlyAdded.isLoading ||
+      reading.isLoading ||
+      wantToRead.isLoading ||
+      read.isLoading);
+  const shelvesEmpty =
+    showShelves && !shelvesLoading && recentlyAddedBooks.length === 0;
 
   return (
     <div className="space-y-4">
@@ -350,7 +356,9 @@ export function LibraryView() {
 
       {/* All view → shelf sections; a status/search → the full grid/list. */}
       {showShelves ? (
-        shelvesEmpty ? (
+        shelvesLoading ? (
+          <ShelfSkeleton />
+        ) : shelvesEmpty ? (
           <EmptyState
             icon={Library}
             title="Your library is waiting"
@@ -494,6 +502,29 @@ export function LibraryView() {
 }
 
 // A titled horizontal shelf of book covers; hides itself when empty.
+// Mirrors the real shelf layout (heading + a row of portrait tiles) so the
+// page doesn't reflow when the books arrive.
+function ShelfSkeleton() {
+  return (
+    <div className="space-y-6" role="status" aria-label="Loading your library">
+      {[0, 1, 2].map((s) => (
+        <section key={s} className="space-y-3">
+          <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+          <div className="flex gap-3 overflow-hidden">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="w-[88px] shrink-0 space-y-1.5">
+                <div className="h-[132px] w-[88px] animate-pulse rounded-xl bg-muted" />
+                <div className="h-3 w-full animate-pulse rounded bg-muted" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function Shelf({
   title,
   books,

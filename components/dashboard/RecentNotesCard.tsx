@@ -26,9 +26,15 @@ export function RecentNotesCard() {
       }
     >
       {notes.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          No notes yet.
-        </p>
+        <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <NotebookPen className="h-4 w-4" aria-hidden />
+          </span>
+          <p className="text-sm text-muted-foreground">No notes yet</p>
+          <p className="text-xs text-muted-foreground/70">
+            Highlights and thoughts you save will show up here.
+          </p>
+        </div>
       ) : (
         <div className="space-y-1">
           {notes.map((n) => (

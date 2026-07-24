@@ -41,7 +41,7 @@ export function ReadingInsights() {
         value={`${session?.streakDays ?? 0}`}
         caption={
           session?.longestStreakDays
-            ? `Best: ${session.longestStreakDays} days`
+            ? `Best: ${session.longestStreakDays} day${session.longestStreakDays === 1 ? "" : "s"}`
             : undefined
         }
       />
@@ -72,7 +72,10 @@ function InsightCard({
   caption?: string;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-2xl border bg-card p-4">
+    // Centred, not top-aligned: these tiles stretch to match the Calendar's
+    // height, so anchoring content to the top left a large void underneath —
+    // especially on tiles with no YoY delta to anchor the bottom.
+    <div className="flex h-full flex-col justify-center rounded-2xl border bg-card p-4">
       <div className="flex items-center gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}>
           {icon}
@@ -85,7 +88,7 @@ function InsightCard({
       {yoyPct != null ? (
         <p
           className={cn(
-            "mt-auto pt-1.5 text-[11px] font-medium",
+            "pt-1.5 text-[11px] font-medium",
             yoyPct >= 0
               ? "text-emerald-600 dark:text-emerald-400"
               : "text-rose-600 dark:text-rose-400",
@@ -94,7 +97,7 @@ function InsightCard({
           {yoyPct >= 0 ? "▲" : "▼"} {Math.abs(yoyPct)}% vs last year
         </p>
       ) : caption ? (
-        <p className="mt-auto pt-1.5 text-[11px] text-muted-foreground">{caption}</p>
+        <p className="pt-1.5 text-[11px] text-muted-foreground">{caption}</p>
       ) : null}
     </div>
   );

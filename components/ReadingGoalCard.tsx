@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PartyPopper, Target } from "lucide-react";
+import { PartyPopper, Sprout, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/bar";
@@ -88,6 +88,11 @@ function GoalRing({ goal }: { goal: GoalDTO }) {
   );
   const avgPerMonth = (goal.progress / monthsElapsed).toFixed(1);
   const booksToGo = Math.max(0, goal.target - goal.progress);
+  // Honest pace check — "on track" has to mean something. Expected progress is
+  // the share of the year already spent, so at the end of July a 10-book goal
+  // expects ~5.8 books. Saying "on track" at 1/10 would just be flattery.
+  const expected = (goal.target * monthsElapsed) / 12;
+  const onTrack = goal.progress >= expected;
 
   const R = 32;
   const C = 2 * Math.PI * R;
@@ -117,8 +122,23 @@ function GoalRing({ goal }: { goal: GoalDTO }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">
-          {done ? "Goal complete! 🎉" : "You're on track! 🌱"}
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          {done ? (
+            <>
+              <PartyPopper className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              Goal complete!
+            </>
+          ) : onTrack ? (
+            <>
+              <Sprout className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              You&rsquo;re on track
+            </>
+          ) : (
+            <>
+              <Sprout className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              Keep going
+            </>
+          )}
         </p>
         <p className="text-xs text-muted-foreground">
           {goal.progress} / {goal.target} books

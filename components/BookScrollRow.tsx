@@ -30,7 +30,9 @@ export function MiniBookCard({
         <BookCover book={book} />
       </div>
       {showTitle ? (
-        <p className="line-clamp-2 text-[11px] font-medium leading-tight text-foreground/80">
+        // Always reserve two lines so a one-line title doesn't pull the
+        // progress bar up and break the row's horizontal alignment.
+        <p className="line-clamp-2 min-h-[2.5em] text-[11px] font-medium leading-tight text-foreground/80">
           {book.title}
         </p>
       ) : null}
