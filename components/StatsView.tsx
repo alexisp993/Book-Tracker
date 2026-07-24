@@ -128,13 +128,16 @@ export function StatsView() {
           <Card title="Books finished" subtitle="Last 12 months">
             <div className="flex h-40 items-end gap-1.5">
               {stats.booksPerMonth.map((m) => (
-                <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
+                <div key={m.month} className="flex h-full flex-1 flex-col items-center gap-1.5">
                   <div className="flex w-full flex-1 items-end">
                     <div
                       role="img"
                       aria-label={`${m.label}: ${m.count} book${m.count === 1 ? "" : "s"}`}
                       className="w-full rounded-t-md bg-primary/80 transition-all"
-                      style={{ height: `${(m.count / maxMonth) * 100}%` }}
+                      style={{
+                        height: `${(m.count / maxMonth) * 100}%`,
+                        minHeight: m.count > 0 ? 3 : 0,
+                      }}
                       title={`${m.count} in ${m.label}`}
                     />
                   </div>
@@ -314,7 +317,7 @@ function TimeReadChart({
           </div>
         ) : null}
         {minutesPerMonth.map((m, i) => (
-          <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
+          <div key={m.month} className="flex h-full flex-1 flex-col items-center gap-1.5">
             <div className="flex w-full flex-1 items-end">
               <button
                 type="button"
@@ -325,7 +328,11 @@ function TimeReadChart({
                   "w-full rounded-t-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   i === focusIndex ? "bg-primary" : "bg-primary/40 hover:bg-primary/60",
                 )}
-                style={{ height: `${(m.minutes / max) * 100}%` }}
+                style={{
+                  height: `${(m.minutes / max) * 100}%`,
+                  // Keep a read month visibly non-zero next to a much bigger one.
+                  minHeight: m.minutes > 0 ? 3 : 0,
+                }}
               />
             </div>
             <span className="text-[10px] text-muted-foreground">{m.label}</span>
