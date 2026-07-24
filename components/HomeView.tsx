@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BookOpen, Search, Settings2 } from "lucide-react";
+import { ArrowRight, BookOpen, Search, Settings2, TrendingUp } from "lucide-react";
 import { StreakBanner } from "@/components/StreakBanner";
 import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import { KpiCards } from "@/components/dashboard/KpiCards";
@@ -134,9 +134,20 @@ export function HomeView() {
       case "calendar":
         return <HomeReadingCalendarPreviewCard showSummary={false} />;
       case "insights":
+        // Header mirrors the Reading Calendar section beside it (same serif
+        // title + icon + subtitle + 16px gap) so the two cards in this row
+        // share a top edge instead of the tiles floating above the heatmap.
         return (
-          <section className="flex h-full flex-col gap-3">
-            <h2 className="text-sm font-semibold">Reading Insights</h2>
+          <section className="flex h-full flex-col gap-4">
+            <div>
+              <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Reading Insights
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Your reading year at a glance
+              </p>
+            </div>
             <ReadingInsights />
           </section>
         );
