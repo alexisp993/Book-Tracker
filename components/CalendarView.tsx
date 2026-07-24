@@ -362,10 +362,10 @@ export function CalendarView() {
   }
 
   return (
-    // Capped and centred: the day cells are aspect-[2/3], so in the full-width
-    // sidebar shell seven of them stretched to ~178x265px and one month ran
-    // ~2000px tall. At max-w-3xl a cell lands near its intended ~100px.
-    <div className="mx-auto w-full max-w-3xl space-y-4">
+    // Width is capped by the page wrapper (app/calendar/page.tsx) so the
+    // heading and the grid share one left edge; the cells are aspect-[2/3] and
+    // stretched to ~178x265px when the shell went full-width.
+    <div className="space-y-4">
       {/* Month navigation + download */}
       <div className="flex items-center justify-between">
         <button
