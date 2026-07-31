@@ -48,9 +48,22 @@ export function Heatmap({
   }, [year]);
 
   const currentYear = new Date().getFullYear();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayKey = isoLocalDate(today);
+
+  // "Today" is inherently client-local, but this component is server-rendered
+  // for the initial HTML. Computing it directly in render mismatched the
+  // server's clock (UTC on Vercel) against the reader's local clock for
+  // several hours out of most days in most timezones — not a rare edge case,
+  // a near-daily one — causing both the "today" ring's className and the
+  // future-day faded styling to differ between server and client (React
+  // error #418). Deferring to an effect means the render that must match the
+  // server treats nothing as "today" or "future", and the real values apply
+  // a tick later, once mounted.
+  const [todayInfo, setTodayInfo] = React.useState<{ date: Date; key: string } | null>(null);
+  React.useEffect(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    setTodayInfo({ date, key: isoLocalDate(date) });
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -98,8 +111,8 @@ export function Heatmap({
         <YearGrid
           year={year}
           minutesByDate={minutesByDate}
-          today={today}
-          todayKey={todayKey}
+          today={todayInfo?.date ?? null}
+          todayKey={todayInfo?.key ?? null}
           scrollRef={scrollRef}
         />
       )}
@@ -116,8 +129,8 @@ function YearGrid({
 }: {
   year: number;
   minutesByDate: Map<string, number>;
-  today: Date;
-  todayKey: string;
+  today: Date | null;
+  todayKey: string | null;
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }) {
   // The grid spans whole weeks: from the Sunday on/before Jan 1 to the Saturday
@@ -140,7 +153,9 @@ function YearGrid({
       const cellDate = addDays(gridStart, w * 7 + d);
       const key = isoLocalDate(cellDate);
       const inYear = cellDate.getFullYear() === year;
-      const isFuture = cellDate > today;
+      // today === null before mount (see the deferred-effect comment above):
+      // nothing is "future" yet, matching the server's render exactly.
+      const isFuture = today !== null && cellDate > today;
       col.push({
         date: key,
         minutes: inYear && !isFuture ? minutesByDate.get(key) ?? 0 : 0,

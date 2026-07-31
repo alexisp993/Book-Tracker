@@ -22,11 +22,20 @@ import type { HomeSectionKey } from "@/lib/homeConfig";
 import { DEFAULT_HOME_CONFIG, SECTION_SPAN } from "@/lib/homeConfig";
 import { cn } from "@/lib/utils";
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+// Time-of-day is inherently client-local, but this component is still
+// server-rendered for the initial HTML — computing the greeting directly in
+// render caused a real hydration mismatch (React error #418) whenever the
+// server's clock (UTC on Vercel) and the reader's local clock landed in
+// different morning/afternoon/evening bands. Deferring to an effect keeps the
+// server and first client render identical, then swaps in the real greeting
+// a tick later, after mount.
+function useGreeting(): string {
+  const [greeting, setGreeting] = React.useState("Welcome back");
+  React.useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+  }, []);
+  return greeting;
 }
 
 function ShelfCard({
@@ -96,6 +105,7 @@ export function HomeView() {
   const { data: homeConfig } = useHomeConfig();
   const [customizerOpen, setCustomizerOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
+  const greeting = useGreeting();
 
   const name = user?.name?.split(" ")[0] ?? null;
 
@@ -195,7 +205,7 @@ export function HomeView() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              {greeting()}
+              {greeting}
               {name ? `, ${name}` : ""}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
