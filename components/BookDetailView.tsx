@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   ChevronDown,
   Heart,
+  Pencil,
   Timer,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
@@ -46,11 +49,13 @@ const DETAIL_TABS: readonly TabItem<Tab>[] = [
 ];
 
 export function BookDetailView({ id }: { id: string }) {
+  const router = useRouter();
   const { data: book, isLoading } = useBook(id);
   const [tab, setTab] = React.useState<Tab>("info");
   const [formOpen, setFormOpen] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [sessionError, setSessionError] = React.useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const updateMutation = useUpdateBook();
   const deleteMutation = useDeleteBook();
   const { data: activeSession } = useActiveSession();
@@ -89,6 +94,16 @@ export function BookDetailView({ id }: { id: string }) {
           : "Couldn't start the session.",
       );
     }
+  }
+
+  async function handleDelete() {
+    if (!book) return;
+    await deleteMutation.mutateAsync(book.id);
+    setDeleteConfirmOpen(false);
+    // The page is scoped to this one book, unlike Library's kebab-delete
+    // (which just closes a dialog and the row disappears in place) —
+    // there's nothing left here to show once it's gone.
+    router.replace("/library");
   }
 
   async function handleSubmit(values: BookFormValues) {
@@ -183,9 +198,12 @@ export function BookDetailView({ id }: { id: string }) {
           ) : null}
 
           {/* Unified "Update Progress" split button — primary opens the edit
-              form; the chevron reveals the reading-session entry point, so
-              the hero has one action control instead of a separate pencil
-              icon + full-width Start button. */}
+              form; the chevron reveals reading-session, Edit, and Delete, so
+              the hero has one action control instead of scattered icons.
+              Edit/Delete used to only be reachable by going back to Library
+              and finding this exact card's kebab — found via /impeccable
+              critique, since this is the page a reader spends the most time
+              on per book. */}
           <div className="relative mt-4" ref={progressMenuRef}>
             <div className="flex">
               <Button
@@ -208,29 +226,54 @@ export function BookDetailView({ id }: { id: string }) {
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </div>
-            {progressMenuOpen && (book.status !== "READ" || activeSession) ? (
+            {progressMenuOpen ? (
               <div
                 role="menu"
                 className="absolute left-0 top-full z-20 mt-1 w-56 origin-top-left overflow-hidden rounded-xl border bg-card py-1 shadow-lg animate-[bt-menu-in_140ms_ease-out]"
               >
+                {book.status !== "READ" || activeSession ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProgressMenuOpen(false);
+                      handleStartReading();
+                    }}
+                    disabled={startSession.isPending}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary disabled:opacity-50"
+                  >
+                    <Timer className="h-3.5 w-3.5" />
+                    {startSession.isPending
+                      ? "Starting…"
+                      : activeSession
+                        ? activeSession.userBookId === book.id
+                          ? "Continue reading session"
+                          : "Open current session"
+                        : "Start reading session"}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => {
                     setProgressMenuOpen(false);
-                    handleStartReading();
+                    setFormError(null);
+                    setFormOpen(true);
                   }}
-                  disabled={startSession.isPending}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
                 >
-                  <Timer className="h-3.5 w-3.5" />
-                  {startSession.isPending
-                    ? "Starting…"
-                    : activeSession
-                      ? activeSession.userBookId === book.id
-                        ? "Continue reading session"
-                        : "Open current session"
-                      : "Start reading session"}
+                  <Pencil className="h-3.5 w-3.5" /> Edit details
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProgressMenuOpen(false);
+                    setDeleteConfirmOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete book
                 </button>
               </div>
             ) : null}
@@ -249,7 +292,11 @@ export function BookDetailView({ id }: { id: string }) {
       {tab === "sessions" && <SessionsTab userBookId={book.id} />}
       {tab === "notes" && <NotesTab userBookId={book.id} />}
 
-      {/* Edit modal */}
+      {/* Edit modal — no onDelete here: it used to fire deleteMutation with
+          zero confirmation (the only unconfirmed delete path in the app,
+          unlike Library's kebab and Collections' delete, which both confirm
+          first). The menu's "Delete book" above opens the real confirmation
+          below instead. */}
       <Dialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -262,11 +309,32 @@ export function BookDetailView({ id }: { id: string }) {
           error={formError}
           onSubmit={handleSubmit}
           onCancel={() => setFormOpen(false)}
-          onDelete={() => {
-            deleteMutation.mutate(book.id);
-            setFormOpen(false);
-          }}
         />
+      </Dialog>
+
+      {/* Delete confirmation — same copy/structure as Library's, since this
+          is the only other place a book can be deleted from. */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        title="Remove book?"
+      >
+        <p className="text-sm text-muted-foreground">
+          Remove <span className="font-medium text-foreground">{book.title}</span>{" "}
+          from your library? This deletes your reading entry for it.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? "Removing…" : "Remove"}
+          </Button>
+        </div>
       </Dialog>
     </div>
   );
