@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  BookMarked,
   BookOpen,
   CalendarDays,
   FolderHeart,
@@ -14,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/BrandLogo";
 import { ReadingTimer } from "@/components/ReadingTimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/AccountMenu";
@@ -63,9 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border/70 bg-background/95 backdrop-blur-md lg:flex">
         <Link href="/" className="flex h-16 shrink-0 items-center gap-2 px-5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
-            <BookMarked className="h-4 w-4" />
-          </span>
+          <BrandLogo className="h-8 w-8 shrink-0 rounded-lg" />
           <span className="font-display text-xl font-semibold tracking-tight">
             Book Tracker
           </span>
@@ -106,9 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md lg:hidden">
         <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
-              <BookMarked className="h-4 w-4" />
-            </span>
+            <BrandLogo className="h-8 w-8 shrink-0 rounded-lg" />
             <span className="font-display text-xl font-semibold tracking-tight">
               Book Tracker
             </span>

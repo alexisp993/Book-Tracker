@@ -9,14 +9,20 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Your unlimited personal library and reading tracker.",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#4f46e5",
+    background_color: "#fdfdfc",
+    theme_color: "#1f3b52",
     icons: [
       {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/book-tracker-logo.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "any",
+      },
+      {
+        src: "/book-tracker-logo.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
       },
     ],
   };
