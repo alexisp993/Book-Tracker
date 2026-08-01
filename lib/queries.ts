@@ -196,11 +196,15 @@ export function useEnrichBooks() {
 
 // --- Shelves & Collections (groups) ---
 
-export function useGroups(base: GroupBasePath) {
+export function useGroups(
+  base: GroupBasePath,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: queryKeys.groups(base),
     queryFn: () => api.listGroups(base),
     staleTime: 60_000,
+    enabled: options.enabled,
   });
 }
 

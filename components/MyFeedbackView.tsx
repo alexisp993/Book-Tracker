@@ -18,7 +18,7 @@ export function MyFeedbackView() {
   const { data: items, isLoading } = useMyFeedback();
 
   if (isLoading) {
-    return <Loading />;
+    return <Loading label="Loading your feedback…" />;
   }
   if (!items || items.length === 0) {
     return (

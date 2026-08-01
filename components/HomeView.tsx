@@ -115,10 +115,26 @@ export function HomeView() {
     .sort((a, b) => a.order - b.order)
     .map((s) => s.key);
 
-  const { data: currentlyReading } = useBooks({ status: "CURRENTLY_READING", pageSize: 8 });
-  const { data: wantToRead } = useBooks({ status: "WANT_TO_READ", pageSize: 10 });
-  const { data: recentlyAdded } = useBooks({ sort: "createdAt", order: "desc", pageSize: 8 });
-  const { data: shelves } = useGroups("shelves");
+  // Gated to the section actually being shown — with the leaner default
+  // (most sections now off), fetching all four unconditionally meant most
+  // accounts downloaded shelf/book-group data for rows they'd never see.
+  // Flips to enabled the instant a hidden section is toggled back on in the
+  // customizer, same as any other reactive query.
+  const { data: currentlyReading } = useBooks(
+    { status: "CURRENTLY_READING", pageSize: 8 },
+    { enabled: orderedVisible.includes("currentlyReading") },
+  );
+  const { data: wantToRead } = useBooks(
+    { status: "WANT_TO_READ", pageSize: 10 },
+    { enabled: orderedVisible.includes("wantToRead") },
+  );
+  const { data: recentlyAdded } = useBooks(
+    { sort: "createdAt", order: "desc", pageSize: 8 },
+    { enabled: orderedVisible.includes("recentlyAdded") },
+  );
+  const { data: shelves } = useGroups("shelves", {
+    enabled: orderedVisible.includes("myShelves"),
+  });
 
   const currentlyReadingBooks = currentlyReading?.items ?? [];
   const wantToReadBooks = wantToRead?.items ?? [];

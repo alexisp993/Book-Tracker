@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 export function BetaDashboardView() {
   const { data: stats, isLoading } = useBetaStats();
 
-  if (isLoading) return <Loading />;
+  if (isLoading) return <Loading label="Loading dashboard…" />;
   if (!stats) return null;
 
   return (

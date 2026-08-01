@@ -122,7 +122,7 @@ export function BookDetailView({ id }: { id: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loading />
+        <Loading label="Loading book…" />
       </div>
     );
   }
@@ -395,7 +395,7 @@ function SessionsTab({ userBookId }: { userBookId: string }) {
   const items = data?.items ?? [];
 
   if (isLoading) {
-    return <Loading />;
+    return <Loading label="Loading sessions…" />;
   }
 
   if (items.length === 0) {

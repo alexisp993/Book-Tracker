@@ -68,7 +68,7 @@ export function AdminFeedbackView() {
       </div>
 
       {isLoading ? (
-        <Loading />
+        <Loading label="Loading feedback…" />
       ) : items.length === 0 ? (
         <EmptyState
           icon={MessageSquareText}

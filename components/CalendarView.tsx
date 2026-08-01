@@ -417,7 +417,7 @@ export function CalendarView() {
 
       {/* Calendar grid */}
       {isLoading ? (
-        <Loading />
+        <Loading label="Loading your calendar…" />
       ) : (
         <div className="grid grid-cols-7 gap-1">
           {viewModel.cells.map((cell, i) => {

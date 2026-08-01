@@ -141,7 +141,7 @@ export function GroupsView({
       </div>
 
       {loading ? (
-        <Loading />
+        <Loading label={`Loading your ${singular}s…`} />
       ) : !groups || groups.length === 0 ? (
         <EmptyState
           icon={Library}
@@ -208,7 +208,7 @@ export function GroupsView({
         description={detail?.group.description ?? openMeta?.description ?? undefined}
       >
         {openLoading ? (
-          <Loading />
+          <Loading label="Loading books…" />
         ) : !detail || detail.books.length === 0 ? (
           <EmptyState
             icon={BookOpen}

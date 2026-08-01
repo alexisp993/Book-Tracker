@@ -45,7 +45,7 @@ export function StatsView() {
       <div className="space-y-6">
         <PageHeader title="Statistics" />
         {loading ? (
-          <Loading />
+          <Loading label="Loading your stats…" />
         ) : (
           <EmptyState
             icon={BookOpen}

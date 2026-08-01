@@ -46,7 +46,7 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
     setTimeout(() => setSaved(false), 3000);
   }
 
-  if (isLoading) return <Loading />;
+  if (isLoading) return <Loading label="Loading feedback…" />;
   if (!feedback) return <p className="text-sm text-muted-foreground">Not found.</p>;
 
   return (
