@@ -31,11 +31,20 @@ const NAV = [
 ] as const;
 
 // The mobile bottom bar keeps a focused 4 — eight tabs don't fit a phone bar;
-// the rest are reachable from Home and within the app.
+// the rest are reachable from Home and within the app. Sessions replaces
+// Collections here (found via /impeccable critique): reading sessions are
+// PRODUCT.md's stated core loop, so the one screen where a reader logs a
+// past session or checks their history belongs in the thumb-reachable bar,
+// not behind Home. (The global ReadingTimer FAB below already covers
+// *starting a live* session from anywhere; this covers viewing history and
+// logging a past one, which the FAB can't do.) Collections is curatorial and
+// occasional — still reachable from Home's shelves card and the full
+// sidebar on desktop, so it's the one that moves out. Notes stays: jotting a
+// thought is as in-the-moment and phone-first as a session itself.
 const MOBILE_NAV = [
   { href: "/", label: "Home", icon: House },
   { href: "/notes", label: "Notes", icon: NotebookPen },
-  { href: "/collections", label: "Collections", icon: FolderHeart },
+  { href: "/sessions", label: "Sessions", icon: Timer },
   { href: "/profile", label: "Profile", icon: User },
 ] as const;
 
