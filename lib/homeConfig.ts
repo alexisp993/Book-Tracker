@@ -56,20 +56,27 @@ export const SECTION_SPAN: Record<HomeSectionKey, string> = {
   streak: "lg:col-span-6",
 };
 
-// Order matches the mockup; the streak banner is off by default (redundant with
-// the streak KPI in the Overview row) but remains available in the customizer.
+// Leaner default (found via /impeccable critique, confirmed by the user):
+// shipping all 11 sections visible by default put 7-8 of them on screen
+// before any scroll, against PRODUCT.md's own "calm over dense" principle —
+// the customizer below already existed to fix exactly this, it just wasn't
+// the default. Four sections earn a first look: today's overview, the
+// fastest path back into a book, the calendar (the core reading-consistency
+// loop), and the quick actions to start something new. Everything else is
+// one tap away in the customizer, not deleted — order is preserved so
+// turning a section back on doesn't reshuffle the rest.
 export const DEFAULT_HOME_CONFIG: HomeSection[] = [
   { key: "todayProgress", visible: true, order: 0 },
   { key: "quickActions", visible: true, order: 1 },
   { key: "continueReading", visible: true, order: 2 },
-  { key: "readingGoal", visible: true, order: 3 },
+  { key: "readingGoal", visible: false, order: 3 },
   { key: "calendar", visible: true, order: 4 },
-  { key: "insights", visible: true, order: 5 },
-  { key: "currentlyReading", visible: true, order: 6 },
-  { key: "wantToRead", visible: true, order: 7 },
-  { key: "recentNotes", visible: true, order: 8 },
-  { key: "recentlyAdded", visible: true, order: 9 },
-  { key: "myShelves", visible: true, order: 10 },
+  { key: "insights", visible: false, order: 5 },
+  { key: "currentlyReading", visible: false, order: 6 },
+  { key: "wantToRead", visible: false, order: 7 },
+  { key: "recentNotes", visible: false, order: 8 },
+  { key: "recentlyAdded", visible: false, order: 9 },
+  { key: "myShelves", visible: false, order: 10 },
   { key: "streak", visible: false, order: 11 },
 ];
 
