@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { ProgressBar } from "@/components/ui/bar";
 import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { ApiRequestError } from "@/lib/api";
 import { useDeleteSession, useStopSession } from "@/lib/queries";
@@ -62,6 +63,56 @@ export function clearPauseState(sessionId: string) {
   } catch {
     // best-effort
   }
+}
+
+// ---------------------------------------------------------------------------
+// Optional target duration ("set a timer" when starting a session) — a
+// purely client-side reading aid, not sent to or stored by the server: it
+// doesn't change what a session records, only whether Reading Mode shows a
+// secondary "X min left" progress line alongside the real elapsed clock.
+// Same localStorage-per-session-id pattern as pause state, for the same
+// reason (survives a refresh mid-session).
+// ---------------------------------------------------------------------------
+
+const targetKey = (sessionId: string) => `bt_target:${sessionId}`;
+
+export function readTargetMinutes(sessionId: string): number | null {
+  try {
+    const raw = localStorage.getItem(targetKey(sessionId));
+    if (raw) {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  } catch {
+    // corrupted/unavailable storage — treat as no target set
+  }
+  return null;
+}
+
+export function writeTargetMinutes(sessionId: string, minutes: number) {
+  try {
+    localStorage.setItem(targetKey(sessionId), String(minutes));
+  } catch {
+    // best-effort
+  }
+}
+
+export function clearTargetMinutes(sessionId: string) {
+  try {
+    localStorage.removeItem(targetKey(sessionId));
+  } catch {
+    // best-effort
+  }
+}
+
+// The optimistic session (see ReadingTimer.tsx) is written under a
+// placeholder id before the real one exists; once the real id lands, carry
+// the target duration over to it rather than losing it.
+export function migrateTargetMinutes(fromId: string, toId: string) {
+  const minutes = readTargetMinutes(fromId);
+  if (minutes === null) return;
+  clearTargetMinutes(fromId);
+  writeTargetMinutes(toId, minutes);
 }
 
 /**
@@ -123,6 +174,9 @@ export function ReadingMode({
   const [pause, setPause] = React.useState<PauseState>(() =>
     readPauseState(session.id),
   );
+  const [targetMinutes, setTargetMinutes] = React.useState<number | null>(() =>
+    readTargetMinutes(session.id),
+  );
   const [view, setView] = React.useState<"timer" | "finish" | "saved">("timer");
   const [confirmCancel, setConfirmCancel] = React.useState(false);
   const [endPage, setEndPage] = React.useState("");
@@ -139,9 +193,14 @@ export function ReadingMode({
 
   const paused = pause.pausedSince !== null;
 
-  // Re-sync pause state when the session changes (new session id).
+  // Re-sync pause state and target duration when the session changes (new
+  // session id — this also fires the moment ReadingTimer's optimistic
+  // placeholder id is swapped for the real one, which is what actually
+  // surfaces a target duration set at the picker: it was written under the
+  // real id at that point, see ReadingTimer.tsx).
   React.useEffect(() => {
     setPause(readPauseState(session.id));
+    setTargetMinutes(readTargetMinutes(session.id));
     setView("timer");
     setConfirmCancel(false);
     setError(null);
@@ -216,6 +275,7 @@ export function ReadingMode({
         minutes,
       });
       clearPauseState(session.id);
+      clearTargetMinutes(session.id);
       // Finishing a session is the core loop's one completion event — it
       // used to close with zero acknowledgment. Hold on a brief confirmation
       // instead of closing immediately; the effect below auto-dismisses it.
@@ -233,6 +293,7 @@ export function ReadingMode({
     try {
       await deleteMutation.mutateAsync(session.id);
       clearPauseState(session.id);
+      clearTargetMinutes(session.id);
       onClose();
     } catch (err) {
       setError(
@@ -373,6 +434,27 @@ export function ReadingMode({
             >
               {paused ? "Paused" : "Reading"}
             </span>
+
+            {/* Optional target duration set at the picker — a secondary aid,
+                never the source of truth for the recorded session length
+                (that's always the elapsed clock above). No auto-stop: once
+                reached this just says so calmly and keeps counting. */}
+            {targetMinutes ? (
+              <div className="mt-1 w-48">
+                <ProgressBar
+                  value={elapsed}
+                  max={targetMinutes * 60_000}
+                  fillClass={
+                    elapsed >= targetMinutes * 60_000 ? "bg-primary" : "bg-primary/70"
+                  }
+                />
+                <p className="mt-1.5 text-center text-xs text-muted-foreground">
+                  {elapsed >= targetMinutes * 60_000
+                    ? "Timer's up — keep going or finish whenever you're ready"
+                    : `${Math.ceil((targetMinutes * 60_000 - elapsed) / 60_000)} min left of ${targetMinutes}`}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {/* Controls */}

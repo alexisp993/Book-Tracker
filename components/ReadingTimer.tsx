@@ -20,7 +20,18 @@ import {
   READING_MODE_OPEN_EVENT,
   ReadingMode,
   getActiveElapsedMs,
+  migrateTargetMinutes,
+  writeTargetMinutes,
 } from "@/components/ReadingMode";
+import { FilterPills } from "@/components/ui/tabs";
+
+const TIMER_PRESETS = [
+  { value: "", label: "No timer" },
+  { value: "15", label: "15 min" },
+  { value: "30", label: "30 min" },
+  { value: "45", label: "45 min" },
+  { value: "60", label: "60 min" },
+] as const;
 
 // A client-side stand-in for the real ReadingSessionDTO, built entirely from
 // data the picker already has loaded — no network round-trip needed to show
@@ -79,6 +90,9 @@ export function ReadingTimer() {
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [modeOpen, setModeOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Empty string = "No timer" (matches TIMER_PRESETS' own value, so it can
+  // drive FilterPills directly without a separate mapping).
+  const [timerPreset, setTimerPreset] = React.useState("");
 
   const startMutation = useStartSession();
 
@@ -141,12 +155,15 @@ export function ReadingTimer() {
   // entry is rolled back and the picker reopens with the real error.
   function handleStart(book: LibraryBook) {
     setError(null);
+    if (timerPreset) writeTargetMinutes("optimistic", Number(timerPreset));
     qc.setQueryData(queryKeys.activeSession, optimisticSession(book));
     setNow(Date.now());
     setPickerOpen(false);
     setModeOpen(true);
+    setTimerPreset("");
 
     startMutation.mutate(book.id, {
+      onSuccess: (session) => migrateTargetMinutes("optimistic", session.id),
       onError: (err) => {
         qc.setQueryData(queryKeys.activeSession, null);
         setModeOpen(false);
@@ -209,7 +226,20 @@ export function ReadingTimer() {
         title="Start a reading session"
         description="Pick the book you're about to read."
       >
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {books.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Set a timer (optional)
+              </p>
+              <FilterPills
+                size="sm"
+                value={timerPreset}
+                onChange={setTimerPreset}
+                items={TIMER_PRESETS}
+              />
+            </div>
+          ) : null}
           {books.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
               <BookOpen className="h-7 w-7 opacity-40" />
