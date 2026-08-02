@@ -89,6 +89,15 @@ export function ReadingTimer() {
 
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [modeOpen, setModeOpen] = React.useState(false);
+  // ReadingMode's own "saved" confirmation view holds itself open for ~1.4s
+  // after Finish, via its own onClose timer — but activeSession now goes
+  // null the instant the mutation resolves (see useStopSession), so gating
+  // ReadingMode's mount on `active` directly would unmount it mid-
+  // confirmation. Remember the last real session so ReadingMode keeps
+  // rendering it — modeOpen (not activeSession) now owns whether the
+  // overlay is present at all.
+  const lastSessionRef = React.useRef<ReadingSessionDTO | null>(null);
+  if (active) lastSessionRef.current = active;
   const [error, setError] = React.useState<string | null>(null);
   // Empty string = "No timer" (matches TIMER_PRESETS' own value, so it can
   // drive FilterPills directly without a separate mapping).
@@ -281,9 +290,9 @@ export function ReadingTimer() {
         </div>
       </Dialog>
 
-      {active ? (
+      {modeOpen && lastSessionRef.current ? (
         <ReadingMode
-          session={active}
+          session={lastSessionRef.current}
           open={modeOpen}
           onClose={() => setModeOpen(false)}
         />

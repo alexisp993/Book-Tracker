@@ -305,10 +305,19 @@ export function useUpdateSession() {
 }
 
 export function useDeleteSession() {
+  const qc = useQueryClient();
   const invalidate = useInvalidateSessions();
   return useMutation({
     mutationFn: (id: string) => api.deleteSession(id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      // Same fix as useStopSession below: we know for certain there's no
+      // active session anymore, so say so directly instead of invalidating
+      // and waiting on a refetch that (for this specific mutation) this
+      // hook never even triggered before — Cancel left the floating pill
+      // showing the just-discarded session indefinitely.
+      qc.setQueryData(queryKeys.activeSession, null);
+      invalidate();
+    },
   });
 }
 
@@ -350,7 +359,13 @@ export function useStopSession() {
   return useMutation({
     mutationFn: (input: StopSessionInput) => api.stopSession(input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.activeSession });
+      // We know for certain there's no active session anymore the moment
+      // this resolves — say so directly instead of invalidating and waiting
+      // on a background refetch. That's what made the floating pill (and
+      // its clock) visibly keep running for a few seconds after Finish: it
+      // was showing genuinely stale data, still ticking from the session
+      // that had already ended, until the refetch eventually caught up.
+      qc.setQueryData(queryKeys.activeSession, null);
       invalidateSessions();
       // endPage may have updated the book's currentPage.
       qc.invalidateQueries({ queryKey: queryKeys.booksAll });
