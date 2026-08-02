@@ -14,6 +14,7 @@ import {
 import { formatDuration } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
+import { withCalendarTransition } from "@/lib/viewTransition";
 import type { CalendarDay } from "@/lib/api";
 
 // Canvas palette read from the active theme's CSS variables at export time,
@@ -333,15 +334,23 @@ export function CalendarView() {
     [year, month, calData],
   );
 
+  // /impeccable overdrive: the month label slides the way you're navigating
+  // (native View Transitions, no library — see lib/viewTransition.ts). No-op
+  // on browsers without support, so this can never regress the plain instant
+  // swap the calendar has always had.
   function prevMonth() {
-    if (month === 1) { setYear(y => y - 1); setMonth(12); }
-    else setMonth(m => m - 1);
-    setSelectedDate(null);
+    withCalendarTransition("prev", () => {
+      if (month === 1) { setYear(y => y - 1); setMonth(12); }
+      else setMonth(m => m - 1);
+      setSelectedDate(null);
+    });
   }
   function nextMonth() {
-    if (month === 12) { setYear(y => y + 1); setMonth(1); }
-    else setMonth(m => m + 1);
-    setSelectedDate(null);
+    withCalendarTransition("next", () => {
+      if (month === 12) { setYear(y => y + 1); setMonth(1); }
+      else setMonth(m => m + 1);
+      setSelectedDate(null);
+    });
   }
   function canGoNext() {
     return year < today.getFullYear() ||
@@ -377,7 +386,12 @@ export function CalendarView() {
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <p className="font-display text-base font-semibold">{viewModel.monthLabel}</p>
+        <p
+          className="font-display text-base font-semibold"
+          style={{ viewTransitionName: "calendar-month-label" } as React.CSSProperties}
+        >
+          {viewModel.monthLabel}
+        </p>
 
         <div className="flex items-center gap-1">
           <button
@@ -419,7 +433,10 @@ export function CalendarView() {
       {isLoading ? (
         <Loading label="Loading your calendar…" />
       ) : (
-        <div className="grid grid-cols-7 gap-1">
+        <div
+          className="grid grid-cols-7 gap-1"
+          style={{ viewTransitionName: "calendar-month-grid" } as React.CSSProperties}
+        >
           {viewModel.cells.map((cell, i) => {
             if (cell.day === null || cell.dateKey === null) {
               return <div key={`empty-${i}`} />;

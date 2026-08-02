@@ -194,3 +194,61 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* /impeccable overdrive: native View Transitions (no library — the same
+   dependency-light rule as the rest of the app's motion) for the reading
+   calendar's month/year navigation. `*, *::before, *::after` above does NOT
+   reach ::view-transition-* pseudo-elements — they're their own generated
+   tree — so reduced-motion needs its own explicit rule here.
+   `lib/viewTransition.ts` sets [data-calendar-direction] on <html> right
+   before starting the transition; unset (instant swap) on browsers without
+   support, which is the entire fallback story — nothing else changes. */
+::view-transition-group(calendar-month-grid),
+::view-transition-group(calendar-month-label),
+::view-transition-group(calendar-year-grid),
+::view-transition-group(calendar-year-label) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Default (no direction, e.g. jumping to "Today"): cross-fade only. */
+::view-transition-old(calendar-month-grid),
+::view-transition-new(calendar-month-grid),
+::view-transition-old(calendar-year-grid),
+::view-transition-new(calendar-year-grid) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Directional: the month/year label slides the way you're navigating, like
+   a native calendar app — the grid itself stays a cross-fade (a full grid
+   sliding off-canvas reads as a page flip, not a date change). */
+@keyframes bt-cal-label-out-left { to { transform: translateX(-16px); opacity: 0; } }
+@keyframes bt-cal-label-in-left { from { transform: translateX(16px); opacity: 0; } }
+@keyframes bt-cal-label-out-right { to { transform: translateX(16px); opacity: 0; } }
+@keyframes bt-cal-label-in-right { from { transform: translateX(-16px); opacity: 0; } }
+
+[data-calendar-direction="next"] ::view-transition-old(calendar-month-label),
+[data-calendar-direction="next"] ::view-transition-old(calendar-year-label) {
+  animation: 200ms cubic-bezier(0.4, 0, 1, 1) both bt-cal-label-out-left;
+}
+[data-calendar-direction="next"] ::view-transition-new(calendar-month-label),
+[data-calendar-direction="next"] ::view-transition-new(calendar-year-label) {
+  animation: 260ms cubic-bezier(0.16, 1, 0.3, 1) both bt-cal-label-in-left;
+}
+[data-calendar-direction="prev"] ::view-transition-old(calendar-month-label),
+[data-calendar-direction="prev"] ::view-transition-old(calendar-year-label) {
+  animation: 200ms cubic-bezier(0.4, 0, 1, 1) both bt-cal-label-out-right;
+}
+[data-calendar-direction="prev"] ::view-transition-new(calendar-month-label),
+[data-calendar-direction="prev"] ::view-transition-new(calendar-year-label) {
+  animation: 260ms cubic-bezier(0.16, 1, 0.3, 1) both bt-cal-label-in-right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

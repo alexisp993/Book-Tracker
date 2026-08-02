@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import { withCalendarTransition } from "@/lib/viewTransition";
 import {
   addDays,
   bucket,
@@ -67,13 +68,22 @@ export function Heatmap({
 
   return (
     <div className="space-y-3">
-      {/* Toolbar: year label (left) + one grouped nav control (right) */}
+      {/* Toolbar: year label (left) + one grouped nav control (right).
+          /impeccable overdrive: the year label slides the way you're
+          navigating (native View Transitions — see lib/viewTransition.ts);
+          no-op on unsupported browsers, so this can only add, never regress
+          the plain instant swap. */}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{year}</p>
+        <p
+          className="text-sm font-semibold"
+          style={{ viewTransitionName: "calendar-year-label" } as React.CSSProperties}
+        >
+          {year}
+        </p>
         <div className="flex items-center overflow-hidden rounded-lg border bg-background">
           <button
             type="button"
-            onClick={() => onYearChange(year - 1)}
+            onClick={() => withCalendarTransition("prev", () => onYearChange(year - 1))}
             disabled={year <= minYear}
             aria-label="Previous year"
             className="flex h-9 w-9 items-center justify-center transition-colors hover:bg-secondary disabled:opacity-40"
@@ -82,7 +92,7 @@ export function Heatmap({
           </button>
           <button
             type="button"
-            onClick={() => onYearChange(currentYear)}
+            onClick={() => withCalendarTransition(null, () => onYearChange(currentYear))}
             disabled={year === currentYear}
             className="h-9 border-x px-3 text-xs font-medium transition-colors hover:bg-secondary disabled:opacity-40"
           >
@@ -90,7 +100,7 @@ export function Heatmap({
           </button>
           <button
             type="button"
-            onClick={() => onYearChange(year + 1)}
+            onClick={() => withCalendarTransition("next", () => onYearChange(year + 1))}
             disabled={year >= currentYear}
             aria-label="Next year"
             className="flex h-9 w-9 items-center justify-center transition-colors hover:bg-secondary disabled:opacity-40"
@@ -197,7 +207,8 @@ function YearGrid({
             // A tall label row leaves a comfortable gap between the month
             // labels and the grid (item: more top padding).
             gridTemplateRows: `1.5rem repeat(${ROWS}, auto)`,
-          }}
+            viewTransitionName: "calendar-year-grid",
+          } as React.CSSProperties}
         >
           {/* Month labels — row 1, above their starting week column */}
           {monthLabels.map((m) => (
