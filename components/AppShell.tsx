@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
   BookOpen,
   CalendarDays,
   FolderHeart,
@@ -25,7 +24,6 @@ const NAV = [
   { href: "/collections", label: "Collections", icon: FolderHeart },
   { href: "/sessions", label: "Reading Session", icon: Timer },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/stats", label: "Statistics", icon: BarChart3 },
   { href: "/notes", label: "Notes", icon: NotebookPen },
   { href: "/profile", label: "Profile", icon: User },
 ] as const;

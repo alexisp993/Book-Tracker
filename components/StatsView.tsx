@@ -8,6 +8,9 @@ import {
   Clock,
   Flame,
   Heart,
+  LayoutGrid,
+  Library,
+  Sparkles,
   Star,
   Timer,
   Trophy,
@@ -27,10 +30,10 @@ import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 type Tab = "overview" | "books" | "sessions" | "time";
 
 const TABS: readonly TabItem<Tab>[] = [
-  { value: "overview", label: "Overview" },
-  { value: "books", label: "Books" },
-  { value: "sessions", label: "Sessions" },
-  { value: "time", label: "Time" },
+  { value: "overview", label: "Overview", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+  { value: "books", label: "Books", icon: <Library className="h-3.5 w-3.5" /> },
+  { value: "sessions", label: "Sessions", icon: <Timer className="h-3.5 w-3.5" /> },
+  { value: "time", label: "Time", icon: <Clock className="h-3.5 w-3.5" /> },
 ];
 
 export function StatsView() {
@@ -68,32 +71,36 @@ export function StatsView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Statistics"
-        actions={<span className="text-sm text-muted-foreground">This Year</span>}
-      />
+      <PageHeader title="Statistics" subtitle="Your reading, at a glance" />
 
       <SegmentedTabs value={tab} onChange={setTab} items={TABS} />
 
       {tab === "overview" ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
-            <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" tint="blue" value={stats.total} />
-            <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" tint="emerald" value={stats.read} />
-            <Stat icon={<Flame className="h-4 w-4" />} label="Reading" tint="amber" value={stats.reading} />
-            <Stat
-              icon={<BookOpen className="h-4 w-4" />}
-              label="Pages read"
-              tint="violet"
-              value={stats.pagesRead.toLocaleString()}
-            />
-            <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" tint="rose" value={stats.favorites} />
-            <Stat
-              icon={<Star className="h-4 w-4" />}
-              label="Avg rating"
-              tint="amber"
-              value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
-            />
+          <YearHeroCard stats={stats} streakDays={sessionStats?.streakDays ?? 0} />
+
+          <div>
+            <p className="mb-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              All-time totals
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+              <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" tint="blue" value={stats.total} />
+              <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" tint="emerald" value={stats.read} />
+              <Stat icon={<Flame className="h-4 w-4" />} label="Reading" tint="amber" value={stats.reading} />
+              <Stat
+                icon={<BookOpen className="h-4 w-4" />}
+                label="Pages read"
+                tint="violet"
+                value={stats.pagesRead.toLocaleString()}
+              />
+              <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" tint="rose" value={stats.favorites} />
+              <Stat
+                icon={<Star className="h-4 w-4" />}
+                label="Avg rating"
+                tint="amber"
+                value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
+              />
+            </div>
           </div>
 
           <TimeReadChart
@@ -258,6 +265,60 @@ export function StatsView() {
           yoyPct={stats.timeReadYoyPct}
         />
       ) : null}
+    </div>
+  );
+}
+
+// The page's opening statement — "this year" is the number a reader actually
+// cares to check in on, so it leads, big and first. The 6-tile grid below
+// still carries the honest all-time totals, just demoted to secondary.
+function YearHeroCard({
+  stats,
+  streakDays,
+}: {
+  stats: {
+    booksThisYear: number;
+    pagesThisYear: number;
+    minutesThisYear: number;
+    booksYoyPct: number | null;
+  };
+  streakDays: number;
+}) {
+  return (
+    <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-card sm:p-6">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <Sparkles className="h-3.5 w-3.5" /> This year in reading
+      </div>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div>
+          <p className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            {stats.booksThisYear} book{stats.booksThisYear === 1 ? "" : "s"}
+          </p>
+          <div className="mt-1">
+            <YoyDelta pct={stats.booksYoyPct} />
+          </div>
+        </div>
+        <div className="flex gap-5">
+          <div>
+            <p className="font-display text-lg font-semibold">
+              {stats.pagesThisYear.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground">pages</p>
+          </div>
+          <div>
+            <p className="font-display text-lg font-semibold">
+              {formatDuration(stats.minutesThisYear)}
+            </p>
+            <p className="text-xs text-muted-foreground">time read</p>
+          </div>
+          <div>
+            <p className="font-display text-lg font-semibold">
+              {streakDays > 0 ? `${streakDays} 🔥` : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">day streak</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

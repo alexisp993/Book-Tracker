@@ -42,7 +42,14 @@ export function SegmentedTabs<T extends string>({
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {t.label}
+            {t.icon ? (
+              <span className="inline-flex items-center gap-1.5">
+                {t.icon}
+                {t.label}
+              </span>
+            ) : (
+              t.label
+            )}
           </button>
         );
       })}
