@@ -2,21 +2,54 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Play } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { BookCover } from "@/components/BookCover";
 import { ApiRequestError } from "@/lib/api";
 import {
+  queryKeys,
   useActiveSession,
   useBooks,
   useStartSession,
 } from "@/lib/queries";
 import { STATUS_LABELS } from "@/lib/constants";
+import type { LibraryBook } from "@/lib/types";
+import type { ReadingSessionDTO } from "@/lib/types";
 import {
   READING_MODE_OPEN_EVENT,
   ReadingMode,
   getActiveElapsedMs,
 } from "@/components/ReadingMode";
+
+// A client-side stand-in for the real ReadingSessionDTO, built entirely from
+// data the picker already has loaded — no network round-trip needed to show
+// it. Marked with a fake id so it's never mistaken for (or used to call an
+// API about) a real session; the real POST response replaces it moments
+// later via the exact same query-cache slot.
+function optimisticSession(book: LibraryBook): ReadingSessionDTO {
+  const now = new Date().toISOString();
+  return {
+    id: "optimistic",
+    userBookId: book.id,
+    bookId: book.bookId,
+    title: book.title,
+    author: book.authors[0] ?? null,
+    coverUrl: book.coverUrl,
+    coverCandidates: book.coverCandidates,
+    pageCount: book.pageCount,
+    currentPage: book.currentPage,
+    date: now,
+    minutes: null,
+    pagesRead: null,
+    startPage: null,
+    endPage: null,
+    mood: null,
+    note: null,
+    isActive: true,
+    createdAt: now,
+  };
+}
 
 function clockLabel(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -39,6 +72,7 @@ function clockLabel(ms: number): string {
 // invalidation; the ticking clock stays local, exactly as before.
 export function ReadingTimer() {
   const pathname = usePathname();
+  const qc = useQueryClient();
   const { data: active, isLoading: loadingActive } = useActiveSession();
   const [now, setNow] = React.useState(Date.now());
 
@@ -97,18 +131,31 @@ export function ReadingTimer() {
     }
   }, [wantOpen, active]);
 
-  async function handleStart(userBookId: string) {
+  // Opens Reading Mode the instant a book is picked, using data already
+  // loaded in the picker — no waiting on the network. Used to await the full
+  // POST, then rely on invalidating + refetching activeSession to notice the
+  // new session existed: two serial round-trips before anything but a static
+  // dialog showed, which read as several seconds of nothing happening. The
+  // real request still runs in the background and reconciles the cache
+  // (useStartSession's onSuccess) once it lands; on failure the optimistic
+  // entry is rolled back and the picker reopens with the real error.
+  function handleStart(book: LibraryBook) {
     setError(null);
-    try {
-      await startMutation.mutateAsync(userBookId);
-      setNow(Date.now());
-      setPickerOpen(false);
-      setModeOpen(true);
-    } catch (err) {
-      setError(
-        err instanceof ApiRequestError ? err.message : "Couldn't start the timer.",
-      );
-    }
+    qc.setQueryData(queryKeys.activeSession, optimisticSession(book));
+    setNow(Date.now());
+    setPickerOpen(false);
+    setModeOpen(true);
+
+    startMutation.mutate(book.id, {
+      onError: (err) => {
+        qc.setQueryData(queryKeys.activeSession, null);
+        setModeOpen(false);
+        setPickerOpen(true);
+        setError(
+          err instanceof ApiRequestError ? err.message : "Couldn't start the timer.",
+        );
+      },
+    });
   }
 
   if (loadingActive) return null;
@@ -179,7 +226,7 @@ export function ReadingTimer() {
                   key={b.id}
                   type="button"
                   disabled={starting}
-                  onClick={() => handleStart(b.id)}
+                  onClick={() => handleStart(b)}
                   className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-secondary disabled:opacity-50"
                 >
                   <div className="h-12 w-9 shrink-0 overflow-hidden rounded-md border bg-muted">

@@ -405,10 +405,20 @@ export function ReadingMode({
                   variant="outline"
                   size="sm"
                   onClick={handleCancel}
-                  disabled={deleteMutation.isPending}
+                  // While the session is still the client-side optimistic
+                  // placeholder (see ReadingTimer.tsx), it has no real id yet
+                  // — deleteSession(id) needs one, unlike stop/finish, which
+                  // targets "whichever session is active" server-side with
+                  // no id at all. A few seconds' wait here is honest; a 404
+                  // from discarding a session that was never created isn't.
+                  disabled={deleteMutation.isPending || session.id === "optimistic"}
                   className="border-destructive/40 text-destructive hover:bg-destructive/10"
                 >
-                  {deleteMutation.isPending ? "Discarding…" : "Yes, discard"}
+                  {deleteMutation.isPending
+                    ? "Discarding…"
+                    : session.id === "optimistic"
+                      ? "Starting…"
+                      : "Yes, discard"}
                 </Button>
                 <Button
                   type="button"

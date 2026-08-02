@@ -330,8 +330,14 @@ export function useStartSession() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (userBookId: string) => api.startSession(userBookId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.activeSession });
+    onSuccess: (session) => {
+      // Write the real response straight into the cache instead of
+      // invalidating-and-refetching: the POST already returns the full
+      // ReadingSessionDTO, so a second GET round-trip just to re-read what
+      // we already have was the main cause of Reading Mode's startup lag
+      // (ReadingTimer.tsx adds a client-side optimistic write on top of
+      // this for the instant-open case; this is what reconciles it).
+      qc.setQueryData(queryKeys.activeSession, session);
       // Starting a session may auto-promote WANT_TO_READ/ON_HOLD -> CURRENTLY_READING.
       qc.invalidateQueries({ queryKey: queryKeys.booksAll });
     },
