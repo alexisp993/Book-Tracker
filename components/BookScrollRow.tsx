@@ -32,7 +32,7 @@ export function MiniBookCard({
       {showTitle ? (
         // Always reserve two lines so a one-line title doesn't pull the
         // progress bar up and break the row's horizontal alignment.
-        <p className="line-clamp-2 min-h-[2.5em] text-[11px] font-medium leading-tight text-foreground/80">
+        <p className="line-clamp-2 min-h-[2.5em] text-caption-sm font-medium leading-tight text-foreground/80">
           {book.title}
         </p>
       ) : null}

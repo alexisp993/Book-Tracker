@@ -222,7 +222,7 @@ export function GroupsView({
                 <div className="aspect-[2/3] overflow-hidden rounded-lg border bg-muted">
                   <MiniCover book={b} />
                 </div>
-                <p className="line-clamp-2 text-[11px] font-medium leading-tight">
+                <p className="line-clamp-2 text-caption-sm font-medium leading-tight">
                   {b.title}
                 </p>
                 <StatusBadge status={b.status} />
@@ -373,7 +373,7 @@ function CollectionRow({
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[15px] font-semibold leading-tight">
+          <p className="truncate font-display text-title-sm font-semibold leading-tight">
             {group.name}
           </p>
           <p className="truncate text-xs text-muted-foreground">

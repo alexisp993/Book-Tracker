@@ -82,13 +82,13 @@ function InsightCard({
         </span>
         <div className="min-w-0">
           <p className="truncate font-display text-xl font-semibold leading-tight">{value}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{label}</p>
+          <p className="truncate text-caption-sm text-muted-foreground">{label}</p>
         </div>
       </div>
       {yoyPct != null ? (
         <p
           className={cn(
-            "pt-1.5 text-[11px] font-medium",
+            "pt-1.5 text-caption-sm font-medium",
             yoyPct >= 0
               ? "text-emerald-600 dark:text-emerald-400"
               : "text-rose-600 dark:text-rose-400",
@@ -97,7 +97,7 @@ function InsightCard({
           {yoyPct >= 0 ? "▲" : "▼"} {Math.abs(yoyPct)}% vs last year
         </p>
       ) : caption ? (
-        <p className="pt-1.5 text-[11px] text-muted-foreground">{caption}</p>
+        <p className="pt-1.5 text-caption-sm text-muted-foreground">{caption}</p>
       ) : null}
     </div>
   );

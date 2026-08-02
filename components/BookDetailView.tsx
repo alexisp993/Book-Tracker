@@ -380,7 +380,7 @@ function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }
 function InfoCell({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border bg-card p-3 shadow-card">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-caption-sm font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       <p className="mt-0.5 break-words text-sm font-medium">{value}</p>

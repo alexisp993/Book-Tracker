@@ -90,7 +90,7 @@ function ShelfPreview({ group }: { group: BookGroup }) {
         )}
       </div>
       <div>
-        <p className="line-clamp-1 text-[11px] font-medium">{group.name}</p>
+        <p className="line-clamp-1 text-caption-sm font-medium">{group.name}</p>
         <p className="text-[10px] text-muted-foreground">
           {group.count} {group.count === 1 ? "book" : "books"}
         </p>

@@ -73,8 +73,10 @@ Editorial serif display + neutral sans body is the right pairing for a reading a
 |---|---|
 | Screen title | `font-display text-2xl font-bold tracking-tight` |
 | Card / section title | `font-display text-lg font-semibold` |
+| List / card-row title | `font-display text-title-sm font-semibold leading-tight` (15px — a real gap between `text-sm`/14px and this row, found via `/impeccable typeset`: 8 files had independently converged on the identical arbitrary `text-[15px]`, so it's named as `fontSize.title-sm` in `tailwind.config.ts` rather than left a magic number) |
 | Body | `text-sm` |
 | Secondary / caption | `text-xs text-muted-foreground` |
+| Dense secondary (metadata rows, shelf captions) | `text-caption-sm` (11px — same story as `title-sm`: 26 call sites had converged on `text-[11px]`, now `fontSize.caption-sm`) |
 | Micro (legend, axis) | `text-[10px]` — **hard floor** |
 
 `text-[8px]` and `text-[9px]` are **banned**. If labels don't fit, show *fewer labels* — don't

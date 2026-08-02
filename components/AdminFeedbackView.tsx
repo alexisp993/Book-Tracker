@@ -84,7 +84,7 @@ export function AdminFeedbackView() {
               className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-secondary"
             >
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
+                <p className="line-clamp-1 font-display text-title-sm font-semibold leading-tight">
                   {f.subject}
                 </p>
                 <p className="line-clamp-1 text-xs text-muted-foreground">

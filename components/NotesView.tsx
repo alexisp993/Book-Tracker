@@ -305,12 +305,12 @@ function NoteCard({
             <Link
               href={`/books/${note.userBookId}`}
               onClick={(e) => e.stopPropagation()}
-              className="line-clamp-1 font-display text-[15px] font-semibold leading-tight hover:underline"
+              className="line-clamp-1 font-display text-title-sm font-semibold leading-tight hover:underline"
             >
               {note.bookTitle}
             </Link>
           ) : (
-            <span className="text-[11px] font-medium text-muted-foreground">
+            <span className="text-caption-sm font-medium text-muted-foreground">
               {NOTE_TYPE_LABELS[note.type]}
             </span>
           )}
@@ -322,7 +322,7 @@ function NoteCard({
             <NoteTypeIcon type={note.type} />
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-caption-sm text-muted-foreground">
           {note.page ? `Page ${note.page} · ` : ""}
           {formatRelativeDate(note.createdAt)}
         </p>

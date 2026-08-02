@@ -60,7 +60,7 @@ export const BookCard = React.memo(function BookCard({
           <p className="line-clamp-2 font-display text-[13px] font-semibold leading-tight">
             {book.title}
           </p>
-          <p className="line-clamp-1 text-[11px] text-muted-foreground">
+          <p className="line-clamp-1 text-caption-sm text-muted-foreground">
             {book.authors[0] ?? "Unknown"}
           </p>
         </div>
@@ -77,7 +77,7 @@ export const BookCard = React.memo(function BookCard({
         <StatusBadge
           status={book.status}
           overlay
-          className="absolute left-2 top-2 text-[11px]"
+          className="absolute left-2 top-2 text-caption-sm"
         />
         {book.favorite ? (
           <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 backdrop-blur-md">
@@ -88,7 +88,7 @@ export const BookCard = React.memo(function BookCard({
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <Link href={`/books/${book.id}`} className="flex-1">
-          <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-tight">
+          <h3 className="line-clamp-2 font-display text-title-sm font-semibold leading-tight">
             {book.title}
           </h3>
           <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
@@ -100,7 +100,7 @@ export const BookCard = React.memo(function BookCard({
         {progress !== null && book.status === "CURRENTLY_READING" ? (
           <div className="mt-0.5">
             <ProgressBar value={progress} />
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-caption-sm text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
             </p>
           </div>
@@ -109,7 +109,7 @@ export const BookCard = React.memo(function BookCard({
         ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-medium", STATUS_TEXT[book.status])}>
+          <span className={cn("inline-flex items-center gap-1.5 text-caption-sm font-medium", STATUS_TEXT[book.status])}>
             <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[book.status])} />
             {STATUS_LABELS[book.status]}
           </span>

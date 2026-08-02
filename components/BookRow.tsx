@@ -44,7 +44,7 @@ export const BookRow = React.memo(function BookRow({
         <BookCover book={book} />
       </div>
       <div className="pointer-events-none relative min-w-0 flex-1">
-        <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
+        <p className="line-clamp-1 font-display text-title-sm font-semibold leading-tight">
           {book.title}
         </p>
         <p className="line-clamp-1 text-xs text-muted-foreground">
@@ -58,13 +58,13 @@ export const BookRow = React.memo(function BookRow({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-caption-sm text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
             </p>
           </div>
         ) : (
           <div className="mt-1 flex items-center gap-2">
-            <span className={cn("text-[11px] font-medium", STATUS_TEXT[book.status])}>
+            <span className={cn("text-caption-sm font-medium", STATUS_TEXT[book.status])}>
               {STATUS_LABELS[book.status]}
             </span>
             {book.rating ? <StarRating value={book.rating} size={12} /> : null}

@@ -13,6 +13,16 @@ const config: Config = {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
       },
+      // Two roles the type ramp never named, found by /impeccable typeset:
+      // both sit in the gap between two documented sizes, and both were
+      // independently re-invented as the same arbitrary pixel value at
+      // enough call sites (8 and 26) to prove they're real roles, not
+      // one-offs. Naming them turns "copy-pasted magic number" into "system
+      // token" with zero rendered change.
+      fontSize: {
+        "title-sm": "15px", // list/card-row title — between text-sm (14px) and text-lg (18px)
+        "caption-sm": "11px", // dense secondary text — between text-[10px] micro floor and text-xs (12px)
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

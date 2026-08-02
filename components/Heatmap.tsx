@@ -259,7 +259,7 @@ function YearGrid({
 
       {/* Legend — a small title over a GitHub-style Less→More scale */}
       <div className="mt-3">
-        <p className="text-[11px] font-medium text-muted-foreground">Daily Reading</p>
+        <p className="text-caption-sm font-medium text-muted-foreground">Daily Reading</p>
         <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <span>Less</span>
           {BUCKET_LEGEND.map((l) => (

@@ -58,7 +58,7 @@ export function ContinueReadingCard({
         {progress !== null ? (
           <div className="mt-2">
             <ProgressBar value={progress} />
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-caption-sm text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
               {estimatedHours
                 ? ` · ~${estimatedHours}h left at your pace`

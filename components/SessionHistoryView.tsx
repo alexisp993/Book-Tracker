@@ -177,7 +177,7 @@ export function SessionHistoryView() {
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
+                <p className="line-clamp-1 font-display text-title-sm font-semibold leading-tight">
                   {s.title}
                 </p>
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -186,7 +186,7 @@ export function SessionHistoryView() {
                   {s.pagesRead ? ` · ${s.pagesRead} pages` : ""}
                   {s.mood ? ` · ${MOOD_EMOJI[s.mood]} ${MOOD_LABELS[s.mood]}` : ""}
                 </p>
-                <p className="line-clamp-1 text-[11px] text-muted-foreground/80">
+                <p className="line-clamp-1 text-caption-sm text-muted-foreground/80">
                   {formatDate(s.date)}
                   {s.note ? ` · ${s.note}` : ""}
                 </p>

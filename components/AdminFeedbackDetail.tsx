@@ -50,7 +50,11 @@ export function AdminFeedbackDetail({ id }: { id: string }) {
   if (!feedback) return <p className="text-sm text-muted-foreground">Not found.</p>;
 
   return (
-    <div className="space-y-5">
+    // Capped so the feedback description (free-flowing prose, no line-clamp)
+    // stays in a readable measure instead of running the full width of the
+    // sidebar shell — the same class of gap found and fixed on several other
+    // pages earlier, here found via /impeccable typeset.
+    <div className="mx-auto w-full max-w-3xl space-y-5">
       <BackHeader href="/admin/feedback" backLabel="Back to all feedback" />
 
       <Card>

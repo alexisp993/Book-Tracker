@@ -202,7 +202,7 @@ function ResultRow({
         ) : null}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
+        <p className="line-clamp-1 font-display text-title-sm font-semibold leading-tight">
           {result.title}
         </p>
         <p className="line-clamp-1 text-xs text-muted-foreground">

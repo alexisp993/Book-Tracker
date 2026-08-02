@@ -25,7 +25,7 @@ export function BookCover({
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-3 text-center text-muted-foreground">
         <BookOpen className="h-6 w-6 opacity-30" />
-        <span className="line-clamp-3 text-[11px] font-medium leading-tight">
+        <span className="line-clamp-3 text-caption-sm font-medium leading-tight">
           {book.title}
         </span>
       </div>

@@ -409,7 +409,7 @@ export function CalendarView() {
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 text-center">
         {viewModel.weekdayLabels.map((d) => (
-          <p key={d} className="pb-1 text-[11px] font-medium text-muted-foreground">
+          <p key={d} className="pb-1 text-caption-sm font-medium text-muted-foreground">
             {d}
           </p>
         ))}
@@ -471,9 +471,12 @@ export function CalendarView() {
                   {cell.day}
                 </span>
 
-                {/* "+N" badge when multiple books were read that day */}
+                {/* "+N" badge when multiple books were read that day.
+                    text-[10px] is the design system's documented micro floor
+                    (MASTER.md §12 A2) — this badge was the one place still
+                    under it (text-[9px]), found via /impeccable typeset. */}
                 {cell.extraBookCount > 0 ? (
-                  <span className="absolute bottom-1 right-1 z-20 rounded-full bg-black/60 px-1 text-[9px] font-semibold leading-[14px] text-white">
+                  <span className="absolute bottom-1 right-1 z-20 rounded-full bg-black/60 px-1 text-[10px] font-semibold leading-[14px] text-white">
                     +{cell.extraBookCount}
                   </span>
                 ) : !cell.hasCover && cell.hasData ? (

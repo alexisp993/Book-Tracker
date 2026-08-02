@@ -143,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-caption-sm font-medium transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >

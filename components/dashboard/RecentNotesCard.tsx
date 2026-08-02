@@ -61,7 +61,7 @@ export function RecentNotesCard() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium leading-tight">{n.bookTitle}</p>
                 <p className="line-clamp-1 text-xs text-muted-foreground">{n.body}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                <p className="mt-0.5 text-caption-sm text-muted-foreground/70">
                   {formatDate(n.updatedAt)}
                 </p>
               </div>

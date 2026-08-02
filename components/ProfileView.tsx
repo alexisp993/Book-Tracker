@@ -57,7 +57,7 @@ export function ProfileView() {
               </p>
             ) : null}
             {me?.isAdmin ? (
-              <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-300">
+              <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-caption-sm font-medium text-violet-600 dark:text-violet-300">
                 Admin
               </span>
             ) : null}

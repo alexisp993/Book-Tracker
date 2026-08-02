@@ -80,7 +80,7 @@ function SuggestionCard({ suggestion }: { suggestion: SuggestionItem }) {
         ) : null}
       </div>
       <div className="min-w-0">
-        <p className="line-clamp-2 text-[11px] font-medium leading-tight">
+        <p className="line-clamp-2 text-caption-sm font-medium leading-tight">
           {suggestion.title}
         </p>
         {suggestion.authors[0] ? (

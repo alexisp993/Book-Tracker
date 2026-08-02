@@ -54,7 +54,7 @@ function StatPill({
       </span>
       <div className="min-w-0">
         <p className="truncate text-2xl font-semibold leading-tight">{value}</p>
-        <p className="truncate text-[11px] leading-tight text-muted-foreground">
+        <p className="truncate text-caption-sm leading-tight text-muted-foreground">
           {label}
           {caption ? ` • ${caption}` : ""}
         </p>

@@ -35,7 +35,7 @@ export function MyFeedbackView() {
       {items.map((f) => (
         <div key={f.id} className="flex items-center gap-3 rounded-xl px-3 py-3">
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight">
+            <p className="line-clamp-1 font-display text-title-sm font-semibold leading-tight">
               {f.subject}
             </p>
             <p className="text-xs text-muted-foreground">

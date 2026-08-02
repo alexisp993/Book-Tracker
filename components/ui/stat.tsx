@@ -32,7 +32,7 @@ export function Stat({
       <p className="mt-2.5 text-xs text-muted-foreground">{label}</p>
       <p className="mt-0.5 font-display text-2xl font-semibold">{value}</p>
       {caption ? (
-        <p className="mt-0.5 text-[11px] text-muted-foreground">{caption}</p>
+        <p className="mt-0.5 text-caption-sm text-muted-foreground">{caption}</p>
       ) : null}
     </div>
   );
