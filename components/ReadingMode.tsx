@@ -123,12 +123,16 @@ export function ReadingMode({
   const [pause, setPause] = React.useState<PauseState>(() =>
     readPauseState(session.id),
   );
-  const [view, setView] = React.useState<"timer" | "finish">("timer");
+  const [view, setView] = React.useState<"timer" | "finish" | "saved">("timer");
   const [confirmCancel, setConfirmCancel] = React.useState(false);
   const [endPage, setEndPage] = React.useState("");
   const [mood, setMood] = React.useState("");
   const [note, setNote] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [savedSummary, setSavedSummary] = React.useState<{
+    minutes: number;
+    endPage: number | null;
+  } | null>(null);
 
   const stopMutation = useStopSession();
   const deleteMutation = useDeleteSession();
@@ -159,6 +163,16 @@ export function ReadingMode({
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  // Auto-dismiss the confirmation after a beat long enough to register but
+  // short enough that it never reads as a forced wait on a routine action —
+  // a click or keypress (below) can always cut it short.
+  React.useEffect(() => {
+    if (view !== "saved") return;
+    const t = setTimeout(onClose, 1400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
 
   if (!open) return null;
 
@@ -202,7 +216,11 @@ export function ReadingMode({
         minutes,
       });
       clearPauseState(session.id);
-      onClose();
+      // Finishing a session is the core loop's one completion event — it
+      // used to close with zero acknowledgment. Hold on a brief confirmation
+      // instead of closing immediately; the effect below auto-dismisses it.
+      setSavedSummary({ minutes, endPage: endPage ? Number(endPage) : null });
+      setView("saved");
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Couldn't save the session.",
@@ -242,22 +260,69 @@ export function ReadingMode({
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label="Minimize reading mode"
-          title="Minimize (session keeps running)"
-        >
-          <ChevronDown className="h-5 w-5" />
-        </Button>
+        {view === "saved" ? (
+          <div className="w-9" />
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Minimize reading mode"
+            title="Minimize (session keeps running)"
+          >
+            <ChevronDown className="h-5 w-5" />
+          </Button>
+        )}
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Reading session
+          {view === "saved" ? "" : "Reading session"}
         </p>
         <div className="w-9" />
       </div>
 
-      {view === "timer" ? (
+      {view === "saved" && savedSummary ? (
+        <div
+          className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-4 px-6 pb-10"
+          onClick={onClose}
+          role="button"
+          tabIndex={0}
+          aria-label="Session saved. Dismiss."
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") onClose();
+          }}
+        >
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden>
+            <circle
+              cx="40"
+              cy="40"
+              r="30"
+              stroke="hsl(var(--primary))"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray="188.5"
+              className="animate-[bt-check-circle_550ms_ease-out_forwards]"
+              style={{ strokeDashoffset: 188.5 }}
+            />
+            <path
+              d="M25 41 L35 51 L56 28"
+              stroke="hsl(var(--primary))"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+              strokeDasharray="46"
+              className="animate-[bt-check-mark_350ms_ease-out_250ms_forwards]"
+              style={{ strokeDashoffset: 46 }}
+            />
+          </svg>
+          <div className="animate-[bt-rise-in_250ms_ease-out_300ms_both] text-center">
+            <p className="font-display text-lg font-semibold">Session saved</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {clockLabel(savedSummary.minutes * 60000)} logged
+              {savedSummary.endPage ? ` · up to page ${savedSummary.endPage}` : ""}
+            </p>
+          </div>
+        </div>
+      ) : view === "timer" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-10">
           {/* Book identity */}
           <div className="flex flex-col items-center gap-4 text-center">
