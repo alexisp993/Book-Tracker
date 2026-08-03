@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface TabItem<T extends string> {
@@ -13,6 +14,15 @@ export interface TabItem<T extends string> {
 // Replaces two variants that disagreed on whether the track was `bg-muted` or
 // `bg-muted/50 + border`, and whether the active thumb was `bg-card` or
 // `bg-background`.
+//
+// The active thumb is one real element that slides/resizes to the selected
+// tab's measured position, instead of each tab independently toggling its
+// own background — a hard on/off swap reads as a computer redrawing pixels;
+// a single thumb that moves reads as one physical object relocating. Width
+// tracks each tab's own label length rather than an even 1/n split, so short
+// and long labels both get a snug, correctly-sized indicator. Global CSS
+// already collapses transition-duration under prefers-reduced-motion, so
+// this degrades to an instant swap there with no extra handling needed.
 export function SegmentedTabs<T extends string>({
   value,
   onChange,
@@ -24,22 +34,48 @@ export function SegmentedTabs<T extends string>({
   items: readonly TabItem<T>[];
   className?: string;
 }) {
+  const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const [thumb, setThumb] = React.useState<{ left: number; width: number } | null>(null);
+  const activeIndex = items.findIndex((t) => t.value === value);
+
+  const measure = React.useCallback(() => {
+    const el = tabRefs.current[activeIndex];
+    if (el) setThumb({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [activeIndex]);
+
+  React.useLayoutEffect(measure, [measure]);
+  React.useEffect(() => {
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+
   return (
-    <div className={cn("flex gap-1 rounded-xl bg-muted p-1", className)} role="tablist">
-      {items.map((t) => {
+    <div
+      className={cn("relative flex gap-1 rounded-xl bg-muted p-1", className)}
+      role="tablist"
+    >
+      {thumb ? (
+        <div
+          aria-hidden
+          className="absolute inset-y-1 left-0 rounded-lg bg-card shadow-sm transition-[transform,width] duration-300 ease-out"
+          style={{ width: thumb.width, transform: `translateX(${thumb.left}px)` }}
+        />
+      ) : null}
+      {items.map((t, i) => {
         const active = value === t.value;
         return (
           <button
             key={t.value}
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
             type="button"
             role="tab"
             aria-selected={active}
             onClick={() => onChange(t.value)}
             className={cn(
-              "flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+              "relative z-10 flex-1 rounded-lg py-1.5 text-sm font-medium transition-[color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]",
+              active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {t.icon ? (

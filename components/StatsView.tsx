@@ -369,7 +369,7 @@ function TimeReadChart({
       <div className="relative flex h-40 items-end gap-1.5">
         {focused ? (
           <div
-            className="pointer-events-none absolute -top-8 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background"
+            className="pointer-events-none absolute -top-8 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background transition-[left] duration-300 ease-out"
             style={{
               left: `${((focusIndex + 0.5) / minutesPerMonth.length) * 100}%`,
             }}
@@ -386,7 +386,7 @@ function TimeReadChart({
                 aria-label={`${m.label}: ${formatDuration(m.minutes)}`}
                 aria-pressed={i === focusIndex}
                 className={cn(
-                  "w-full rounded-t-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "w-full origin-bottom rounded-t-md transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-x-90",
                   i === focusIndex ? "bg-primary" : "bg-primary/40 hover:bg-primary/60",
                 )}
                 style={{
