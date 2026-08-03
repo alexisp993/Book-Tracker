@@ -1,7 +1,17 @@
 "use client";
 
 import type * as React from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import NumberFlow from "@number-flow/react";
+import {
+  Bar,
+  BarChart,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+} from "recharts";
 import {
   BookCheck,
   BookOpen,
@@ -60,7 +70,6 @@ export function StatsView() {
     );
   }
 
-  const maxMonth = Math.max(1, ...stats.booksPerMonth.map((m) => m.count));
   const maxStatus = Math.max(1, ...stats.byStatus.map((s) => s.count));
   const maxRating = Math.max(1, ...stats.ratingDistribution.map((r) => r.count));
   const maxGenre = Math.max(1, ...stats.genreBreakdown.map((g) => g.count));
@@ -84,21 +93,30 @@ export function StatsView() {
               All-time totals
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
-              <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" tint="blue" value={stats.total} />
-              <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" tint="emerald" value={stats.read} />
-              <Stat icon={<Flame className="h-4 w-4" />} label="Reading" tint="amber" value={stats.reading} />
+              <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" tint="blue" value={<NumberFlow value={stats.total} />} />
+              <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" tint="emerald" value={<NumberFlow value={stats.read} />} />
+              <Stat icon={<Flame className="h-4 w-4" />} label="Reading" tint="amber" value={<NumberFlow value={stats.reading} />} />
               <Stat
                 icon={<BookOpen className="h-4 w-4" />}
                 label="Pages read"
                 tint="violet"
-                value={stats.pagesRead.toLocaleString()}
+                value={<NumberFlow value={stats.pagesRead} />}
               />
-              <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" tint="rose" value={stats.favorites} />
+              <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" tint="rose" value={<NumberFlow value={stats.favorites} />} />
               <Stat
                 icon={<Star className="h-4 w-4" />}
                 label="Avg rating"
                 tint="amber"
-                value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
+                value={
+                  stats.avgRating ? (
+                    <NumberFlow
+                      value={stats.avgRating}
+                      format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+                    />
+                  ) : (
+                    "—"
+                  )
+                }
               />
             </div>
           </div>
@@ -112,14 +130,14 @@ export function StatsView() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Sparkline
               title="Books Read"
-              value={totalBooksThisYear.toLocaleString()}
+              value={totalBooksThisYear}
               yoyPct={stats.booksYoyPct}
               points={stats.booksPerMonth.map((m) => m.count)}
               tint="emerald"
             />
             <Sparkline
               title="Pages Read"
-              value={totalPagesThisYear.toLocaleString()}
+              value={totalPagesThisYear}
               yoyPct={stats.pagesYoyPct}
               points={stats.pagesPerMonth.map((m) => m.pages)}
               tint="violet"
@@ -133,25 +151,10 @@ export function StatsView() {
       {tab === "books" ? (
         <div className="space-y-3">
           <Card title="Books finished" subtitle="Last 12 months">
-            <div className="flex h-40 items-end gap-1.5">
-              {stats.booksPerMonth.map((m) => (
-                <div key={m.month} className="flex h-full flex-1 flex-col items-center gap-1.5">
-                  <div className="flex w-full flex-1 items-end">
-                    <div
-                      role="img"
-                      aria-label={`${m.label}: ${m.count} book${m.count === 1 ? "" : "s"}`}
-                      className="w-full rounded-t-md bg-primary/80 transition-all"
-                      style={{
-                        height: `${(m.count / maxMonth) * 100}%`,
-                        minHeight: m.count > 0 ? 3 : 0,
-                      }}
-                      title={`${m.count} in ${m.label}`}
-                    />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{m.label}</span>
-                </div>
-              ))}
-            </div>
+            <MonthlyBarChart
+              data={stats.booksPerMonth.map((m) => ({ key: m.month, label: m.label, value: m.count }))}
+              formatValue={(v) => `${v} book${v === 1 ? "" : "s"}`}
+            />
           </Card>
 
           <div className="grid gap-3 lg:grid-cols-2">
@@ -292,7 +295,7 @@ function YearHeroCard({
       <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
           <p className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            {stats.booksThisYear} book{stats.booksThisYear === 1 ? "" : "s"}
+            <NumberFlow value={stats.booksThisYear} /> book{stats.booksThisYear === 1 ? "" : "s"}
           </p>
           <div className="mt-1">
             <YoyDelta pct={stats.booksYoyPct} />
@@ -301,7 +304,7 @@ function YearHeroCard({
         <div className="flex gap-5">
           <div>
             <p className="font-display text-lg font-semibold">
-              {stats.pagesThisYear.toLocaleString()}
+              <NumberFlow value={stats.pagesThisYear} />
             </p>
             <p className="text-xs text-muted-foreground">pages</p>
           </div>
@@ -313,7 +316,13 @@ function YearHeroCard({
           </div>
           <div>
             <p className="font-display text-lg font-semibold">
-              {streakDays > 0 ? `${streakDays} 🔥` : "—"}
+              {streakDays > 0 ? (
+                <>
+                  <NumberFlow value={streakDays} /> 🔥
+                </>
+              ) : (
+                "—"
+              )}
             </p>
             <p className="text-xs text-muted-foreground">day streak</p>
           </div>
@@ -338,6 +347,51 @@ function YoyDelta({ pct }: { pct: number | null }) {
   );
 }
 
+// Shared month-bucket bar chart (recharts) — used for both "Time Read" and
+// "Books finished". `activeBar` lets recharts swap the fill on hover/tap
+// itself, so there's no manual focus-index state or per-cell fill logic to
+// keep in sync — the library owns the interaction, we only style it.
+function MonthlyBarChart({
+  data,
+  formatValue,
+}: {
+  data: { key: string; label: string; value: number }[];
+  formatValue: (v: number) => string;
+}) {
+  return (
+    <div className="-ml-2 h-40">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+          <XAxis
+            dataKey="label"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          />
+          <Tooltip
+            cursor={{ fill: "hsl(var(--muted) / 0.6)" }}
+            content={({ active, payload }) =>
+              active && payload?.length ? (
+                <div className="rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md">
+                  {payload[0].payload.label} / {formatValue(payload[0].value as number)}
+                </div>
+              ) : null
+            }
+          />
+          <Bar
+            dataKey="value"
+            fill="hsl(var(--primary) / 0.4)"
+            activeBar={{ fill: "hsl(var(--primary))" }}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={28}
+            isAnimationActive={false}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function TimeReadChart({
   minutesPerMonth,
   totalMinutes,
@@ -347,59 +401,16 @@ function TimeReadChart({
   totalMinutes: number;
   yoyPct: number | null;
 }) {
-  const maxIdx = useMemo(() => {
-    let best = 0;
-    for (let i = 1; i < minutesPerMonth.length; i++) {
-      if (minutesPerMonth[i].minutes > minutesPerMonth[best].minutes) best = i;
-    }
-    return best;
-  }, [minutesPerMonth]);
-  const [focusIndex, setFocusIndex] = useState(maxIdx);
-
-  const max = Math.max(1, ...minutesPerMonth.map((m) => m.minutes));
-  const focused = minutesPerMonth[focusIndex];
-
   return (
     <Card title="Time Read">
-      <div className="mb-4">
+      <div className="mb-2">
         <p className="font-display text-3xl font-bold">{formatDuration(totalMinutes)}</p>
         <YoyDelta pct={yoyPct} />
       </div>
-
-      <div className="relative flex h-40 items-end gap-1.5">
-        {focused ? (
-          <div
-            className="pointer-events-none absolute -top-8 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background transition-[left] duration-300 ease-out"
-            style={{
-              left: `${((focusIndex + 0.5) / minutesPerMonth.length) * 100}%`,
-            }}
-          >
-            {focused.label} / {formatDuration(focused.minutes)}
-          </div>
-        ) : null}
-        {minutesPerMonth.map((m, i) => (
-          <div key={m.month} className="flex h-full flex-1 flex-col items-center gap-1.5">
-            <div className="flex w-full flex-1 items-end">
-              <button
-                type="button"
-                onClick={() => setFocusIndex(i)}
-                aria-label={`${m.label}: ${formatDuration(m.minutes)}`}
-                aria-pressed={i === focusIndex}
-                className={cn(
-                  "w-full origin-bottom rounded-t-md transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-x-90",
-                  i === focusIndex ? "bg-primary" : "bg-primary/40 hover:bg-primary/60",
-                )}
-                style={{
-                  height: `${(m.minutes / max) * 100}%`,
-                  // Keep a read month visibly non-zero next to a much bigger one.
-                  minHeight: m.minutes > 0 ? 3 : 0,
-                }}
-              />
-            </div>
-            <span className="text-[10px] text-muted-foreground">{m.label}</span>
-          </div>
-        ))}
-      </div>
+      <MonthlyBarChart
+        data={minutesPerMonth.map((m) => ({ key: m.month, label: m.label, value: m.minutes }))}
+        formatValue={formatDuration}
+      />
     </Card>
   );
 }
@@ -412,41 +423,37 @@ function Sparkline({
   tint,
 }: {
   title: string;
-  value: string;
+  value: number;
   yoyPct: number | null;
   points: number[];
   tint: "emerald" | "violet";
 }) {
-  const w = 100;
-  const h = 32;
-  const max = Math.max(1, ...points);
-  const coords = points
-    .map((p, i) => {
-      const x = points.length > 1 ? (i / (points.length - 1)) * w : 0;
-      const y = h - (p / max) * h;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
   const stroke = tint === "emerald" ? "rgb(16 185 129)" : "rgb(139 92 246)";
+  const data = points.map((p, i) => ({ i, value: p }));
 
   return (
     <Card>
       <p className="text-xs text-muted-foreground">{title}</p>
-      <p className="mt-0.5 font-display text-2xl font-semibold">{value}</p>
+      <p className="mt-0.5 font-display text-2xl font-semibold">
+        <NumberFlow value={value} />
+      </p>
       <div className="mt-1">
         <YoyDelta pct={yoyPct} />
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="mt-2 h-10 w-full" preserveAspectRatio="none">
-        <polyline
-          points={coords}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      <div className="mt-2 h-10">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke={stroke}
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </Card>
   );
 }
@@ -464,7 +471,8 @@ function LongestStreakCard({
         </span>
         <div>
           <p className="font-display text-2xl font-semibold">
-            {sessionStats.longestStreakDays} day{sessionStats.longestStreakDays === 1 ? "" : "s"}
+            <NumberFlow value={sessionStats.longestStreakDays} />{" "}
+            day{sessionStats.longestStreakDays === 1 ? "" : "s"}
           </p>
           {sessionStats.longestStreakRange ? (
             <p className="text-xs text-muted-foreground">
