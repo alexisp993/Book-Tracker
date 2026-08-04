@@ -74,7 +74,7 @@ export function SegmentedTabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(t.value)}
             className={cn(
-              "relative z-10 flex-1 rounded-lg py-1.5 text-sm font-medium transition-[color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]",
+              "relative z-10 flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-[color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]",
               active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
