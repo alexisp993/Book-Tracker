@@ -160,6 +160,27 @@ export const FEEDBACK_STATUS_STYLES: Record<FeedbackStatus, string> = {
   CLOSED: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
 };
 
+// Fixed curated set for the "By Genre" suggestions mode
+// (components/SuggestionSection.tsx) — deliberately not derived from the
+// user's own Genre data, so the picker works identically for a brand-new
+// library and a large one.
+export const SUGGESTION_GENRES = [
+  "Fiction",
+  "Mystery",
+  "Fantasy",
+  "Science Fiction",
+  "Romance",
+  "Thriller",
+  "Biography",
+  "History",
+  "Self-Help",
+  "Young Adult",
+  "Horror",
+  "Non-Fiction",
+  "Poetry",
+  "Classics",
+] as const;
+
 // Semantic accent tints — the ONE sanctioned use of raw Tailwind palette
 // colors in this app (design-system MASTER.md §1). Used for stat-tile icon
 // badges and category identity, never for structural UI.

@@ -344,9 +344,15 @@ export async function searchBooks(query: string): Promise<BookSearchResult[]> {
     searchOpenLibrary(q).catch(() => []),
   ]);
 
+  return dedupeResults([...gb, ...ol]);
+}
+
+// Shared by searchBooks and searchBooksByGenre: isbn13 when available,
+// otherwise a lowercase title+first-author key, capped at 20.
+function dedupeResults(results: BookSearchResult[]): BookSearchResult[] {
   const seen = new Set<string>();
   const deduped: BookSearchResult[] = [];
-  for (const r of [...gb, ...ol]) {
+  for (const r of results) {
     const key = r.isbn13 ?? `${r.title.toLowerCase()}|${(r.authors[0] ?? "").toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -354,6 +360,25 @@ export async function searchBooks(query: string): Promise<BookSearchResult[]> {
     if (deduped.length >= 20) break;
   }
   return deduped;
+}
+
+// Genre-based discovery for the suggestions feature — distinct from
+// searchBooks' free-text title/author search. Google Books' `subject:`
+// query operator restricts to that subject; Open Library has no equivalent
+// operator on its general search, but its index already weights subject
+// fields, so a plain-text query against the same genre name is a reasonable
+// approximation without needing its separate /subjects/ endpoint (whose
+// response shape lacks isbn13, which the caller needs for dedup/filtering).
+export async function searchBooksByGenre(genre: string): Promise<BookSearchResult[]> {
+  const g = genre.trim();
+  if (!g) return [];
+
+  const [gb, ol] = await Promise.all([
+    searchGoogleBooks(`subject:"${g}"`).catch(() => []),
+    searchOpenLibrary(g).catch(() => []),
+  ]);
+
+  return dedupeResults([...gb, ...ol]);
 }
 
 // Check the local Book table before hitting any external provider. Books are

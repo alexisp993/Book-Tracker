@@ -559,6 +559,15 @@ export function useSuggestions() {
   });
 }
 
+export function useGenreSuggestions(genre: string) {
+  return useQuery({
+    queryKey: ["suggestions", "genre", genre],
+    queryFn: () => api.searchSuggestionsByGenre(genre),
+    enabled: genre.length > 0,
+    staleTime: 5 * 60_000,
+  });
+}
+
 // --- Home config ---
 
 export function useHomeConfig() {

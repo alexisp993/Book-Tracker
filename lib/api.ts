@@ -146,6 +146,16 @@ export async function searchBookMetadata(
   return handle<{ results: BookSearchResult[] }>(res);
 }
 
+export async function searchSuggestionsByGenre(
+  genre: string,
+): Promise<{ results: BookSearchResult[] }> {
+  const res = await fetch(
+    `/api/suggestions/genre?genre=${encodeURIComponent(genre)}`,
+    { cache: "no-store" },
+  );
+  return handle<{ results: BookSearchResult[] }>(res);
+}
+
 // --- Shelves & Collections (groups) ---
 export type GroupBasePath = "shelves" | "collections";
 
