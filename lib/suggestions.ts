@@ -176,10 +176,14 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
 // A plain relevance-only genre query skewed heavily toward decades-old
 // backlist titles — old books simply accumulate more keyword/subject
 // matches over time than a recently-published one has had the chance to.
-// +12 nudges recent books up without penalizing old ones, so it doesn't
+// +8 nudges recent books up without penalizing old ones, so it doesn't
 // fight genres where old is normal and correct (Classics, Poetry, History):
 // a 2020s release and a 1920s classic both start at 0 on this signal, and
-// only the newer one gets the bump — nothing pushes the classic down.
+// only the newer one gets the bump — nothing pushes the classic down. Kept
+// below the popularity signal's weight on purpose: "recent" alone isn't
+// worth chasing over "actually well-regarded" — sorting the candidate fetch
+// itself by raw newest (tried and reverted, see searchBooksByGenre) proved
+// that recency with zero quality signal just surfaces obscure filler.
 const RECENT_YEARS = 12;
 
 function publishedYear(publishedDate: string | undefined): number | null {
@@ -195,9 +199,9 @@ function publishedYear(publishedDate: string | undefined): number | null {
 // personal history at all:
 //   +30  author matches a previously-read author
 //   +20  user rated another book by this author 4 or 5 stars
-//   +12  published within the last ~12 years
 //   +10  highly rated by readers generally (Google Books avgRating ≥ 4,
 //        with a real sample size — ratingsCount ≥ 50)
+//   +8   published within the last ~12 years
 // Unlike getSuggestions, zero-score results are kept (not filtered out) and
 // still shown, ranked below scored ones — discovery mode's job is to show
 // what exists in the genre, not just what matches history, especially for a
@@ -240,15 +244,15 @@ export async function getGenreSuggestions(
         if (!knownAuthors.length) reasons.push("By a highly-rated author");
       }
 
-      const year = publishedYear(r.publishedDate);
-      if (year !== null && year >= new Date().getFullYear() - RECENT_YEARS) {
-        score += 12;
-        reasons.push("Recently published");
-      }
-
       if ((r.averageRating ?? 0) >= 4 && (r.ratingsCount ?? 0) >= 50) {
         score += 10;
         reasons.push("Highly rated by readers");
+      }
+
+      const year = publishedYear(r.publishedDate);
+      if (year !== null && year >= new Date().getFullYear() - RECENT_YEARS) {
+        score += 8;
+        reasons.push("Recently published");
       }
 
       return { ...r, reasons, score };

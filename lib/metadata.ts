@@ -268,9 +268,11 @@ export interface BookSearchResult {
 async function searchGoogleBooks(
   query: string,
   maxResults = 20,
+  langRestrict?: string,
 ): Promise<BookSearchResult[]> {
   const params = new URLSearchParams({ q: query, maxResults: String(maxResults) });
   params.set("country", process.env.GOOGLE_BOOKS_COUNTRY || "US");
+  if (langRestrict) params.set("langRestrict", langRestrict);
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   if (key) params.set("key", key);
 
@@ -302,14 +304,12 @@ async function searchGoogleBooks(
 async function searchOpenLibrary(
   query: string,
   limit = 20,
-  sort?: "new",
 ): Promise<BookSearchResult[]> {
   const params = new URLSearchParams({
     q: query,
     fields: "title,subtitle,author_name,first_publish_year,isbn,cover_i",
     limit: String(limit),
   });
-  if (sort) params.set("sort", sort);
   const data = (await fetchJson(
     `https://openlibrary.org/search.json?${params.toString()}`,
   )) as OLSearchByQueryResponse | null;
@@ -387,18 +387,22 @@ function dedupeResults(results: BookSearchResult[], limit = 20): BookSearchResul
 // approximation without needing its separate /subjects/ endpoint (whose
 // response shape lacks isbn13, which the caller needs for dedup/filtering).
 //
-// A plain relevance-only query here skewed heavily toward old backlist
-// titles (decades-old category tags accumulate the most keyword/subject
-// matches over time) — pulling a wider pool from both providers (and
-// asking Open Library to sort by newest first) gives getGenreSuggestions'
-// recency scoring enough recent candidates to actually surface.
+// A plain relevance-only query skewed heavily toward old backlist titles
+// (decades-old category tags accumulate the most keyword/subject matches
+// over time), so a wider relevance-ranked pool feeds getGenreSuggestions'
+// recency scoring more candidates to promote. Sorting the fetch itself by
+// "newest" was tried and reverted — Open Library's raw newest-first feed is
+// uncurated (foreign-language webtoon volumes, single self-published
+// chapters, near-future placeholder dates), which read as worse than the
+// old-book problem it was meant to fix. English-restricting the Google
+// Books side cuts a large share of that same noise there.
 export async function searchBooksByGenre(genre: string): Promise<BookSearchResult[]> {
   const g = genre.trim();
   if (!g) return [];
 
   const [gb, ol] = await Promise.all([
-    searchGoogleBooks(`subject:"${g}"`, 40).catch(() => []),
-    searchOpenLibrary(g, 40, "new").catch(() => []),
+    searchGoogleBooks(`subject:"${g}"`, 40, "en").catch(() => []),
+    searchOpenLibrary(g, 40).catch(() => []),
   ]);
 
   return dedupeResults([...gb, ...ol], 30);
