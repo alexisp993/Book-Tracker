@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Check, Plus, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { Loading } from "@/components/ui/loading";
 import { Dialog } from "@/components/ui/dialog";
 import { BookForm, type BookFormValues, type BookPrefill } from "@/components/BookForm";
 import { FilterPills, SegmentedTabs, type TabItem } from "@/components/ui/tabs";
@@ -14,8 +15,12 @@ import type { GenreSuggestionItem, SuggestionItem } from "@/lib/api";
 
 type Mode = "library" | "genre";
 
+// Kept short and evenly matched on purpose — SegmentedTabs splits width
+// evenly between exactly two segments, so a much longer label on one side
+// (the original "From My Library") wraps to two lines while the other
+// stays on one, producing two visibly different pill heights.
 const MODE_TABS: readonly TabItem<Mode>[] = [
-  { value: "library", label: "From My Library" },
+  { value: "library", label: "My Library" },
   { value: "genre", label: "By Genre" },
 ];
 
@@ -79,7 +84,7 @@ function LibrarySuggestionCard({ suggestion }: { suggestion: SuggestionItem }) {
   return (
     <Link
       href={`/books/${suggestion.id}`}
-      className="group flex w-[140px] shrink-0 flex-col gap-2"
+      className="group flex w-[140px] shrink-0 flex-col gap-2 transition-transform active:scale-[0.98]"
     >
       <SuggestionCoverFrame
         coverUrl={suggestion.coverUrl}
@@ -116,7 +121,7 @@ function GenreSuggestions() {
           description="Choose a genre above to discover books outside your library."
         />
       ) : isLoading || isFetching ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Finding books…</p>
+        <Loading label="Finding books…" />
       ) : results.length === 0 ? (
         <EmptyState
           icon={Sparkles}
@@ -208,7 +213,7 @@ function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
         type="button"
         onClick={added ? undefined : handlePick}
         disabled={resolving || added}
-        className="group flex w-[140px] shrink-0 flex-col gap-2 text-left disabled:cursor-default"
+        className="group flex w-[140px] shrink-0 flex-col gap-2 text-left transition-transform active:scale-[0.98] disabled:cursor-default disabled:active:scale-100"
       >
         <div className="relative">
           <SuggestionCoverFrame
@@ -266,7 +271,7 @@ function SuggestionCoverFrame({
   caption?: string;
 }) {
   return (
-    <div className="relative h-[210px] w-[140px] overflow-hidden rounded-xl border bg-muted shadow-sm transition-transform group-hover:scale-[1.02]">
+    <div className="relative h-[210px] w-[140px] overflow-hidden rounded-xl border bg-muted shadow-cover transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover">
       {coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

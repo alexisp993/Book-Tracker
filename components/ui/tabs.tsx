@@ -116,7 +116,11 @@ export function FilterPills<T extends string>({
     <div
       className={cn(
         "flex gap-1",
-        sm && "flex-wrap gap-1.5",
+        sm && "gap-1.5",
+        // `scrollable` means "keep it one line and let it scroll" — letting
+        // `sm`'s flex-wrap also apply would silently cancel that (wrapped
+        // items never overflow, so there'd be nothing to scroll).
+        sm && !scrollable && "flex-wrap",
         scrollable &&
           "overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
