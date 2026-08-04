@@ -173,14 +173,29 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
     .slice(0, 10);
 }
 
+// A plain relevance-only genre query skewed heavily toward decades-old
+// backlist titles — old books simply accumulate more keyword/subject
+// matches over time than a recently-published one has had the chance to.
+// +12 nudges recent books up without penalizing old ones, so it doesn't
+// fight genres where old is normal and correct (Classics, Poetry, History):
+// a 2020s release and a 1920s classic both start at 0 on this signal, and
+// only the newer one gets the bump — nothing pushes the classic down.
+const RECENT_YEARS = 12;
+
+function publishedYear(publishedDate: string | undefined): number | null {
+  const match = publishedDate?.match(/^(\d{4})/);
+  return match ? Number(match[1]) : null;
+}
+
 // "By Genre" discovery mode — candidates come from outside the library
 // (Google Books / Open Library, via searchBooksByGenre), so there's no
 // series/genre-match signal to score against (the genre is already the
-// user's own pick, true for every result). Scored instead on the two
-// personal-history signals that still apply, plus a provider-popularity
-// tie-breaker for books with no personal history at all:
+// user's own pick, true for every result). Scored instead on the personal-
+// history signals that still apply, plus two signals for books with no
+// personal history at all:
 //   +30  author matches a previously-read author
 //   +20  user rated another book by this author 4 or 5 stars
+//   +12  published within the last ~12 years
 //   +10  highly rated by readers generally (Google Books avgRating ≥ 4,
 //        with a real sample size — ratingsCount ≥ 50)
 // Unlike getSuggestions, zero-score results are kept (not filtered out) and
@@ -225,6 +240,12 @@ export async function getGenreSuggestions(
         if (!knownAuthors.length) reasons.push("By a highly-rated author");
       }
 
+      const year = publishedYear(r.publishedDate);
+      if (year !== null && year >= new Date().getFullYear() - RECENT_YEARS) {
+        score += 12;
+        reasons.push("Recently published");
+      }
+
       if ((r.averageRating ?? 0) >= 4 && (r.ratingsCount ?? 0) >= 50) {
         score += 10;
         reasons.push("Highly rated by readers");
@@ -233,5 +254,7 @@ export async function getGenreSuggestions(
       return { ...r, reasons, score };
     });
 
-  return scored.sort((a, b) => b.score - a.score || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0));
+  return scored
+    .sort((a, b) => b.score - a.score || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))
+    .slice(0, 20);
 }

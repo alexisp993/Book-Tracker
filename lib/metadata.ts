@@ -265,8 +265,11 @@ export interface BookSearchResult {
   ratingsCount?: number;
 }
 
-async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
-  const params = new URLSearchParams({ q: query, maxResults: "20" });
+async function searchGoogleBooks(
+  query: string,
+  maxResults = 20,
+): Promise<BookSearchResult[]> {
+  const params = new URLSearchParams({ q: query, maxResults: String(maxResults) });
   params.set("country", process.env.GOOGLE_BOOKS_COUNTRY || "US");
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   if (key) params.set("key", key);
@@ -296,12 +299,17 @@ async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
     .filter((r): r is BookSearchResult => r !== null);
 }
 
-async function searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
+async function searchOpenLibrary(
+  query: string,
+  limit = 20,
+  sort?: "new",
+): Promise<BookSearchResult[]> {
   const params = new URLSearchParams({
     q: query,
     fields: "title,subtitle,author_name,first_publish_year,isbn,cover_i",
-    limit: "20",
+    limit: String(limit),
   });
+  if (sort) params.set("sort", sort);
   const data = (await fetchJson(
     `https://openlibrary.org/search.json?${params.toString()}`,
   )) as OLSearchByQueryResponse | null;
@@ -357,8 +365,8 @@ export async function searchBooks(query: string): Promise<BookSearchResult[]> {
 }
 
 // Shared by searchBooks and searchBooksByGenre: isbn13 when available,
-// otherwise a lowercase title+first-author key, capped at 20.
-function dedupeResults(results: BookSearchResult[]): BookSearchResult[] {
+// otherwise a lowercase title+first-author key.
+function dedupeResults(results: BookSearchResult[], limit = 20): BookSearchResult[] {
   const seen = new Set<string>();
   const deduped: BookSearchResult[] = [];
   for (const r of results) {
@@ -366,7 +374,7 @@ function dedupeResults(results: BookSearchResult[]): BookSearchResult[] {
     if (seen.has(key)) continue;
     seen.add(key);
     deduped.push(r);
-    if (deduped.length >= 20) break;
+    if (deduped.length >= limit) break;
   }
   return deduped;
 }
@@ -378,16 +386,22 @@ function dedupeResults(results: BookSearchResult[]): BookSearchResult[] {
 // fields, so a plain-text query against the same genre name is a reasonable
 // approximation without needing its separate /subjects/ endpoint (whose
 // response shape lacks isbn13, which the caller needs for dedup/filtering).
+//
+// A plain relevance-only query here skewed heavily toward old backlist
+// titles (decades-old category tags accumulate the most keyword/subject
+// matches over time) — pulling a wider pool from both providers (and
+// asking Open Library to sort by newest first) gives getGenreSuggestions'
+// recency scoring enough recent candidates to actually surface.
 export async function searchBooksByGenre(genre: string): Promise<BookSearchResult[]> {
   const g = genre.trim();
   if (!g) return [];
 
   const [gb, ol] = await Promise.all([
-    searchGoogleBooks(`subject:"${g}"`).catch(() => []),
-    searchOpenLibrary(g).catch(() => []),
+    searchGoogleBooks(`subject:"${g}"`, 40).catch(() => []),
+    searchOpenLibrary(g, 40, "new").catch(() => []),
   ]);
 
-  return dedupeResults([...gb, ...ol]);
+  return dedupeResults([...gb, ...ol], 30);
 }
 
 // Check the local Book table before hitting any external provider. Books are
