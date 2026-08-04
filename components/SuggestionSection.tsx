@@ -10,8 +10,7 @@ import { FilterPills, SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { ApiRequestError, lookupIsbn } from "@/lib/api";
 import { useCreateBook, useGenreSuggestions, useSuggestions } from "@/lib/queries";
 import { SUGGESTION_GENRES } from "@/lib/constants";
-import type { SuggestionItem } from "@/lib/api";
-import type { BookSearchResult } from "@/lib/metadata";
+import type { GenreSuggestionItem, SuggestionItem } from "@/lib/api";
 
 type Mode = "library" | "genre";
 
@@ -125,17 +124,22 @@ function GenreSuggestions() {
           description={`Nothing found for ${genre}. Try a different genre.`}
         />
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {results.map((r, i) => (
-            <GenreSuggestionCard key={r.isbn13 ?? `${r.title}-${i}`} result={r} />
-          ))}
+        <div className="space-y-2">
+          <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {results.map((r, i) => (
+              <GenreSuggestionCard key={r.isbn13 ?? `${r.title}-${i}`} result={r} />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ranked by author matches and reader ratings — books you already have are left out.
+          </p>
         </div>
       )}
     </div>
   );
 }
 
-function GenreSuggestionCard({ result }: { result: BookSearchResult }) {
+function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
   const [prefill, setPrefill] = React.useState<BookPrefill | undefined>(undefined);
   const [resolving, setResolving] = React.useState(false);
   const [formOpen, setFormOpen] = React.useState(false);
@@ -207,7 +211,11 @@ function GenreSuggestionCard({ result }: { result: BookSearchResult }) {
         className="group flex w-[140px] shrink-0 flex-col gap-2 text-left disabled:cursor-default"
       >
         <div className="relative">
-          <SuggestionCoverFrame coverUrl={result.coverUrl} title={result.title} />
+          <SuggestionCoverFrame
+            coverUrl={result.coverUrl}
+            title={result.title}
+            caption={result.reasons[0]}
+          />
           <span
             className={
               "absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-colors " +

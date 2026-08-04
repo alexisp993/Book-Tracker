@@ -146,14 +146,19 @@ export async function searchBookMetadata(
   return handle<{ results: BookSearchResult[] }>(res);
 }
 
+export interface GenreSuggestionItem extends BookSearchResult {
+  reasons: string[];
+  score: number;
+}
+
 export async function searchSuggestionsByGenre(
   genre: string,
-): Promise<{ results: BookSearchResult[] }> {
+): Promise<{ results: GenreSuggestionItem[] }> {
   const res = await fetch(
     `/api/suggestions/genre?genre=${encodeURIComponent(genre)}`,
     { cache: "no-store" },
   );
-  return handle<{ results: BookSearchResult[] }>(res);
+  return handle<{ results: GenreSuggestionItem[] }>(res);
 }
 
 // --- Shelves & Collections (groups) ---

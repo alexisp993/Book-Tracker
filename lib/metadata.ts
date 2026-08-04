@@ -115,6 +115,8 @@ interface GBResponse {
       language?: string;
       imageLinks?: { thumbnail?: string; smallThumbnail?: string };
       industryIdentifiers?: { type: string; identifier: string }[];
+      averageRating?: number;
+      ratingsCount?: number;
     };
   }[];
 }
@@ -256,6 +258,11 @@ export interface BookSearchResult {
   isbn13?: string;
   coverUrl?: string;
   source: string;
+  // Provider-reported popularity — only Google Books exposes this today.
+  // Used by the "By Genre" suggestions mode as a tie-breaker signal for
+  // books with no personal reading history to score against.
+  averageRating?: number;
+  ratingsCount?: number;
 }
 
 async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
@@ -282,6 +289,8 @@ async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
         isbn13,
         coverUrl: cover ? cover.replace(/^http:/, "https:") : undefined,
         source: "GOOGLE_BOOKS",
+        averageRating: info.averageRating,
+        ratingsCount: info.ratingsCount,
       };
     })
     .filter((r): r is BookSearchResult => r !== null);

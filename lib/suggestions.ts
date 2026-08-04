@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { searchBooksByGenre, type BookSearchResult } from "@/lib/metadata";
 
 export interface SuggestionDTO {
   id: string; // UserBook id
@@ -10,50 +11,39 @@ export interface SuggestionDTO {
   score: number;
 }
 
-// Heuristic book recommender that scores WANT_TO_READ books in the user's
-// library against their reading history — no AI, no external calls.
-//
-// Scoring weights:
-//   +40  genre matches one of user's top-3 genres
-//   +30  author matches a previously-read author
-//   +20  user rated another book by this author 4 or 5 stars
-//   +10  series continuation (user started this series)
-//   -10  user DNF'd another book in this series
-export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
-  const [wantToRead, doneBooks] = await Promise.all([
-    // Candidate books: everything in the TBR pile
-    prisma.userBook.findMany({
-      where: { userId, status: "WANT_TO_READ" },
-      include: {
-        book: {
-          include: {
-            authors: { include: { author: { select: { name: true } } } },
-            genres: { include: { genre: { select: { name: true } } } },
-          },
+export interface GenreSuggestionItem extends BookSearchResult {
+  reasons: string[];
+  score: number;
+}
+
+interface UserTasteProfile {
+  top3Genres: Set<string>;
+  readAuthors: Set<string>;
+  highRatedAuthors: Set<string>; // rated ≥ 4 by user
+  startedSeriesIds: Set<string>;
+  dnfSeriesIds: Set<string>;
+}
+
+// Shared by getSuggestions and getGenreSuggestions — built from books the
+// user has actually engaged with (any terminal status), independent of
+// whichever candidate pool (library TBR vs. external genre search) is being
+// scored against it.
+async function buildUserProfile(userId: string): Promise<UserTasteProfile> {
+  const doneBooks = await prisma.userBook.findMany({
+    where: { userId, status: { in: ["READ", "CURRENTLY_READING", "DID_NOT_FINISH"] } },
+    include: {
+      book: {
+        include: {
+          authors: { include: { author: { select: { name: true } } } },
+          genres: { include: { genre: { select: { name: true } } } },
         },
       },
-      orderBy: { createdAt: "desc" },
-    }),
-    // Profile source: books the user has engaged with (any terminal status)
-    prisma.userBook.findMany({
-      where: { userId, status: { in: ["READ", "CURRENTLY_READING", "DID_NOT_FINISH"] } },
-      include: {
-        book: {
-          include: {
-            authors: { include: { author: { select: { name: true } } } },
-            genres: { include: { genre: { select: { name: true } } } },
-          },
-        },
-      },
-    }),
-  ]);
+    },
+  });
 
-  if (wantToRead.length === 0) return [];
-
-  // Build user profile from books they've read or are reading
   const genreFreq = new Map<string, number>();
   const readAuthors = new Set<string>();
-  const highRatedAuthors = new Set<string>(); // rated ≥ 4 by user
+  const highRatedAuthors = new Set<string>();
   const startedSeriesIds = new Set<string>();
   const dnfSeriesIds = new Set<string>();
 
@@ -75,13 +65,46 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
     }
   }
 
-  // Top-3 genres by frequency
   const top3Genres = new Set(
     [...genreFreq.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([g]) => g),
   );
+
+  return { top3Genres, readAuthors, highRatedAuthors, startedSeriesIds, dnfSeriesIds };
+}
+
+// Heuristic book recommender that scores WANT_TO_READ books in the user's
+// library against their reading history — no AI, no external calls.
+//
+// Scoring weights:
+//   +40  genre matches one of user's top-3 genres
+//   +30  author matches a previously-read author
+//   +20  user rated another book by this author 4 or 5 stars
+//   +10  series continuation (user started this series)
+//   -10  user DNF'd another book in this series
+export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
+  const [wantToRead, profile] = await Promise.all([
+    // Candidate books: everything in the TBR pile
+    prisma.userBook.findMany({
+      where: { userId, status: "WANT_TO_READ" },
+      include: {
+        book: {
+          include: {
+            authors: { include: { author: { select: { name: true } } } },
+            genres: { include: { genre: { select: { name: true } } } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    buildUserProfile(userId),
+  ]);
+
+  if (wantToRead.length === 0) return [];
+
+  const { top3Genres, readAuthors, highRatedAuthors, startedSeriesIds, dnfSeriesIds } = profile;
 
   // Score each WANT_TO_READ book
   const scored: SuggestionDTO[] = wantToRead.map((ub) => {
@@ -148,4 +171,67 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
     .sort((a, b) => b.score - a.score)
     .filter((s) => s.reasons.length > 0)
     .slice(0, 10);
+}
+
+// "By Genre" discovery mode — candidates come from outside the library
+// (Google Books / Open Library, via searchBooksByGenre), so there's no
+// series/genre-match signal to score against (the genre is already the
+// user's own pick, true for every result). Scored instead on the two
+// personal-history signals that still apply, plus a provider-popularity
+// tie-breaker for books with no personal history at all:
+//   +30  author matches a previously-read author
+//   +20  user rated another book by this author 4 or 5 stars
+//   +10  highly rated by readers generally (Google Books avgRating ≥ 4,
+//        with a real sample size — ratingsCount ≥ 50)
+// Unlike getSuggestions, zero-score results are kept (not filtered out) and
+// still shown, ranked below scored ones — discovery mode's job is to show
+// what exists in the genre, not just what matches history, especially for a
+// newer library with little reading history to score against yet.
+export async function getGenreSuggestions(
+  userId: string,
+  genre: string,
+): Promise<GenreSuggestionItem[]> {
+  const [results, profile, owned] = await Promise.all([
+    searchBooksByGenre(genre),
+    buildUserProfile(userId),
+    prisma.book.findMany({
+      where: { userBooks: { some: { userId } } },
+      select: { isbn13: true },
+    }),
+  ]);
+
+  const ownedIsbns = new Set(
+    owned.map((b) => b.isbn13).filter((isbn): isbn is string => !!isbn),
+  );
+  const { readAuthors, highRatedAuthors } = profile;
+
+  const scored: GenreSuggestionItem[] = results
+    .filter((r) => !r.isbn13 || !ownedIsbns.has(r.isbn13))
+    .map((r) => {
+      let score = 0;
+      const reasons: string[] = [];
+
+      const knownAuthors = r.authors.filter((a) => readAuthors.has(a));
+      if (knownAuthors.length > 0) {
+        score += 30;
+        reasons.push(
+          `By ${knownAuthors[0]}${knownAuthors.length > 1 ? " and others" : ""}, an author you've read`,
+        );
+      }
+
+      const highRatedMatch = r.authors.some((a) => highRatedAuthors.has(a));
+      if (highRatedMatch) {
+        score += 20;
+        if (!knownAuthors.length) reasons.push("By a highly-rated author");
+      }
+
+      if ((r.averageRating ?? 0) >= 4 && (r.ratingsCount ?? 0) >= 50) {
+        score += 10;
+        reasons.push("Highly rated by readers");
+      }
+
+      return { ...r, reasons, score };
+    });
+
+  return scored.sort((a, b) => b.score - a.score || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0));
 }
