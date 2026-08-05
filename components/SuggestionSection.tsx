@@ -11,6 +11,7 @@ import { FilterPills, SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { ApiRequestError, lookupIsbn } from "@/lib/api";
 import { useCreateBook, useGenreSuggestions, useSuggestions } from "@/lib/queries";
 import { SUGGESTION_GENRES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { GenreSuggestionItem, SuggestionItem } from "@/lib/api";
 
 type Mode = "library" | "genre";
@@ -28,6 +29,41 @@ const GENRE_ITEMS: readonly TabItem<string>[] = SUGGESTION_GENRES.map((g) => ({
   value: g,
   label: g,
 }));
+
+// Scrollable list shell shared by both modes: a capped-height column with a
+// visible (not auto-hidden) scrollbar — this section can hold more entries
+// than comfortably fit, so the scrollbar itself needs to read as "more
+// below," not disappear like the app's other horizontal-scroll rows do —
+// plus a bottom fade as a second, harder-to-miss hint.
+function SuggestionList({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <div
+        className={cn(
+          "flex max-h-[420px] flex-col gap-2.5 overflow-y-auto pb-1 pr-2",
+          "[scrollbar-width:thin] [scrollbar-color:hsl(var(--muted-foreground)/0.35)_transparent]",
+          "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent",
+          "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/35",
+        )}
+      >
+        {children}
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background to-transparent"
+      />
+    </div>
+  );
+}
+
+function ReasonTag({ reason }: { reason?: string }) {
+  if (!reason) return null;
+  return (
+    <span className="inline-flex shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+      {reason}
+    </span>
+  );
+}
 
 export function SuggestionSection() {
   const [mode, setMode] = React.useState<Mode>("library");
@@ -68,11 +104,11 @@ function LibrarySuggestions() {
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <SuggestionList>
         {suggestions.map((s) => (
-          <LibrarySuggestionCard key={s.id} suggestion={s} />
+          <LibrarySuggestionRow key={s.id} suggestion={s} />
         ))}
-      </div>
+      </SuggestionList>
       <p className="text-xs text-muted-foreground">
         Suggestions are from your Want to Read list, ranked by genre, author, and series match.
       </p>
@@ -80,24 +116,27 @@ function LibrarySuggestions() {
   );
 }
 
-function LibrarySuggestionCard({ suggestion }: { suggestion: SuggestionItem }) {
+// Already in the library — the row opens the book, it doesn't add anything.
+function LibrarySuggestionRow({ suggestion }: { suggestion: SuggestionItem }) {
   return (
     <Link
       href={`/books/${suggestion.id}`}
-      className="group flex w-[140px] shrink-0 flex-col gap-2 transition-transform active:scale-[0.98]"
+      className="block shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-[box-shadow,transform] hover:shadow-card-hover active:scale-[0.99]"
     >
-      <SuggestionCoverFrame
-        coverUrl={suggestion.coverUrl}
-        title={suggestion.title}
-        caption={suggestion.reasons[0]}
-      />
-      <SuggestionCaption title={suggestion.title} author={suggestion.authors[0]} />
+      <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">
+        {suggestion.description?.trim() || suggestion.title}
+      </p>
+      {suggestion.reasons[0] ? (
+        <div className="mt-2.5">
+          <ReasonTag reason={suggestion.reasons[0]} />
+        </div>
+      ) : null}
     </Link>
   );
 }
 
 // External discovery mode — search results aren't in the library yet, so
-// each card opens the same resolve-then-prefill add flow as
+// each row opens the same resolve-then-prefill add flow as
 // SearchResultsView instead of linking to a local /books/[id].
 function GenreSuggestions() {
   const [genre, setGenre] = React.useState("");
@@ -130,11 +169,11 @@ function GenreSuggestions() {
         />
       ) : (
         <div className="space-y-2">
-          <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <SuggestionList>
             {results.map((r, i) => (
-              <GenreSuggestionCard key={r.isbn13 ?? `${r.title}-${i}`} result={r} />
+              <GenreSuggestionRow key={r.isbn13 ?? `${r.title}-${i}`} result={r} />
             ))}
-          </div>
+          </SuggestionList>
           <p className="text-xs text-muted-foreground">
             Ranked by author matches and reader ratings — books you already have are left out.
           </p>
@@ -144,7 +183,7 @@ function GenreSuggestions() {
   );
 }
 
-function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
+function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
   const [prefill, setPrefill] = React.useState<BookPrefill | undefined>(undefined);
   const [resolving, setResolving] = React.useState(false);
   const [formOpen, setFormOpen] = React.useState(false);
@@ -175,6 +214,7 @@ function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
           title: result.title,
           subtitle: result.subtitle,
           authors: result.authors.join(", "),
+          description: result.description,
           publishedDate: result.publishedDate,
           isbn13: result.isbn13,
           coverUrl: result.coverUrl,
@@ -187,6 +227,7 @@ function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
         title: result.title,
         subtitle: result.subtitle,
         authors: result.authors.join(", "),
+        description: result.description,
         publishedDate: result.publishedDate,
         coverUrl: result.coverUrl,
       });
@@ -209,26 +250,24 @@ function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={added ? undefined : handlePick}
-        disabled={resolving || added}
-        className="group flex w-[140px] shrink-0 flex-col gap-2 text-left transition-transform active:scale-[0.98] disabled:cursor-default disabled:active:scale-100"
-      >
-        <div className="relative">
-          <SuggestionCoverFrame
-            coverUrl={result.coverUrl}
-            title={result.title}
-            caption={result.reasons[0]}
-          />
-          <span
-            className={
-              "absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-colors " +
-              (added
+      <div className="shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover">
+        <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">
+          {result.description?.trim() || result.title}
+        </p>
+        <div className="mt-2.5 flex items-center gap-2">
+          <ReasonTag reason={result.reasons[0]} />
+          <button
+            type="button"
+            onClick={added ? undefined : handlePick}
+            disabled={resolving || added}
+            aria-label={added ? "Added to library" : `Add ${result.title}`}
+            title={added ? "Added to library" : "Add to library"}
+            className={cn(
+              "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors active:scale-[0.95] disabled:active:scale-100",
+              added
                 ? "bg-emerald-500 text-white"
-                : "bg-background/90 text-foreground backdrop-blur-sm group-hover:bg-primary group-hover:text-primary-foreground")
-            }
-            aria-hidden
+                : "bg-muted text-foreground hover:bg-primary hover:text-primary-foreground",
+            )}
           >
             {resolving ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -237,10 +276,9 @@ function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
             ) : (
               <Plus className="h-4 w-4" />
             )}
-          </span>
+          </button>
         </div>
-        <SuggestionCaption title={result.title} author={result.authors[0]} />
-      </button>
+      </div>
 
       <Dialog
         open={formOpen}
@@ -258,52 +296,5 @@ function GenreSuggestionCard({ result }: { result: GenreSuggestionItem }) {
         />
       </Dialog>
     </>
-  );
-}
-
-function SuggestionCoverFrame({
-  coverUrl,
-  title,
-  caption,
-}: {
-  coverUrl: string | null | undefined;
-  title: string;
-  caption?: string;
-}) {
-  return (
-    <div className="relative h-[210px] w-[140px] overflow-hidden rounded-xl border bg-muted shadow-cover transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover">
-      {coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={coverUrl}
-          alt={title}
-          className="h-full w-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center bg-primary/10 p-3">
-          <p className="text-center text-xs font-medium leading-snug text-primary/60">
-            {title}
-          </p>
-        </div>
-      )}
-      {caption ? (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6">
-          <p className="line-clamp-2 text-[10px] leading-tight text-white/90">{caption}</p>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SuggestionCaption({ title, author }: { title: string; author?: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="line-clamp-2 text-caption-sm font-medium leading-tight">{title}</p>
-      {author ? (
-        <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">{author}</p>
-      ) : null}
-    </div>
   );
 }

@@ -7,6 +7,7 @@ export interface SuggestionDTO {
   title: string;
   authors: string[];
   coverUrl: string | null;
+  description: string | null;
   reasons: string[];
   score: number;
 }
@@ -161,6 +162,7 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
       title: ub.book.title,
       authors,
       coverUrl: ub.book.coverUrl,
+      description: ub.book.description,
       reasons,
       score,
     };
@@ -226,6 +228,11 @@ export async function getGenreSuggestions(
 
   const scored: GenreSuggestionItem[] = results
     .filter((r) => !r.isbn13 || !ownedIsbns.has(r.isbn13))
+    // The synopsis-led card has nothing to show without one — Open
+    // Library's search response never includes a description at all, so
+    // this mainly drops OL-sourced results in favor of Google Books' (which
+    // does include one), rather than rendering a blank card.
+    .filter((r) => !!r.description?.trim())
     .map((r) => {
       let score = 0;
       const reasons: string[] = [];

@@ -536,6 +536,7 @@ export interface SuggestionItem {
   title: string;
   authors: string[];
   coverUrl: string | null;
+  description: string | null;
   reasons: string[];
   score: number;
 }

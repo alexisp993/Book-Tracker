@@ -263,6 +263,11 @@ export interface BookSearchResult {
   // books with no personal reading history to score against.
   averageRating?: number;
   ratingsCount?: number;
+  // Only Google Books' search response includes this (Open Library's
+  // search.json doesn't); the synopsis-led suggestions cards need it, so
+  // getGenreSuggestions drops any result missing one rather than showing a
+  // blank card.
+  description?: string;
 }
 
 async function searchGoogleBooks(
@@ -296,6 +301,7 @@ async function searchGoogleBooks(
         source: "GOOGLE_BOOKS",
         averageRating: info.averageRating,
         ratingsCount: info.ratingsCount,
+        description: info.description,
       };
     })
     .filter((r): r is BookSearchResult => r !== null);
