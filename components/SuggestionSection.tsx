@@ -70,6 +70,47 @@ function SuggestionList({ children }: { children: React.ReactNode }) {
 // light / dark / forest — passing with real margin in all three. The small
 // leading icon keeps it distinct from the synopsis above it now that the
 // pill is gone.
+// The card's content, in the order a reader should meet it: the synopsis
+// leads (that was the whole point of the redesign), with title and author
+// underneath as a quiet attribution line.
+//
+// The line exists because synopsis-only cards were unrecoverable. The title
+// was already in the DOM — it sat in the add button's aria-label — so a
+// screen-reader user heard "Add The Dark Tower VII" while the sighted reader
+// saw a price sticker. Showing it costs nothing and removes that asymmetry.
+//
+// With no usable synopsis, title becomes the lead instead of leaving a card
+// that is entirely muted text, so a bare record still reads as a real card.
+function SuggestionBody({
+  synopsis,
+  title,
+  author,
+}: {
+  synopsis?: string | null;
+  title: string;
+  author?: string;
+}) {
+  if (!synopsis) {
+    return (
+      <div className="min-w-0">
+        <p className="line-clamp-2 text-sm font-medium leading-relaxed">{title}</p>
+        {author ? (
+          <p className="mt-1 line-clamp-1 text-caption-sm text-muted-foreground">{author}</p>
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <div className="min-w-0">
+      <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">{synopsis}</p>
+      <p className="mt-1.5 line-clamp-1 text-caption-sm text-muted-foreground">
+        {title}
+        {author ? ` · ${author}` : ""}
+      </p>
+    </div>
+  );
+}
+
 function ReasonTag({ reason }: { reason?: string }) {
   if (!reason) return null;
   return (
@@ -141,9 +182,11 @@ function LibrarySuggestionRow({ suggestion }: { suggestion: SuggestionItem }) {
         focusRing,
       )}
     >
-      <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">
-        {suggestion.description?.trim() || suggestion.title}
-      </p>
+      <SuggestionBody
+        synopsis={suggestion.description}
+        title={suggestion.title}
+        author={suggestion.authors[0]}
+      />
       {suggestion.reasons[0] ? (
         <div className="mt-2.5">
           <ReasonTag reason={suggestion.reasons[0]} />
@@ -281,9 +324,11 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
   return (
     <>
       <div className="shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover">
-        <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">
-          {result.description?.trim() || result.title}
-        </p>
+        <SuggestionBody
+          synopsis={result.description}
+          title={result.title}
+          author={result.authors[0]}
+        />
         <div className="mt-2.5 flex items-center gap-2">
           <ReasonTag reason={result.reasons[0]} />
           <button

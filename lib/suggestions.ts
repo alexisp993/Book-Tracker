@@ -174,7 +174,9 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
       title: ub.book.title,
       authors,
       coverUrl: ub.book.coverUrl,
-      description: ub.book.description,
+      // Same gate as the genre path — a stored description can be the same
+      // catalog junk, since that's where it was imported from.
+      description: usableSynopsis(ub.book.description),
       reasons,
       score,
     };
@@ -203,6 +205,32 @@ const RECENT_YEARS = 12;
 function publishedYear(publishedDate: string | undefined): number | null {
   const match = publishedDate?.match(/^(\d{4})/);
   return match ? Number(match[1]) : null;
+}
+
+// Catalog junk that shows up in a provider's "description" field. These are
+// real strings observed in live Google Books results, not hypotheticals:
+// a price sticker ("Sams Local 11-7-2004 $35.00."), Accelerated Reader
+// metadata ("Grade level 8.2, Book #123, Points 4."), and box-set inventory
+// lines. `description` is an unvalidated free-text bin, not a synopsis field.
+const CATALOG_NOISE =
+  /\$\s?\d|Grade level|Points\s+\d|\bAR\b.{0,12}\b(BL|Quiz)\b|Lexile|Contains the complete|^\s*Set of \d/i;
+
+// Suffixes providers append to otherwise-fine copy.
+const SOURCE_SUFFIX = /\s*--\s*(Provided by publisher|Publisher'?s description|From publisher)\.?\s*$/i;
+
+/**
+ * Returns a description only if it can actually carry a card, else null.
+ *
+ * The card leads with this text, so an unusable string is worse than none —
+ * it looks like a book recommendation while saying nothing about a book.
+ * The previous test was "is it non-empty", which a price sticker passes.
+ */
+export function usableSynopsis(description: string | null | undefined): string | null {
+  const cleaned = description?.replace(SOURCE_SUFFIX, "").trim();
+  if (!cleaned) return null;
+  if (cleaned.length < 60) return null;
+  if (CATALOG_NOISE.test(cleaned)) return null;
+  return cleaned;
 }
 
 // "By Genre" discovery mode — candidates come from outside the library
@@ -269,13 +297,14 @@ export async function getGenreSuggestions(
         reasons.push("Recently published");
       }
 
-      // The card leads with the synopsis, so a result that has one is worth
-      // more than a bare record — but this is a ranking nudge, never a
-      // filter (see the fail-open note on the return). No reason string:
-      // "has a description" isn't a recommendation a reader wants to read.
-      if (r.description?.trim()) score += 6;
+      // The card leads with the synopsis, so a result that has a usable one
+      // is worth more than a bare record — but this is a ranking nudge,
+      // never a filter (see the fail-open note on the return). No reason
+      // string: "has a description" isn't a recommendation a reader reads.
+      const synopsis = usableSynopsis(r.description);
+      if (synopsis) score += 6;
 
-      return { ...r, reasons, score };
+      return { ...r, description: synopsis ?? undefined, reasons, score };
     });
 
   // Fail open, not closed.
