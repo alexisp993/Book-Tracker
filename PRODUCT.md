@@ -56,9 +56,16 @@ notes/highlights; collections and shelves with per-group themes (image/icon/colo
 search and barcode scanning; JSON data export; per-user auth; beta feedback + admin tooling.
 
 **Durable constraints (confirmed commitments):**
-- **Dependency-light / free-tier.** No charting or animation libraries — all charts and the heatmap
-  are hand-rolled SVG/CSS. Runs on Vercel Hobby + Neon free tier (Vercel Blob for uploaded images).
-  The constraint is treated as a feature, not a limitation.
+- **Dependency-light / free-tier.** Reach for a library only where hand-rolling stops paying off,
+  and keep the cost on the route that needs it. Runs on Vercel Hobby + Neon free tier (Vercel Blob
+  for uploaded images). Restraint is treated as a feature, not a limitation.
+  - The **reading heatmap and calendar remain hand-rolled SVG/CSS** — they're the product's
+    signature surface and carry bespoke interaction; no library replaces them.
+  - **Statistics** (`/profile/stats`) uses **recharts** for its bar and line charts and
+    **@number-flow/react** for animating counters. Adopted deliberately; the ~122 kB lands on that
+    one route's chunk and the shared bundle is unaffected.
+  - This bullet previously read "no charting or animation libraries," which the code no longer
+    matched — corrected rather than left as a constraint nothing enforced.
 - **Private, no social.** Single-user data scoping; no social feed, public reviews, or
   sharing-by-default.
 - **Three-theme identity.** Light ("warm parchment"), Dark ("midnight ink"), and Forest are
@@ -95,8 +102,9 @@ the status set above.
 1. **Private and honest.** No social, no ads; never fabricate data or features — surface the real
    signal or nothing.
 2. **Calm over dense.** A reading tool should feel like a quiet reading room, not a spreadsheet.
-3. **Dependency-light craft.** Hand-rolled SVG/CSS and free-tier infra; the constraints are part of
-   the identity.
+3. **Dependency-light craft.** Free-tier infra, and hand-rolled SVG/CSS wherever the surface is
+   part of the identity (heatmap, calendar); a library only where it clearly beats hand-rolling,
+   scoped to the route that needs it.
 4. **Reading consistency is the core loop.** Sessions, streaks, and the heatmap are the heart of the
    product, not an afterthought.
 5. **One coherent system.** Reuse shared primitives and the three-theme token system across every
