@@ -186,12 +186,33 @@ body {
   to { stroke-dashoffset: 0; }
 }
 
+/* Reduced motion: remove travel, keep feedback.
+ *
+ * This used to blanket-set transition-duration to 0.01ms, which also erased
+ * the non-vestibular cues the UI relies on to explain itself — the press
+ * state on a button, the active colour on a segmented tab, a card lifting
+ * under the cursor. "Reduce" asks for less movement, not less information.
+ *
+ * So: animations (all of which translate, scale, or draw) resolve instantly
+ * to their end state, and transitions are narrowed to the properties that
+ * carry no motion — colour, opacity, shadow — which stay animated, just
+ * briskly. Anything transform- or layout-based falls outside that list and
+ * therefore snaps, which is the point. The View Transitions block below
+ * handles its own pseudo-element tree, which this cannot reach.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke, opacity, box-shadow !important;
+    transition-duration: 120ms !important;
+  }
+
+  html {
+    scroll-behavior: auto !important;
   }
 }
 
