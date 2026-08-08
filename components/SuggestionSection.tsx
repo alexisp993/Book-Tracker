@@ -56,11 +56,26 @@ function SuggestionList({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Why this book is being suggested — a label, not a control.
+//
+// This was a blue `bg-primary/10 text-primary` pill, which broke two rules
+// at once. Measured, it fell to 4.46:1 in dark (below the 4.5 AA floor) and
+// sat at exactly 4.50 in light, with no headroom in either — hue-on-hue at
+// 11px has almost none to give. And design-system MASTER.md §7 reserves
+// `primary` for interactive/progress, while §7.5 puts labels at
+// `muted-foreground`; a non-interactive metadata tag rendered in the
+// interactive blue was miscoding what the color means.
+//
+// Muted-foreground directly on the card measures 5.30 / 6.71 / 5.47 across
+// light / dark / forest — passing with real margin in all three. The small
+// leading icon keeps it distinct from the synopsis above it now that the
+// pill is gone.
 function ReasonTag({ reason }: { reason?: string }) {
   if (!reason) return null;
   return (
-    <span className="inline-flex shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-      {reason}
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-caption-sm text-muted-foreground">
+      <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
+      <span className="truncate">{reason}</span>
     </span>
   );
 }
