@@ -49,6 +49,25 @@ export function SegmentedTabs<T extends string>({
     return () => window.removeEventListener("resize", measure);
   }, [measure]);
 
+  // The control declared role="tablist"/role="tab" but implemented none of
+  // the keyboard contract that role promises, so a screen-reader user
+  // pressing the arrow keys they'd been told to expect got nothing. Roving
+  // tabindex + arrows + Home/End is the self-contained half of the pattern;
+  // it moves focus and selection together, which is the expected behaviour
+  // for tabs that swap content immediately.
+  function onKeyDown(e: React.KeyboardEvent) {
+    const last = items.length - 1;
+    let next: number | null = null;
+    if (e.key === "ArrowRight") next = activeIndex >= last ? 0 : activeIndex + 1;
+    else if (e.key === "ArrowLeft") next = activeIndex <= 0 ? last : activeIndex - 1;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = last;
+    if (next === null) return;
+    e.preventDefault();
+    onChange(items[next].value);
+    tabRefs.current[next]?.focus();
+  }
+
   return (
     <div
       className={cn("relative flex gap-1 rounded-xl bg-muted p-1", className)}
@@ -72,6 +91,8 @@ export function SegmentedTabs<T extends string>({
             type="button"
             role="tab"
             aria-selected={active}
+            tabIndex={active ? 0 : -1}
+            onKeyDown={onKeyDown}
             onClick={() => onChange(t.value)}
             className={cn(
               "relative z-10 flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-[color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]",

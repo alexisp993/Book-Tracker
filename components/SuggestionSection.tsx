@@ -163,7 +163,10 @@ function SuggestionHeader() {
 function LibrarySuggestions() {
   const { data: suggestions = [], isLoading } = useSuggestions();
 
-  if (isLoading) return null;
+  // Was `return null` — the section collapsed to a bare header and then
+  // popped in, while genre mode showed a spinner for the same wait. Same
+  // component, same kind of fetch; they should resolve the same way.
+  if (isLoading) return <Loading label="Finding suggestions…" />;
   if (suggestions.length === 0) {
     return (
       <EmptyState
@@ -243,7 +246,10 @@ function GenreSuggestions() {
     <div className="space-y-3">
       <FilterPills
         value={genre}
-        onChange={setGenre}
+        // Re-picking the selected genre clears it. Without this there was no
+        // route back to the neutral "pick a genre" state once you'd chosen —
+        // a one-way door on a browsing control.
+        onChange={(g) => setGenre((current) => (current === g ? "" : g))}
         items={genreItems}
         size="sm"
         scrollable
@@ -277,8 +283,15 @@ function GenreSuggestions() {
       ) : (
         <div className="space-y-2">
           <SuggestionList>
-            {results.map((r, i) => (
-              <GenreSuggestionRow key={r.isbn13 ?? `${r.title}-${i}`} result={r} />
+            {results.map((r) => (
+              // Keyed on identity, not position. The old `${title}-${index}`
+              // fallback meant a reorder handed one book's row state — its
+              // expanded panel, its green "added" tick — to whichever book
+              // landed at that index.
+              <GenreSuggestionRow
+                key={r.isbn13 ?? `${r.title}|${r.authors[0] ?? ""}`}
+                result={r}
+              />
             ))}
           </SuggestionList>
           <p className="text-xs text-muted-foreground">
