@@ -225,6 +225,28 @@ const SOURCE_SUFFIX = /\s*--\s*(Provided by publisher|Publisher'?s description|F
  * it looks like a book recommendation while saying nothing about a book.
  * The previous test was "is it non-empty", which a price sticker passes.
  */
+// Google Books subject queries rank on keyword density, so an adult-genre
+// search surfaces picture books and early readers that merely carry the
+// subject tag — a live "Fantasy" query returned Winnie-the-Pooh, Where the
+// Wild Things Are, and Bartholomew and the Oobleck in its top 20.
+//
+// A penalty rather than a filter: these signals are provider-supplied and
+// patchy (Open Library results carry none of them, so they score 0 here and
+// are unaffected), and a genuinely short adult book shouldn't vanish.
+const JUVENILE_CATEGORY = /juvenile|picture book|early reader|board book/i;
+
+function juvenilePenalty(
+  r: { pageCount?: number; categories?: string[] },
+  genre: string,
+): number {
+  // Young Adult asks for exactly what this would suppress.
+  if (genre === "Young Adult") return 0;
+  let penalty = 0;
+  if (r.categories?.some((c) => JUVENILE_CATEGORY.test(c))) penalty -= 25;
+  if (typeof r.pageCount === "number" && r.pageCount > 0 && r.pageCount < 100) penalty -= 15;
+  return penalty;
+}
+
 export function usableSynopsis(description: string | null | undefined): string | null {
   const cleaned = description?.replace(SOURCE_SUFFIX, "").trim();
   if (!cleaned) return null;
@@ -303,6 +325,8 @@ export async function getGenreSuggestions(
       // string: "has a description" isn't a recommendation a reader reads.
       const synopsis = usableSynopsis(r.description);
       if (synopsis) score += 6;
+
+      score += juvenilePenalty(r, genre);
 
       return { ...r, description: synopsis ?? undefined, reasons, score };
     });

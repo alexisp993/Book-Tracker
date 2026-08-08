@@ -9,7 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { BookForm, type BookFormValues, type BookPrefill } from "@/components/BookForm";
 import { FilterPills, SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { ApiRequestError, lookupIsbn } from "@/lib/api";
-import { useCreateBook, useGenreSuggestions, useSuggestions } from "@/lib/queries";
+import { useCreateBook, useGenreSuggestions, useStats, useSuggestions } from "@/lib/queries";
 import { SUGGESTION_GENRES } from "@/lib/constants";
 import { cn, focusRing, hitArea } from "@/lib/utils";
 import type { GenreSuggestionItem, SuggestionItem } from "@/lib/api";
@@ -85,15 +85,19 @@ function SuggestionBody({
   synopsis,
   title,
   author,
+  expanded = false,
 }: {
   synopsis?: string | null;
   title: string;
   author?: string;
+  expanded?: boolean;
 }) {
   if (!synopsis) {
     return (
       <div className="min-w-0">
-        <p className="line-clamp-2 text-sm font-medium leading-relaxed">{title}</p>
+        <p className={cn("text-sm font-medium leading-relaxed", !expanded && "line-clamp-2")}>
+          {title}
+        </p>
         {author ? (
           <p className="mt-1 line-clamp-1 text-caption-sm text-muted-foreground">{author}</p>
         ) : null}
@@ -102,7 +106,16 @@ function SuggestionBody({
   }
   return (
     <div className="min-w-0">
-      <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">{synopsis}</p>
+      <p
+        className={cn(
+          "text-sm leading-relaxed text-foreground/90",
+          // Capped by default so the list stays scannable; the full text is
+          // one tap away rather than behind the add-book modal.
+          !expanded && "line-clamp-3",
+        )}
+      >
+        {synopsis}
+      </p>
       <p className="mt-1.5 line-clamp-1 text-caption-sm text-muted-foreground">
         {title}
         {author ? ` · ${author}` : ""}
@@ -201,6 +214,24 @@ function LibrarySuggestionRow({ suggestion }: { suggestion: SuggestionItem }) {
 // SearchResultsView instead of linking to a local /books/[id].
 function GenreSuggestions() {
   const [genre, setGenre] = React.useState("");
+  const { data: stats } = useStats();
+
+  // Lead with the genres this reader actually reads. The app already knows
+  // them — `genreBreakdown` is computed for Statistics — but the pill row was
+  // a static alphabet, so the one personalised thing this surface could do
+  // was being thrown away. Genres the reader has no books in keep their
+  // original order behind the matches.
+  const genreItems = React.useMemo(() => {
+    const rank = new Map(
+      (stats?.genreBreakdown ?? []).map((g, i) => [g.name.toLowerCase(), i]),
+    );
+    return [...GENRE_ITEMS].sort((a, b) => {
+      const ra = rank.get(a.value.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+      const rb = rank.get(b.value.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+      return ra - rb;
+    });
+  }, [stats?.genreBreakdown]);
+
   const { data, isLoading, isFetching } = useGenreSuggestions(genre);
   const results = data?.results ?? [];
   const providerCount = data?.providerCount ?? 0;
@@ -210,7 +241,7 @@ function GenreSuggestions() {
       <FilterPills
         value={genre}
         onChange={setGenre}
-        items={GENRE_ITEMS}
+        items={genreItems}
         size="sm"
         scrollable
       />
@@ -266,6 +297,7 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
   // with only the thin search fields. Saying so beats letting someone save a
   // half-empty record believing it was fetched.
   const [partialDetails, setPartialDetails] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
 
   const createMutation = useCreateBook();
 
@@ -330,11 +362,40 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
   return (
     <>
       <div className="shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover">
-        <SuggestionBody
-          synopsis={result.description}
-          title={result.title}
-          author={result.authors[0]}
-        />
+        {/* The read-only rung between "no identity" and "a 10-field editable
+            record". Browsing used to mean opening and dismissing a modal per
+            card just to find out what a book was; now the body itself opens
+            to the cover and the untruncated synopsis, and "+" stays a pure
+            commit action. */}
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+          className={cn(
+            "block w-full rounded-lg text-left transition-opacity hover:opacity-90",
+            focusRing,
+          )}
+        >
+          <div className="flex gap-3">
+            {expanded && result.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={result.coverUrl}
+                alt=""
+                className="h-[84px] w-14 shrink-0 rounded-md border bg-muted object-cover shadow-cover"
+                loading="lazy"
+                decoding="async"
+                onError={(e) => (e.currentTarget.style.display = "none")}
+              />
+            ) : null}
+            <SuggestionBody
+              synopsis={result.description}
+              title={result.title}
+              author={result.authors[0]}
+              expanded={expanded}
+            />
+          </div>
+        </button>
         <div className="mt-2.5 flex items-center gap-2">
           <ReasonTag reason={result.reasons[0]} />
           <button

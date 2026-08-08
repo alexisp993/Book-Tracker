@@ -117,6 +117,7 @@ interface GBResponse {
       industryIdentifiers?: { type: string; identifier: string }[];
       averageRating?: number;
       ratingsCount?: number;
+      maturityRating?: string;
     };
   }[];
 }
@@ -264,10 +265,15 @@ export interface BookSearchResult {
   averageRating?: number;
   ratingsCount?: number;
   // Only Google Books' search response includes this (Open Library's
-  // search.json doesn't); the synopsis-led suggestions cards need it, so
-  // getGenreSuggestions drops any result missing one rather than showing a
-  // blank card.
+  // search.json doesn't). The synopsis-led suggestion cards lead with it,
+  // and rank results that have one above those that don't.
   description?: string;
+  // Also Google-Books-only, and used by the genre suggestions scorer to keep
+  // picture books out of adult-genre results: a subject query for "Fantasy"
+  // otherwise surfaces Winnie-the-Pooh on keyword density alone.
+  pageCount?: number;
+  categories?: string[];
+  maturityRating?: string;
 }
 
 async function searchGoogleBooks(
@@ -302,6 +308,9 @@ async function searchGoogleBooks(
         averageRating: info.averageRating,
         ratingsCount: info.ratingsCount,
         description: info.description,
+        pageCount: info.pageCount,
+        categories: info.categories,
+        maturityRating: info.maturityRating,
       };
     })
     .filter((r): r is BookSearchResult => r !== null);
