@@ -14,11 +14,15 @@ export function BrandLogo({
 }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
+    // Serves icon-128, not the 512px master: this renders at 32px in the app
+    // shell and 56px on the auth screens, so 128 still covers the largest use
+    // at 2x DPR while cutting the transfer from 117 KB to ~10 KB. The 512px
+    // original stays in public/ as the source for regenerating the icon set.
     <img
-      src="/book-tracker-logo.png"
+      src="/icon-128.png"
       alt={alt}
-      width={512}
-      height={512}
+      width={128}
+      height={128}
       className={cn("object-cover", className)}
     />
   );
