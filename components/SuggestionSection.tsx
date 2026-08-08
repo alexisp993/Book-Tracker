@@ -11,7 +11,7 @@ import { FilterPills, SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { ApiRequestError, lookupIsbn } from "@/lib/api";
 import { useCreateBook, useGenreSuggestions, useSuggestions } from "@/lib/queries";
 import { SUGGESTION_GENRES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, focusRing } from "@/lib/utils";
 import type { GenreSuggestionItem, SuggestionItem } from "@/lib/api";
 
 type Mode = "library" | "genre";
@@ -121,7 +121,10 @@ function LibrarySuggestionRow({ suggestion }: { suggestion: SuggestionItem }) {
   return (
     <Link
       href={`/books/${suggestion.id}`}
-      className="block shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-[box-shadow,transform] hover:shadow-card-hover active:scale-[0.99]"
+      className={cn(
+        "block shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-[box-shadow,transform] hover:shadow-card-hover active:scale-[0.99]",
+        focusRing,
+      )}
     >
       <p className="line-clamp-3 text-sm leading-relaxed text-foreground/90">
         {suggestion.description?.trim() || suggestion.title}
@@ -264,6 +267,7 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
             title={added ? "Added to library" : "Add to library"}
             className={cn(
               "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors active:scale-[0.95] disabled:active:scale-100",
+              focusRing,
               added
                 ? "bg-emerald-500 text-white"
                 : "bg-muted text-foreground hover:bg-primary hover:text-primary-foreground",

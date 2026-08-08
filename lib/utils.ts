@@ -76,6 +76,24 @@ export function formatDate(value: string | Date | null | undefined): string {
   });
 }
 
+// THE keyboard focus treatment for the whole app.
+//
+// Every shared primitive (ui/button, ui/list, ui/tabs) already spells this
+// out inline, which is exactly why a hand-written surface can silently ship
+// without any focus ring at all — SuggestionSection did, and an audit caught
+// it only by reading computed styles. Import this instead of retyping the
+// classes, so "did you remember the ring?" stops being a per-file judgment
+// call.
+//
+// `focusRing` sits outside the element (buttons, cards, standalone controls).
+// `focusRingInset` draws inside the bounds, for rows and tiles that sit flush
+// against a container edge where an outset ring would be clipped.
+export const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+export const focusRingInset =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+
 // THE duration format for the whole app. Two components previously carried
 // their own copies of this, so the same session read "45 min" on /sessions and
 // "45m" on /calendar. Import this one; don't re-declare it.
