@@ -153,12 +153,12 @@ export interface GenreSuggestionItem extends BookSearchResult {
 
 export async function searchSuggestionsByGenre(
   genre: string,
-): Promise<{ results: GenreSuggestionItem[] }> {
+): Promise<{ results: GenreSuggestionItem[]; providerCount: number }> {
   const res = await fetch(
     `/api/suggestions/genre?genre=${encodeURIComponent(genre)}`,
     { cache: "no-store" },
   );
-  return handle<{ results: GenreSuggestionItem[] }>(res);
+  return handle<{ results: GenreSuggestionItem[]; providerCount: number }>(res);
 }
 
 // --- Shelves & Collections (groups) ---

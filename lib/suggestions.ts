@@ -17,6 +17,18 @@ export interface GenreSuggestionItem extends BookSearchResult {
   score: number;
 }
 
+export interface GenreSuggestionResult {
+  results: GenreSuggestionItem[];
+  /**
+   * How many raw records the metadata providers returned, before the
+   * already-owned filter. Zero means the providers themselves came back
+   * empty (outage, rate limit, or a genuinely unmatched genre); a positive
+   * count with an empty `results` means the reader already owns everything
+   * we found. The UI needs to say different things in those two cases.
+   */
+  providerCount: number;
+}
+
 interface UserTasteProfile {
   top3Genres: Set<string>;
   readAuthors: Set<string>;
@@ -211,7 +223,7 @@ function publishedYear(publishedDate: string | undefined): number | null {
 export async function getGenreSuggestions(
   userId: string,
   genre: string,
-): Promise<GenreSuggestionItem[]> {
+): Promise<GenreSuggestionResult> {
   const [results, profile, owned] = await Promise.all([
     searchBooksByGenre(genre),
     buildUserProfile(userId),
@@ -228,11 +240,6 @@ export async function getGenreSuggestions(
 
   const scored: GenreSuggestionItem[] = results
     .filter((r) => !r.isbn13 || !ownedIsbns.has(r.isbn13))
-    // The synopsis-led card has nothing to show without one — Open
-    // Library's search response never includes a description at all, so
-    // this mainly drops OL-sourced results in favor of Google Books' (which
-    // does include one), rather than rendering a blank card.
-    .filter((r) => !!r.description?.trim())
     .map((r) => {
       let score = 0;
       const reasons: string[] = [];
@@ -262,10 +269,35 @@ export async function getGenreSuggestions(
         reasons.push("Recently published");
       }
 
+      // The card leads with the synopsis, so a result that has one is worth
+      // more than a bare record — but this is a ranking nudge, never a
+      // filter (see the fail-open note on the return). No reason string:
+      // "has a description" isn't a recommendation a reader wants to read.
+      if (r.description?.trim()) score += 6;
+
       return { ...r, reasons, score };
     });
 
-  return scored
-    .sort((a, b) => b.score - a.score || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))
-    .slice(0, 20);
+  // Fail open, not closed.
+  //
+  // This used to drop every result without a description, on the logic that
+  // a synopsis-led card has nothing to show without one. That made the whole
+  // feature depend on a single provider: Open Library's search response never
+  // includes a description, only Google Books' does, and both are wrapped in
+  // `.catch(() => [])`. So any Google Books hiccup — rate limit, thin
+  // records, an outage — filtered *everything* out and the reader got a bare
+  // "No results" for a genre with thousands of matching books. Verified in
+  // the wild: Fantasy returned 18 rows one hour and nothing the next.
+  //
+  // Now a description-less result still renders, ranked below the ones that
+  // have a synopsis, and falls back to title + author on the card.
+  // `providerCount` lets the caller tell "the providers gave us nothing"
+  // apart from "you already own everything we found", which are the same
+  // empty list but very different messages.
+  return {
+    results: scored
+      .sort((a, b) => b.score - a.score || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))
+      .slice(0, 20),
+    providerCount: results.length,
+  };
 }

@@ -160,6 +160,7 @@ function GenreSuggestions() {
   const [genre, setGenre] = React.useState("");
   const { data, isLoading, isFetching } = useGenreSuggestions(genre);
   const results = data?.results ?? [];
+  const providerCount = data?.providerCount ?? 0;
 
   return (
     <div className="space-y-3">
@@ -180,11 +181,22 @@ function GenreSuggestions() {
       ) : isLoading || isFetching ? (
         <Loading label="Finding books…" />
       ) : results.length === 0 ? (
-        <EmptyState
-          icon={Sparkles}
-          title="No results"
-          description={`Nothing found for ${genre}. Try a different genre.`}
-        />
+        // Two very different situations produce an empty list, and telling
+        // the reader "nothing found" for both is misleading: one is us
+        // failing, the other is them already being well-read in this genre.
+        providerCount > 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title={`You already have every ${genre} book we found`}
+            description="Try another genre — anything already in your library is left out of these suggestions."
+          />
+        ) : (
+          <EmptyState
+            icon={Sparkles}
+            title="Couldn't reach the book service"
+            description="No results came back for this genre just now. Try again in a moment, or pick a different genre."
+          />
+        )
       ) : (
         <div className="space-y-2">
           <SuggestionList>

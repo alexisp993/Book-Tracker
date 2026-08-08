@@ -16,11 +16,11 @@ export async function GET(request: Request) {
   const genre = searchParams.get("genre") ?? "";
 
   if (!SUGGESTION_GENRES.includes(genre as (typeof SUGGESTION_GENRES)[number])) {
-    return NextResponse.json({ results: [] });
+    return NextResponse.json({ results: [], providerCount: 0 });
   }
 
   const user = await getCurrentUser();
-  const results = await getGenreSuggestions(user.id, genre);
+  const { results, providerCount } = await getGenreSuggestions(user.id, genre);
 
-  return NextResponse.json({ results });
+  return NextResponse.json({ results, providerCount });
 }
