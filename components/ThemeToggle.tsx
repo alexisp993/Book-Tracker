@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Leaf, Moon, Sun } from "lucide-react";
 import { useTheme, type Theme } from "@/lib/theme";
+import { cn, hitArea } from "@/lib/utils";
 
 // Compat re-exports: theme logic now lives in lib/theme.ts (single source of
 // truth shared with the Profile appearance picker).
@@ -38,7 +39,10 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={cycle}
-      className="inline-flex items-center justify-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      className={cn(
+        "inline-flex items-center justify-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+        hitArea,
+      )}
       aria-label={LABEL[theme]}
       title={LABEL[theme]}
     >

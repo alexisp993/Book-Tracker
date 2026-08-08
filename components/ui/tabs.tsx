@@ -136,7 +136,11 @@ export function FilterPills<T extends string>({
             onClick={() => onChange(t.value)}
             className={cn(
               "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              sm ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
+              // `sm` was py-1 (24px tall) — exactly on the WCAG 2.5.8 floor
+              // and well under MASTER.md §A3's own 44px rule. These sit in a
+              // dense scrolling row, so an expanded invisible hit area would
+              // overlap its neighbours; py-2 buys real height (32px) instead.
+              sm ? "px-3 py-2 text-xs" : "px-3.5 py-1.5 text-sm",
               active
                 ? sm
                   ? "bg-primary text-primary-foreground"

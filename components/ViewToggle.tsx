@@ -36,7 +36,12 @@ export function ViewToggle({
             aria-pressed={active}
             title={opt.label}
             className={cn(
-              "flex h-8 w-9 items-center justify-center rounded-lg transition-colors",
+              // Real size, not an expanded hit area: these two sit flush
+              // against each other, so invisible 44px regions would overlap
+              // and steal each other's taps. 40px matches the sort select and
+              // "New collection" button beside it, keeping the toolbar row on
+              // one baseline — a true 44 would make this the only taller item.
+              "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
               active
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:text-foreground",

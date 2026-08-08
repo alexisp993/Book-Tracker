@@ -11,7 +11,7 @@ import { FilterPills, SegmentedTabs, type TabItem } from "@/components/ui/tabs";
 import { ApiRequestError, lookupIsbn } from "@/lib/api";
 import { useCreateBook, useGenreSuggestions, useSuggestions } from "@/lib/queries";
 import { SUGGESTION_GENRES } from "@/lib/constants";
-import { cn, focusRing } from "@/lib/utils";
+import { cn, focusRing, hitArea } from "@/lib/utils";
 import type { GenreSuggestionItem, SuggestionItem } from "@/lib/api";
 
 type Mode = "library" | "genre";
@@ -283,6 +283,10 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
             className={cn(
               "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors active:scale-[0.95] disabled:active:scale-100",
               focusRing,
+              // Safe here: the button sits alone at the row's trailing edge
+              // inside p-4, so the 44px region stays within the card and
+              // can't reach the next row's button.
+              hitArea,
               added
                 ? "bg-emerald-500 text-white"
                 : "bg-muted text-foreground hover:bg-primary hover:text-primary-foreground",

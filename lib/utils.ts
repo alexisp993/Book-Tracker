@@ -94,6 +94,18 @@ export const focusRing =
 export const focusRingInset =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
+// Expands a control's *tappable* region to the 44×44 minimum in MASTER.md
+// §A3 without inflating how big it looks — the doc's own prescribed fix
+// ("enlarge, or add invisible padding to hit-area"). A centred transparent
+// pseudo-element does the work; `min-h-full`/`min-w-full` keep it from ever
+// shrinking a control that's already larger.
+//
+// Only for controls with clear space around them. Do NOT put this on items
+// in a dense row: neighbouring invisible regions would overlap and steal
+// each other's taps, which is worse than the small target it fixes.
+export const hitArea =
+  "relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:min-h-full after:min-w-full after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']";
+
 // THE duration format for the whole app. Two components previously carried
 // their own copies of this, so the same session read "45 min" on /sessions and
 // "45m" on /calendar. Import this one; don't re-declare it.

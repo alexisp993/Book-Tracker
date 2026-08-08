@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, hitArea } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/queries";
 
 // Hand-rolled dropdown (no menu primitive exists in this app's UI kit yet) —
@@ -40,7 +40,10 @@ export function AccountMenu() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center justify-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        className={cn(
+          "inline-flex items-center justify-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+          hitArea,
+        )}
         aria-label="Account menu"
         aria-expanded={open}
       >
