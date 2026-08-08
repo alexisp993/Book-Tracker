@@ -262,11 +262,16 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
   const [formOpen, setFormOpen] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [added, setAdded] = React.useState(false);
+  // The full-record lookup can miss, and the fallback quietly fills the form
+  // with only the thin search fields. Saying so beats letting someone save a
+  // half-empty record believing it was fetched.
+  const [partialDetails, setPartialDetails] = React.useState(false);
 
   const createMutation = useCreateBook();
 
   async function handlePick() {
     setFormError(null);
+    setPartialDetails(false);
     if (result.isbn13) {
       setResolving(true);
       try {
@@ -283,6 +288,7 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
           coverUrl: full.coverUrl,
         });
       } catch {
+        setPartialDetails(true);
         setPrefill({
           title: result.title,
           subtitle: result.subtitle,
@@ -335,8 +341,10 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
             type="button"
             onClick={added ? undefined : handlePick}
             disabled={resolving || added}
-            aria-label={added ? "Added to library" : `Add ${result.title}`}
-            title={added ? "Added to library" : "Add to library"}
+            aria-label={
+              added ? `${result.title} added to your library` : `Add ${result.title} to your library`
+            }
+            title={added ? "Added to your library" : "Add to your library"}
             className={cn(
               "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors active:scale-[0.95] disabled:active:scale-100",
               focusRing,
@@ -363,8 +371,14 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
       <Dialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title="Add a book"
-        description="Review the details, then save."
+        // Name the book. This dialog is the moment identity finally resolves,
+        // and titling it "Add a book" buried the answer inside a form field.
+        title={`Add ${result.title}`}
+        description={
+          partialDetails
+            ? "We couldn't load the full record for this one — check the details before saving."
+            : "Review the details, then save."
+        }
       >
         <BookForm
           key={prefill?.isbn13 ?? prefill?.title ?? "new"}
