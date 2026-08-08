@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, hitArea } from "@/lib/utils";
 
 export interface TabItem<T extends string> {
   value: T;
@@ -75,6 +75,11 @@ export function SegmentedTabs<T extends string>({
             onClick={() => onChange(t.value)}
             className={cn(
               "relative z-10 flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-[color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]",
+              // 32px visually, 44px to a fingertip. Safe despite sitting
+              // adjacent: every tab is wider than 44px, so `min-w-full` in
+              // hitArea wins and the region never grows sideways into its
+              // neighbour — it only expands vertically, into the row's gap.
+              hitArea,
               active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -136,6 +141,10 @@ export function FilterPills<T extends string>({
             onClick={() => onChange(t.value)}
             className={cn(
               "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              // Same reasoning as SegmentedTabs above: pills run 61-111px
+              // wide, comfortably past 44, so the hit region only grows
+              // vertically and can't steal a neighbour's tap.
+              hitArea,
               // `sm` was py-1 (24px tall) — exactly on the WCAG 2.5.8 floor
               // and well under MASTER.md §A3's own 44px rule. These sit in a
               // dense scrolling row, so an expanded invisible hit area would

@@ -48,9 +48,12 @@ function SuggestionList({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
+      {/* Shortened from h-10: the taller fade washed over the last visible
+          card's add button, dimming a live control to signal scroll. 24px
+          still reads as "more below" without touching the button row. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background to-transparent"
       />
     </div>
   );
@@ -415,7 +418,11 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
               hitArea,
               added
                 ? "bg-emerald-500 text-white"
-                : "bg-muted text-foreground hover:bg-primary hover:text-primary-foreground",
+                : // `bg-muted` on `bg-card` nearly disappears in dark, which
+                  // left the card's only action as its weakest element in the
+                  // theme the product calls "midnight ink". A border gives it
+                  // an edge in every theme without shouting.
+                  "border bg-muted text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground",
             )}
           >
             {resolving ? (
