@@ -568,23 +568,6 @@ export function useGenreSuggestions(genre: string) {
   });
 }
 
-// --- Home config ---
-
-export function useHomeConfig() {
-  return useQuery({
-    queryKey: ["homeConfig"],
-    queryFn: () => api.getHomeConfig(),
-    staleTime: 60_000,
-  });
-}
-
-export function useUpdateHomeConfig() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (config: import("@/lib/homeConfig").HomeSection[]) =>
-      api.putHomeConfig(config),
-    onSuccess: (data) => {
-      qc.setQueryData(["homeConfig"], data);
-    },
-  });
-}
+// Home-config hooks removed with the dashboard customizer — Home is a fixed
+// editorial composition now, so there is no per-user section order to read or
+// write. `User.homeConfig` remains in the schema as an inert nullable column.

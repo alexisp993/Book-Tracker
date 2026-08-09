@@ -81,3 +81,68 @@ export function Section({
     </section>
   );
 }
+
+// THE editorial section label: small, uppercase, widely tracked, muted, sans.
+//
+// Deliberately identical everywhere it appears. Section headings previously all
+// shared one serif size/weight, which meant "Currently Reading", "Quick Actions"
+// and "Reading Calendar" competed at equal rank and none of them read as
+// structure. Making the label quiet and uniform lets it recede into a system,
+// and hands the page's typographic weight to the thing that deserves it — the
+// book.
+export function SectionLabel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "text-caption-sm font-medium uppercase tracking-[0.12em] text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
+/**
+ * An editorial band: a hairline rule, a quiet label, then content.
+ *
+ * The separator *is* the structure — no border box, no background, no shadow.
+ * More space above the rule than below the label, so the eye reads the group as
+ * belonging to what follows it rather than floating between two regions.
+ */
+export function Band({
+  label,
+  actions,
+  children,
+  className,
+  divider = true,
+}: {
+  label?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  divider?: boolean;
+}) {
+  return (
+    <section
+      className={cn(
+        divider && "border-t border-border/60 pt-8 sm:pt-10",
+        className,
+      )}
+    >
+      {label ? (
+        <div className="mb-5 flex items-baseline justify-between gap-4">
+          <SectionLabel>{label}</SectionLabel>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}

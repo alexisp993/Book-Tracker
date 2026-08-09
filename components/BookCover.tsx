@@ -23,6 +23,12 @@ const COVER_SIZES = {
   lg: "h-[132px] w-[88px] rounded-xl",
   /** Browsing size — Library's shelves, where covers are the content. */
   xl: "h-[186px] w-[124px] rounded-xl",
+  /**
+   * The one book on the page that matters most. Sized so the cover, not the
+   * heading, is the first thing the eye lands on — a reading app's display
+   * moment is a book, not type.
+   */
+  hero: "h-[228px] w-[152px] rounded-xl sm:h-[276px] sm:w-[184px]",
   /** Fills its container at the true 2:3 book ratio. */
   fill: "aspect-[2/3] w-full rounded-xl",
 } as const;
