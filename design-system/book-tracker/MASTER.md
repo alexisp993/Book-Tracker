@@ -19,20 +19,42 @@
 Themes are **classes on `<html>`** (`.dark`, `.forest`), applied pre-paint from
 `localStorage["bt_theme"]`. Consumed as `hsl(var(--x))`.
 
-| Token | Light (warm parchment) | Dark (midnight ink) | Forest |
+**"Bound"** — the palette comes from the materials a book is made of: the text
+block (paper), the binding (cloth), the stamp (foil), and ink. Light is the
+open page; Dark is the same book closed, bound in navy cloth; Forest is the
+green-cloth binding. The greyer paper is deliberate — cream plus a serif is
+the reflexive "book app" look, and the grey is what makes this read as a
+printed object rather than parchment.
+
+| Token | Light (text block) | Dark (navy cloth) | Forest (green cloth) |
 |---|---|---|---|
-| `--background` | `36 28% 97%` | `22 16% 8%` | `150 22% 8%` |
-| `--foreground` | `20 14% 11%` | `36 20% 96%` | `120 14% 91%` |
-| `--card` | `36 33% 99%` | `22 14% 11%` | `150 18% 12%` |
-| `--primary` | `221 83% 53%` | `217 91% 64%` | `142 44% 52%` |
-| `--secondary` / `--muted` / `--accent` | `30 20% 93%` | `22 12% 16%` | `150 16% 17%` |
-| `--muted-foreground` | `25 10% 42%` | `30 10% 65%` | `120 8% 60%` |
-| `--border` | `30 16% 88%` | `22 12% 19%` | `150 14% 21%` |
-| `--input` | `30 16% 85%` | `22 12% 22%` | `150 14% 23%` |
-| `--ring` | `221 83% 53%` | `217 91% 64%` | `142 44% 52%` |
-| `--warm` | `18 75% 54%` | `22 80% 62%` | `35 72% 52%` |
-| `--destructive` | `0 72% 51%` | `0 70% 60%` | `0 65% 58%` |
+| `--background` | `40 14% 92%` | `220 20% 8%` | `156 24% 7%` |
+| `--foreground` | `25 14% 13%` | `40 18% 94%` | `96 14% 92%` |
+| `--card` | `40 22% 97%` | `220 16% 13%` | `156 19% 12%` |
+| `--primary` | `219 52% 33%` | `214 68% 63%` | `146 40% 55%` |
+| `--secondary` / `--muted` / `--accent` | `38 13% 87%` | `220 14% 17%` | `156 16% 16%` |
+| `--muted-foreground` | `28 8% 40%` | `35 9% 66%` | `100 9% 64%` |
+| `--border` | `36 12% 83%` | `220 13% 20%` | `156 14% 20%` |
+| `--input` | `36 12% 78%` | `220 13% 23%` | `156 14% 23%` |
+| `--ring` | `219 52% 33%` | `214 68% 63%` | `146 40% 55%` |
+| `--warm` (brass foil) | `32 62% 44%` | `34 72% 58%` | `34 68% 55%` |
+| `--destructive` | `4 62% 44%` | `4 66% 60%` | `6 68% 64%` |
 | `--radius` | `0.85rem` | *(inherits)* | `1rem` |
+
+> **The format of these values is load-bearing.** They must stay bare,
+> space-separated HSL triples, and `--heat-*` must stay plain hex. Two
+> consumers hand-parse them: `tailwind.config.ts` wraps each as
+> `hsl(var(--x))`, and `readThemePalette()` in `CalendarView.tsx` splits the
+> triple to build the calendar PNG. Canvas silently ignores an invalid
+> `fillStyle` and keeps the previous colour, so a format change there produces
+> a quietly wrong export that no build step can catch.
+
+> Forest's `--destructive` is lighter than the other themes' on purpose: at the
+> shared value it measured 4.14:1 on Forest's card, under the AA floor.
+
+> `--heat-1..4` are a fixed brand commitment (green in every theme, never
+> blue). `--heat-0` is **not** part of that ramp — it is the empty cell, and is
+> re-derived per theme to sit on that theme's ground.
 
 **Rules**
 
@@ -64,14 +86,26 @@ old stock values; only Forest changes. Verified in-browser:
 ## 2. Typography
 
 - **Body:** Inter — `--font-sans`, variable, `display: swap`
-- **Display:** Cormorant Garamond — `--font-serif`, weights 400/500/600/700, exposed via the
+- **Display:** Literata — `--font-serif`, variable axis, exposed via the
   hand-written `.font-display` class in `globals.css` (**not** a Tailwind `fontFamily` key)
 
 Editorial serif display + neutral sans body is the right pairing for a reading app. Keep it.
 
+Literata replaced Cormorant Garamond. Cormorant is a *display* face — small
+x-height, hairline strokes — and most titles in this app render at 13–15px,
+where it went weak and generic. Literata was drawn for long-form book reading
+and holds weight small. Two consequences to respect:
+
+- **Display weight tops out at `font-semibold` (600).** Literata's 700 is
+  markedly blacker than Cormorant's; page titles use 600, not bold.
+- **`.font-display` sets no letter-spacing.** The old blanket `-0.01em` was
+  tuned for Cormorant's loose fit and crowds Literata at small sizes. Apply
+  `tracking-tight` at the call site for ~24px and above; leave small titles
+  alone.
+
 | Role | Class |
 |---|---|
-| Screen title | `font-display text-2xl font-bold tracking-tight` |
+| Screen title | `font-display text-2xl font-semibold tracking-tight` |
 | Card / section title | `font-display text-lg font-semibold` |
 | List / card-row title | `font-display text-title-sm font-semibold leading-tight` (15px — a real gap between `text-sm`/14px and this row, found via `/impeccable typeset`: 8 files had independently converged on the identical arbitrary `text-[15px]`, so it's named as `fontSize.title-sm` in `tailwind.config.ts` rather than left a magic number) |
 | Body | `text-sm` |
@@ -115,7 +149,9 @@ All primitives live in `components/ui/`. **Never hand-roll these patterns again*
 | `Button` | `ui/button.tsx` | variants `default\|outline\|ghost\|destructive` × sizes `default\|sm\|icon` |
 | `Input` `Textarea` `Select` `Label` | `ui/input.tsx` | native passthrough, no variants |
 | `Dialog` | `ui/dialog.tsx` | Escape to close, scroll-lock, bottom sheet under `sm` |
-| `Card` | `ui/card.tsx` | `rounded-2xl border bg-card p-4 sm:p-5`; `title` optional; pass layout via `className` (it merges). Every content panel uses this — the only raw `rounded-2xl border bg-card` divs left are a `<button>` (AddBookLauncher option) and a `<form>` (FeedbackForm), which Card can't be |
+| `Card` | `ui/card.tsx` | `rounded-2xl border bg-card p-4 sm:p-5`; `title` optional; pass layout via `className` (it merges). **A bounded object**, not every titled region — see the Card/Section rule below |
+| `Section` | `ui/section.tsx` | A labelled region: heading + optional subtitle + optional trailing action, with **no** border, background, shadow or padding. `Card` composes its header so the two can't drift |
+| `CoverFrame` | `BookCover.tsx` | The framed box a cover sits in, at one of `xs / sm / md / lg / xl / fill`. Radius scales with the box; every size carries `shadow-cover` |
 | `Stat` | `ui/stat.tsx` | tinted icon badge + value + label |
 | `ListContainer` / `ListRow` | `ui/list.tsx` | row `px-4 py-3`, icon `h-4 w-4` (Lucide component, not a node), `ChevronRight h-4 w-4` |
 | `SegmentedTabs` | `ui/tabs.tsx` | `rounded-xl bg-muted p-1`; active `bg-card shadow-sm` |
@@ -143,12 +179,23 @@ render the header in **every** state, including loading and empty.
 
 ## 5. Visual hierarchy
 
-1. **One H1 per screen** via `PageHeader`. Never two competing titles.
-2. Numbers lead in stat contexts: value `text-2xl`+ first, label `text-xs muted` second.
-3. Color carries meaning, never decoration — `primary` = interactive/progress, `warm` = streaks,
+1. **`Card` for bounded objects; `Section` for labelled regions.** If the
+   content is something you could pick up and move — one book's
+   continue-reading tile, a note, a chart — it's a Card. If it's a labelled
+   part of the page — a shelf of covers, a row of metrics, a group of action
+   tiles — it's a Section. A border around everything ranks nothing: uniform
+   elevation is why this app's hierarchy previously rested entirely on type
+   size. **Never nest a Card inside a Card.**
+2. **Covers are the hero.** A book cover is the most designed object on any
+   screen it appears on, and should generally be the largest. Size it with
+   `CoverFrame`; don't hand-roll a box. Resist stacking badges, pills and
+   metadata onto the artwork.
+3. **One H1 per screen** via `PageHeader`. Never two competing titles.
+4. Numbers lead in stat contexts: value `text-2xl`+ first, label `text-xs muted` second.
+5. Color carries meaning, never decoration — `primary` = interactive/progress, `warm` = streaks,
    `destructive` = irreversible, accent tints = category identity only.
-4. **Max one primary filled button per view.** Everything else `outline` or `ghost`.
-5. Chrome recedes: nav / toolbars / labels at `muted-foreground`, content at `foreground`.
+6. **Max one primary filled button per view.** Everything else `outline` or `ghost`.
+7. Chrome recedes: nav / toolbars / labels at `muted-foreground`, content at `foreground`.
 
 ---
 
