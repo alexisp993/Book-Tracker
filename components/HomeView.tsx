@@ -127,7 +127,10 @@ export function HomeView() {
   const { data: shelves } = useGroups("shelves");
 
   // Two years back, matching what the calendar preview used to request.
-  const { data: calendarDays } = useCalendarRange(0, (1 + 1) * 371);
+  const { data: calendarDays, isLoading: calendarLoading } = useCalendarRange(
+    0,
+    (1 + 1) * 371,
+  );
 
   const currentlyReadingBooks = currentlyReading?.items ?? [];
   const wantToReadBooks = wantToRead?.items ?? [];
@@ -239,13 +242,24 @@ export function HomeView() {
       <Band label="Reading activity">
         {/* The heatmap, unwrapped. It used to sit inside a Card inside a
             titled section — a box around a box around a grid. */}
-        <Heatmap
-          minutesByDate={minutesByDate}
-          year={calendarYear}
-          onYearChange={setCalendarYear}
-          minYear={year - 1}
-          isEmpty={minutesByDate.size === 0}
-        />
+        {calendarLoading ? (
+          <div
+            className="h-40 w-full animate-pulse rounded-xl bg-muted/60"
+            role="status"
+            aria-label="Loading your reading activity"
+          />
+        ) : (
+          <Heatmap
+            minutesByDate={minutesByDate}
+            year={calendarYear}
+            onYearChange={setCalendarYear}
+            minYear={year - 1}
+            // Only claim emptiness once the data has actually arrived —
+            // otherwise an in-flight query renders "No reading activity yet"
+            // at someone with a year of sessions behind them.
+            isEmpty={minutesByDate.size === 0}
+          />
+        )}
       </Band>
     </div>
   );

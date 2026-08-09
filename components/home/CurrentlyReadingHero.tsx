@@ -24,10 +24,37 @@ export function CurrentlyReadingHero({
 }: {
   onContinue: (book: LibraryBook) => void;
 }) {
-  const { data } = useBooks({ status: "CURRENTLY_READING", pageSize: 50 });
+  const { data, isLoading } = useBooks({
+    status: "CURRENTLY_READING",
+    pageSize: 50,
+  });
   const { data: sessionStats } = useSessionStats();
 
   const books = data?.items ?? [];
+
+  // Loading is not the same as empty, and this section is the one place where
+  // conflating them actively lies: an in-flight query would otherwise render
+  // "Nothing on the go right now" to a reader who is midway through a book.
+  // The skeleton holds the hero's exact geometry so nothing jumps when the
+  // real book arrives.
+  if (isLoading) {
+    return (
+      <Band label="Currently reading" divider={false}>
+        <div
+          className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-9"
+          role="status"
+          aria-label="Loading your current book"
+        >
+          <div className="h-[228px] w-[152px] shrink-0 animate-pulse rounded-xl bg-muted sm:h-[276px] sm:w-[184px]" />
+          <div className="min-w-0 flex-1 space-y-3 pb-1">
+            <div className="h-9 w-2/3 animate-pulse rounded bg-muted sm:h-11" />
+            <div className="h-5 w-1/3 animate-pulse rounded bg-muted" />
+            <div className="h-1 w-full max-w-sm animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+      </Band>
+    );
+  }
 
   // The grid used to swallow a null section silently. A fixed composition can't
   // — a hole where the hero belongs reads as breakage — so an empty shelf gets
