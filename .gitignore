@@ -33,3 +33,10 @@ yarn-error.log*
 
 .vercel
 .env*
+
+# Local agent/skill tooling — installed per-machine, not part of the app
+.agents/
+.claude/skills/
+.impeccable/
+.codex/
+skills-lock.json
