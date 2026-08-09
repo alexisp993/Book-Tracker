@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
-import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
+import { Band } from "@/components/ui/section";
 import { BackHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
@@ -39,18 +39,9 @@ import { NotesView } from "@/components/NotesView";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/utils";
 
-type Tab = "info" | "sessions" | "notes";
-
-const DETAIL_TABS: readonly TabItem<Tab>[] = [
-  { value: "info", label: "Info" },
-  { value: "sessions", label: "Sessions" },
-  { value: "notes", label: "Notes" },
-];
-
 export function BookDetailView({ id }: { id: string }) {
   const router = useRouter();
   const { data: book, isLoading } = useBook(id);
-  const [tab, setTab] = React.useState<Tab>("info");
   const [formOpen, setFormOpen] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [sessionError, setSessionError] = React.useState<string | null>(null);
@@ -160,20 +151,20 @@ export function BookDetailView({ id }: { id: string }) {
           not a liftable object sitting on it, so the composition is carried by
           the cover's scale and the title's size rather than a border. The
           cover moves onto the shared scale instead of a one-off width. */}
-      <div className="grid grid-cols-[auto_1fr] gap-5 sm:gap-7">
-        <CoverFrame size="xl">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-9">
+        <CoverFrame size="hero" className="self-start">
           <BookCover book={book} />
         </CoverFrame>
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-balance sm:text-3xl">
+        <div className="min-w-0 flex-1 pb-1">
+          <h1 className="font-display text-3xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-[2.75rem]">
             {book.title}
           </h1>
           {book.subtitle ? (
-            <p className="mt-0.5 text-sm text-muted-foreground leading-snug">
+            <p className="mt-1.5 text-sm leading-snug text-muted-foreground">
               {book.subtitle}
             </p>
           ) : null}
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 font-display text-lg italic text-muted-foreground">
             {book.authors.length > 0 ? book.authors.join(", ") : "Unknown author"}
           </p>
 
@@ -211,18 +202,24 @@ export function BookDetailView({ id }: { id: string }) {
               on per book. */}
           <div className="relative mt-4" ref={progressMenuRef}>
             <div className="flex">
+              {/* Outline, and sentence case. A filled button beside a hero
+                  cover competes with the artwork for the same attention —
+                  Home spends its one filled affordance on the global "Start
+                  reading" FAB, and this was the app's only Title Case control. */}
               <Button
                 type="button"
+                variant="outline"
                 size="sm"
                 className="rounded-r-none"
                 onClick={() => { setFormError(null); setFormOpen(true); }}
               >
-                Update Progress
+                Update progress
               </Button>
               <Button
                 type="button"
+                variant="outline"
                 size="icon"
-                className="w-8 rounded-l-none border-l border-primary-foreground/20"
+                className="w-8 rounded-l-none border-l-0"
                 onClick={() => setProgressMenuOpen((v) => !v)}
                 aria-label="More actions"
                 aria-haspopup="menu"
@@ -289,13 +286,21 @@ export function BookDetailView({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Tab bar */}
-      <SegmentedTabs value={tab} onChange={setTab} items={DETAIL_TABS} />
-
-      {/* Tab content */}
-      {tab === "info" && <InfoTab book={book} />}
-      {tab === "sessions" && <SessionsTab userBookId={book.id} />}
-      {tab === "notes" && <NotesTab userBookId={book.id} />}
+      {/* Three Bands, not a tab bar. Tabs made this a record with views; a
+          book's page is one document you read down — what it is, when you read
+          it, what you thought. It also retires the segmented control whose
+          inactive labels measured 4.29:1 against the track, under AA. */}
+      <div className="space-y-8 sm:space-y-10">
+        <Band label="About">
+          <InfoTab book={book} />
+        </Band>
+        <Band label="Sessions">
+          <SessionsTab userBookId={book.id} />
+        </Band>
+        <Band label="Notes">
+          <NotesTab userBookId={book.id} />
+        </Band>
+      </div>
 
       {/* Edit modal — no onDelete here: it used to fire deleteMutation with
           zero confirmation (the only unconfirmed delete path in the app,
@@ -364,14 +369,11 @@ function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="mb-1.5 text-sm font-semibold">About</h2>
-        {/* Capped to a readable measure — in the full-width shell this ran to
-            ~1250px per line. */}
-        <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground line-clamp-6">
-          {book.description || "No description available."}
-        </p>
-      </div>
+      {/* No local heading — the enclosing Band already says "About". Capped to
+          a readable measure; in the full-width shell this ran ~1250px a line. */}
+      <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground line-clamp-6">
+        {book.description || "No description available."}
+      </p>
 
       {/* A colophon, not six tiles. This is the flat metadata off a book's
           copyright page — a definition list separated by hairlines, so it
