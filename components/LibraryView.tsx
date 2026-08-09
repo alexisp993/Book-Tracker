@@ -277,7 +277,7 @@ export function LibraryView() {
     <div className="space-y-4">
       {/* Compact toolbar: title + search + sort + view + add + scan */}
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto font-display text-2xl font-bold tracking-tight">
+        <h1 className="mr-auto font-display text-2xl font-semibold tracking-tight">
           Library
         </h1>
         <div className="relative order-last w-full sm:order-none sm:w-56">

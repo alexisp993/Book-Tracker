@@ -9,8 +9,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Your unlimited personal library and reading tracker.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fdfdfc",
-    theme_color: "#1f3b52",
+    // Kept in step with the light theme's --background and --primary in
+    // app/globals.css. These can't read the CSS vars, so they're hand-derived
+    // and drift silently — the previous theme_color was a blue that matched
+    // nothing in the palette.
+    background_color: "#edece8",
+    theme_color: "#284780",
     icons: [
       {
         src: "/book-tracker-logo.png",

@@ -53,7 +53,7 @@ export default function RegisterPage() {
           <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-warm/15 text-warm">
             <PartyPopper className="h-6 w-6" />
           </span>
-          <h1 className="font-display text-lg font-bold tracking-tight">
+          <h1 className="font-display text-lg font-semibold tracking-tight">
             Beta Tester Registration Closed
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <BrandLogo className="mb-3 h-14 w-14 rounded-2xl shadow-card" />
-          <h1 className="font-display text-xl font-bold tracking-tight">
+          <h1 className="font-display text-xl font-semibold tracking-tight">
             Join the beta
           </h1>
           <p className="text-sm text-muted-foreground">

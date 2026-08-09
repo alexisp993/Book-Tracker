@@ -294,7 +294,7 @@ function YearHeroCard({
       </div>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
-          <p className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
+          <p className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
             <NumberFlow value={stats.booksThisYear} /> book{stats.booksThisYear === 1 ? "" : "s"}
           </p>
           <div className="mt-1">
@@ -404,7 +404,7 @@ function TimeReadChart({
   return (
     <Card title="Time Read">
       <div className="mb-2">
-        <p className="font-display text-3xl font-bold">{formatDuration(totalMinutes)}</p>
+        <p className="font-display text-3xl font-semibold">{formatDuration(totalMinutes)}</p>
         <YoyDelta pct={yoyPct} />
       </div>
       <MonthlyBarChart

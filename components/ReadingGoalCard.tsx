@@ -116,7 +116,7 @@ function GoalRing({ goal }: { goal: GoalDTO }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-lg font-bold leading-none">{pct}%</span>
+          <span className="font-display text-lg font-semibold leading-none">{pct}%</span>
           <span className="text-[10px] text-muted-foreground">of goal</span>
         </div>
       </div>

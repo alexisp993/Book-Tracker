@@ -2,37 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Warm, literary palette: a soft parchment neutral (not cool gray), a blue
-   primary for actions, and a terracotta secondary accent for warmth — used
-   sparingly (favorites, highlights, the "currently reading" quick action) so
-   the app doesn't read as flat black/white/blue. */
+/* ═══════════════════════════════════════════════════════════════════════
+   "Bound" — the palette is drawn from the materials a book is made of:
+   the text block (paper), the binding (cloth), the stamp (foil), and ink.
+
+   Light is the open page. Dark is the closed book — a navy-black bookcloth
+   rather than a neutral charcoal. Forest is the green-cloth binding.
+
+   ⚠ FORMAT IS LOAD-BEARING. Colour tokens must stay bare, space-separated
+   HSL triples ("H S% L%") and --heat-* must stay plain hex. Two consumers
+   parse them by hand:
+     • tailwind.config.ts wraps every colour as hsl(var(--x)) — a different
+       format breaks every colour utility in the app, loudly.
+     • readThemePalette() in components/CalendarView.tsx splits the triple
+       to build the calendar PNG export. Canvas silently ignores an invalid
+       fillStyle and keeps the previous colour, so a format change there
+       produces a quietly wrong image that no build step can catch.
+   If OKLCH authoring is ever wanted, convert to HSL at authoring time.
+   ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --background: 36 28% 96%;
-  --foreground: 20 14% 11%;
-  --card: 36 33% 100%;
-  --card-foreground: 20 14% 11%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 30 20% 93%;
-  --secondary-foreground: 20 14% 14%;
-  --muted: 30 20% 93%;
-  --muted-foreground: 25 10% 42%;
-  --accent: 30 20% 93%;
-  --accent-foreground: 20 14% 14%;
-  --warm: 18 75% 54%;
-  --warm-foreground: 0 0% 100%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 30 16% 88%;
-  --input: 30 16% 85%;
-  --ring: 221 83% 53%;
+  /* Uncoated text-block stock. Deliberately greyer and cooler than the cream
+     it replaces — cream+serif is the reflexive "book app" look, and the grey
+     is what makes this read as a printed page rather than parchment. */
+  --background: 40 14% 92%;
+  --foreground: 25 14% 13%;
+  --card: 40 22% 97%;
+  --card-foreground: 25 14% 13%;
+  /* Bookcloth indigo — printer's ink, not stock UI blue. Deep enough to sit
+     as type-weight colour on paper, which #2563eb never was. */
+  --primary: 219 52% 33%;
+  --primary-foreground: 40 30% 97%;
+  --secondary: 38 13% 87%;
+  --secondary-foreground: 25 14% 16%;
+  --muted: 38 13% 87%;
+  --muted-foreground: 28 8% 40%;
+  --accent: 38 13% 87%;
+  --accent-foreground: 25 14% 16%;
+  /* Brass foil — the stamped-cover accent. Reserved for streaks. */
+  --warm: 32 62% 44%;
+  --warm-foreground: 40 30% 97%;
+  --destructive: 4 62% 44%;
+  --destructive-foreground: 40 30% 97%;
+  --border: 36 12% 83%;
+  --input: 36 12% 78%;
+  --ring: 219 52% 33%;
   --radius: 0.85rem;
 
   /* Elevation scale. Two layers each: a tight contact shadow that anchors the
-     surface, plus a wider soft one that gives it lift. Tinted with the warm
-     palette rather than pure black so cards don't grey out the parchment.
+     surface, plus a wider soft one that gives it lift. Tinted into the paper
+     hue rather than pure black so cards don't grey out the ground.
      --shadow-3 is for book covers, which should read as physical objects. */
-  --shadow-color: 30 25% 35%;
+  --shadow-color: 30 25% 30%;
   --shadow-1: 0 1px 2px hsl(var(--shadow-color) / 0.05),
     0 4px 12px -2px hsl(var(--shadow-color) / 0.07);
   --shadow-2: 0 2px 4px hsl(var(--shadow-color) / 0.06),
@@ -40,36 +60,43 @@
   --shadow-3: 0 1px 2px hsl(var(--shadow-color) / 0.10),
     0 8px 18px -4px hsl(var(--shadow-color) / 0.20);
 
-  /* Reading-heatmap intensity ramp — a dedicated GitHub-contribution green
-     scale, independent of --primary (which is blue for actions). Level 0 is
-     the empty/no-reading cell; 1-4 ramp with reading duration. */
-  --heat-0: #ebedf0;
+  /* Reading-heatmap intensity ramp — a dedicated green scale, independent of
+     --primary. Levels 1-4 ramp with reading duration and are a fixed brand
+     commitment. Level 0 is NOT part of that ramp: it's the empty cell, so it
+     is re-derived per theme to sit on that theme's ground. (It was GitHub's
+     cool grey #ebedf0, which reads as a dirty patch on warm paper.) */
+  --heat-0: #e3e0d8;
   --heat-1: #d3f0d8;
   --heat-2: #97d99f;
   --heat-3: #4bab5c;
   --heat-4: #238b45;
 }
 
+/* Dark — the closed book. A navy-black bookcloth rather than a neutral
+   charcoal, so the dark theme is the same material world as the light one
+   seen from the outside, not a generic inversion. */
 .dark {
-  --background: 22 16% 8%;
-  --foreground: 36 20% 96%;
-  --card: 22 14% 13%;
-  --card-foreground: 36 20% 96%;
-  --primary: 217 91% 64%;
+  --background: 220 20% 8%;
+  --foreground: 40 18% 94%;
+  --card: 220 16% 13%;
+  --card-foreground: 40 18% 94%;
+  /* Lifted well above the light theme's ink indigo — a 33% primary would
+     disappear against this ground. */
+  --primary: 214 68% 63%;
   --primary-foreground: 220 40% 10%;
-  --secondary: 22 12% 16%;
-  --secondary-foreground: 36 20% 96%;
-  --muted: 22 12% 16%;
-  --muted-foreground: 30 10% 65%;
-  --accent: 22 12% 16%;
-  --accent-foreground: 36 20% 96%;
-  --warm: 22 80% 62%;
-  --warm-foreground: 20 30% 10%;
-  --destructive: 0 70% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 22 12% 19%;
-  --input: 22 12% 22%;
-  --ring: 217 91% 64%;
+  --secondary: 220 14% 17%;
+  --secondary-foreground: 40 18% 94%;
+  --muted: 220 14% 17%;
+  --muted-foreground: 35 9% 66%;
+  --accent: 220 14% 17%;
+  --accent-foreground: 40 18% 94%;
+  --warm: 34 72% 58%;
+  --warm-foreground: 24 35% 10%;
+  --destructive: 4 66% 60%;
+  --destructive-foreground: 40 20% 97%;
+  --border: 220 13% 20%;
+  --input: 220 13% 23%;
+  --ring: 214 68% 63%;
 
   /* On a dark background a shadow has almost nothing to darken, so depth here
      comes mainly from the raised --card above; these stay deliberately strong
@@ -82,35 +109,40 @@
   --shadow-3: 0 1px 2px hsl(var(--shadow-color) / 0.50),
     0 8px 18px -4px hsl(var(--shadow-color) / 0.60);
 
-  --heat-0: #20242b;
+  --heat-0: #1b1f26;
   --heat-1: #0e4429;
   --heat-2: #006d32;
   --heat-3: #26a641;
   --heat-4: #39d353;
 }
 
-/* Forest — a deep, cosy woodland palette: mossy dark greens, soft sage
-   foreground, emerald primary accent. Inspired by reading by lamplight. */
+/* Forest — bottle-green binding cloth. The same book as .dark, bound in
+   green instead of navy: deeper and less minty than the previous woodland
+   green, so it reads as dyed cloth rather than as a colour filter. The
+   larger --radius is kept deliberately — it's the one thing that makes
+   Forest a distinct theme rather than a recolour. */
 .forest {
-  --background: 150 22% 8%;
-  --foreground: 120 14% 91%;
-  --card: 150 18% 14%;
-  --card-foreground: 120 14% 91%;
-  --primary: 142 44% 52%;
-  --primary-foreground: 150 30% 7%;
-  --secondary: 150 16% 17%;
-  --secondary-foreground: 120 14% 91%;
-  --muted: 150 16% 17%;
-  --muted-foreground: 120 8% 60%;
-  --accent: 150 16% 17%;
-  --accent-foreground: 120 14% 91%;
-  --warm: 35 72% 52%;
-  --warm-foreground: 0 0% 100%;
-  --destructive: 0 65% 58%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 150 14% 21%;
-  --input: 150 14% 23%;
-  --ring: 142 44% 52%;
+  --background: 156 24% 7%;
+  --foreground: 96 14% 92%;
+  --card: 156 19% 12%;
+  --card-foreground: 96 14% 92%;
+  --primary: 146 40% 55%;
+  --primary-foreground: 156 32% 7%;
+  --secondary: 156 16% 16%;
+  --secondary-foreground: 96 14% 92%;
+  --muted: 156 16% 16%;
+  --muted-foreground: 100 9% 64%;
+  --accent: 156 16% 16%;
+  --accent-foreground: 96 14% 92%;
+  --warm: 34 68% 55%;
+  --warm-foreground: 24 35% 10%;
+  /* Lighter than the other themes' destructive: measured 4.14:1 on this
+     card at 58% L, under the AA floor. 64% clears it at 5.14. */
+  --destructive: 6 68% 64%;
+  --destructive-foreground: 156 32% 8%;
+  --border: 156 14% 20%;
+  --input: 156 14% 23%;
+  --ring: 146 40% 55%;
   --radius: 1rem;
 
   /* Same reasoning as .dark, tinted green so shadows sit in the woodland
@@ -123,7 +155,7 @@
   --shadow-3: 0 1px 2px hsl(var(--shadow-color) / 0.50),
     0 8px 18px -4px hsl(var(--shadow-color) / 0.60);
 
-  --heat-0: #17271e;
+  --heat-0: #16241c;
   --heat-1: #1c4a30;
   --heat-2: #2a7d47;
   --heat-3: #35b45c;
@@ -146,10 +178,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Elegant serif for display headings / book titles. */
+/* Literata for display headings and book titles.
+ *
+ * No blanket negative tracking. The previous -0.01em was tuned for Cormorant
+ * Garamond, which is loosely fitted and needs pulling in. Literata ships
+ * tightly fitted with a large x-height, so the same value crowds it at the
+ * 13-15px sizes most titles in this app render at. Tracking is applied by
+ * size instead: neutral for small titles, negative only where the face gets
+ * large enough to open up on its own. */
 .font-display {
   font-family: var(--font-serif), ui-serif, Georgia, serif;
-  letter-spacing: -0.01em;
+  font-optical-sizing: auto;
 }
 
 /* Restrained entrance motion for overlays/menus — transform + opacity only,

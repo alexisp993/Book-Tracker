@@ -57,7 +57,11 @@ function readThemePalette(): CanvasPalette {
     // The shared green intensity ramp (lib/calendarViewModel.ts) read straight
     // from its CSS vars, so the exported image matches the on-screen heatmap.
     bucketFill: BUCKET_VARS.map(raw),
-    emptyCell: hsl("--muted", 0.2),
+    // --heat-0, the same var the live grid paints an empty day with
+    // (BUCKET_CLASS[0] in lib/calendarViewModel.ts). This was `--muted` at
+    // 20%, so the exported PNG quietly disagreed with the screen on every
+    // zero-reading day.
+    emptyCell: raw("--heat-0"),
     texture: hsl("--foreground", 0.03),
     badgeBg: hsl("--background", 0.8),
   };

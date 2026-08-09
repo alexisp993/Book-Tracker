@@ -157,7 +157,7 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
         <>
           {/* Page title + icon-only search/add actions */}
           <div className="flex items-center justify-between gap-3">
-            <h1 className="font-display text-2xl font-bold tracking-tight">Notes</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">Notes</h1>
             <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"

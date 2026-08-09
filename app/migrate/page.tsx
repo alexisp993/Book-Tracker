@@ -49,7 +49,7 @@ export default function MigratePage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <BrandLogo className="mb-3 h-14 w-14 rounded-2xl shadow-card" />
-          <h1 className="font-display text-xl font-bold tracking-tight">
+          <h1 className="font-display text-xl font-semibold tracking-tight">
             Set up your account
           </h1>
           <p className="text-sm text-muted-foreground">

@@ -220,7 +220,7 @@ export function HomeView() {
         {/* Dashboard header — greeting + search + customize */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
               {greeting}
               {name ? `, ${name}` : ""}
             </h1>

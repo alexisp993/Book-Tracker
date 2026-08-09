@@ -1,18 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Cormorant_Garamond } from "next/font/google";
+import { Inter, Literata } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
 
-// Clean sans for UI/body (Apple-like clarity) + elegant serif for titles (literary).
+// Inter for UI/body; Literata for titles and book names.
+//
+// Literata replaces Cormorant Garamond. Cormorant is a display face — it has a
+// small x-height and hairline strokes that go weak and generic at the 13-15px
+// sizes most of this app's titles actually render at. Literata was drawn for
+// long-form book reading (it is Google Play Books' text face), so it holds
+// weight at small sizes and reads as a printed object rather than as a
+// wedding invitation.
+//
+// No explicit `weight`: this pulls the variable axis, which covers the full
+// 200-900 range in one file — smaller than the four static cuts it replaces.
 const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
-const serif = Cormorant_Garamond({
+const serif = Literata({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   variable: "--font-serif",
   display: "swap",
 });
@@ -39,9 +48,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Hand-derived from --background in app/globals.css (light 40 14% 92%,
+  // dark 220 20% 8%). Browser chrome can't read CSS vars, so these drift
+  // silently — update them whenever the ground moves.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdfaf6" },
-    { media: "(prefers-color-scheme: dark)", color: "#16140f" },
+    { media: "(prefers-color-scheme: light)", color: "#edece8" },
+    { media: "(prefers-color-scheme: dark)", color: "#101318" },
   ],
   viewportFit: "cover",
 };
