@@ -182,10 +182,12 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
     };
   });
 
-  // Return top 10 with at least one reason (scored books first, then the rest)
+  // Same rule as the genre path: the card is the synopsis, so a book with no
+  // usable one has nothing to show and is left out rather than rendered as a
+  // bare title.
   return scored
     .sort((a, b) => b.score - a.score)
-    .filter((s) => s.reasons.length > 0)
+    .filter((s) => s.reasons.length > 0 && !!s.description)
     .slice(0, 10);
 }
 
@@ -331,24 +333,24 @@ export async function getGenreSuggestions(
       return { ...r, description: synopsis ?? undefined, reasons, score };
     });
 
-  // Fail open, not closed.
+  // A result without a usable synopsis is dropped, not degraded.
   //
-  // This used to drop every result without a description, on the logic that
-  // a synopsis-led card has nothing to show without one. That made the whole
-  // feature depend on a single provider: Open Library's search response never
-  // includes a description, only Google Books' does, and both are wrapped in
-  // `.catch(() => [])`. So any Google Books hiccup — rate limit, thin
-  // records, an outage — filtered *everything* out and the reader got a bare
-  // "No results" for a genre with thousands of matching books. Verified in
-  // the wild: Fantasy returned 18 rows one hour and nothing the next.
+  // The card is the synopsis — the reader is meant to judge the story blind
+  // and only see the title at the add step — so a synopsis-less record has
+  // literally nothing to render. Falling back to a title-only card was tried
+  // and reverted: it turns the surface back into an ordinary recommendation
+  // list where the author's name does the deciding.
   //
-  // Now a description-less result still renders, ranked below the ones that
-  // have a synopsis, and falls back to title + author on the card.
-  // `providerCount` lets the caller tell "the providers gave us nothing"
-  // apart from "you already own everything we found", which are the same
-  // empty list but very different messages.
+  // This does mean leaning on Google Books, since Open Library's search
+  // response carries no descriptions at all. The earlier version of this
+  // filter tested only for a non-empty string and failed *silently* — an
+  // empty genre was indistinguishable from an outage. `providerCount` is
+  // what keeps that honest now: the caller can tell "the providers gave us
+  // nothing" from "we found books but none had a summary", and say so.
+  const withSynopsis = scored.filter((r) => !!r.description);
+
   return {
-    results: scored
+    results: withSynopsis
       .sort((a, b) => b.score - a.score || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))
       .slice(0, 20),
     providerCount: results.length,

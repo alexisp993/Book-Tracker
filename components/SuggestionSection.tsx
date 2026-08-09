@@ -84,29 +84,26 @@ function SuggestionList({ children }: { children: React.ReactNode }) {
 //
 // With no usable synopsis, title becomes the lead instead of leaving a card
 // that is entirely muted text, so a bare record still reads as a real card.
+// The synopsis, and nothing else.
+//
+// A previous pass added a title · author line here to make cards
+// "recoverable" — which quietly destroyed the point of the design. The
+// reader is meant to judge the story blind and only learn what the book is
+// once they've decided they're interested; putting the title on the card
+// turns it straight back into a normal recommendation list where a familiar
+// name or a known author does the deciding.
+//
+// Identity is revealed at the add step, where the form shows title, author,
+// cover, publisher and the rest. Cards with no usable synopsis are filtered
+// out server-side rather than falling back to a title, because a title-only
+// card is precisely what this surface exists not to be.
 function SuggestionBody({
   synopsis,
-  title,
-  author,
   expanded = false,
 }: {
-  synopsis?: string | null;
-  title: string;
-  author?: string;
+  synopsis: string;
   expanded?: boolean;
 }) {
-  if (!synopsis) {
-    return (
-      <div className="min-w-0">
-        <p className={cn("text-sm font-medium leading-relaxed", !expanded && "line-clamp-2")}>
-          {title}
-        </p>
-        {author ? (
-          <p className="mt-1 line-clamp-1 text-caption-sm text-muted-foreground">{author}</p>
-        ) : null}
-      </div>
-    );
-  }
   return (
     <div className="min-w-0">
       <p
@@ -118,10 +115,6 @@ function SuggestionBody({
         )}
       >
         {synopsis}
-      </p>
-      <p className="mt-1.5 line-clamp-1 text-caption-sm text-muted-foreground">
-        {title}
-        {author ? ` · ${author}` : ""}
       </p>
     </div>
   );
@@ -201,11 +194,7 @@ function LibrarySuggestionRow({ suggestion }: { suggestion: SuggestionItem }) {
         focusRing,
       )}
     >
-      <SuggestionBody
-        synopsis={suggestion.description}
-        title={suggestion.title}
-        author={suggestion.authors[0]}
-      />
+      <SuggestionBody synopsis={suggestion.description ?? ""} />
       {suggestion.reasons[0] ? (
         <div className="mt-2.5">
           <ReasonTag reason={suggestion.reasons[0]} />
@@ -270,8 +259,8 @@ function GenreSuggestions() {
         providerCount > 0 ? (
           <EmptyState
             icon={Sparkles}
-            title={`You already have every ${genre} book we found`}
-            description="Try another genre — anything already in your library is left out of these suggestions."
+            title={`Nothing to show for ${genre} right now`}
+            description="We only suggest books we can show a summary for, and none came back this time. Try another genre."
           />
         ) : (
           <EmptyState
@@ -392,25 +381,10 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
             focusRing,
           )}
         >
-          <div className="flex gap-3">
-            {expanded && result.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={result.coverUrl}
-                alt=""
-                className="h-[84px] w-14 shrink-0 rounded-md border bg-muted object-cover shadow-cover"
-                loading="lazy"
-                decoding="async"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            ) : null}
-            <SuggestionBody
-              synopsis={result.description}
-              title={result.title}
-              author={result.authors[0]}
-              expanded={expanded}
-            />
-          </div>
+          {/* No cover here either — expanding reveals the *rest of the
+              story*, not the book's identity. The cover would give the game
+              away as surely as the title does. */}
+          <SuggestionBody synopsis={result.description ?? ""} expanded={expanded} />
         </button>
         <div className="mt-2.5 flex items-center gap-2">
           <ReasonTag reason={result.reasons[0]} />
@@ -418,6 +392,11 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
             type="button"
             onClick={added ? undefined : handlePick}
             disabled={resolving || added}
+            // The one place the title is still exposed, and deliberately so:
+            // twenty identical icon-only buttons need distinguishable
+            // accessible names or the list is unusable with a screen reader.
+            // "Add this book" twenty times over is not a usable alternative.
+            // The blind-judgment premise yields to that.
             aria-label={
               added ? `${result.title} added to your library` : `Add ${result.title} to your library`
             }
