@@ -225,7 +225,10 @@ export function HomeView() {
             ) : null}
 
             {shelvesData.length > 0 ? (
-              <ShelfRow title="Collections" href="/shelves">
+              // This row renders useGroups("shelves") and links to /shelves,
+              // but was titled "Collections" — the one visible naming bug on
+              // the screen that otherwise sets the app's language.
+              <ShelfRow title="Shelves" href="/shelves">
                 <div className="flex gap-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {shelvesData.slice(0, 8).map((g) => (
                     <ShelfPreview key={g.id} group={g} />

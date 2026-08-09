@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   BookOpen,
-  Library,
   MoreVertical,
   Pencil,
   Plus,
@@ -147,16 +146,29 @@ export function GroupsView({
       {loading ? (
         <Loading label={`Loading your ${singular}s…`} />
       ) : !groups || groups.length === 0 ? (
-        <EmptyState
-          icon={Library}
-          title={`No ${singular}s yet`}
-          description="Create one, then add books to it from a book's edit screen."
-          action={
-            <Button onClick={startCreate}>
-              <Plus className="h-4 w-4" /> New {singular}
-            </Button>
-          }
-        />
+        // Authored, not a dashed box with a routing instruction in it. The old
+        // copy ("Create one, then add books to it from a book's edit screen")
+        // told the reader where the button lives; this tells them what the
+        // feature is for. Same voice as CurrentlyReadingHero's empty state.
+        <div className="max-w-md py-4">
+          <p className="font-display text-2xl leading-snug">
+            {singular === "shelf"
+              ? "No shelves yet."
+              : "No collections yet."}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {singular === "shelf"
+              ? "Group books by mood, by season, by whatever you like. A book can sit on as many shelves as you want."
+              : "Keep a series, a reading order, or a list in the sequence you meant. Collections remember their order; shelves don't."}
+          </p>
+          <button
+            type="button"
+            onClick={startCreate}
+            className="mt-4 inline-flex items-center gap-1.5 border-b border-primary/40 pb-0.5 text-sm font-medium text-primary transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Plus className="h-3.5 w-3.5" /> Create your first {singular}
+          </button>
+        </div>
       ) : view === "grid" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((g) => (

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   FolderHeart,
   House,
+  Library,
   NotebookPen,
   Timer,
   User,
@@ -21,6 +22,13 @@ import { AccountMenu } from "@/components/AccountMenu";
 const NAV = [
   { href: "/", label: "Home", icon: House },
   { href: "/library", label: "Library", icon: BookOpen },
+  // Both grouping routes are listed. /shelves was previously reachable only
+  // from a Home tile, which is why the two felt like one screen that kept
+  // changing its name — the reader never saw them side by side and so never
+  // learned there were two. They are separate models (ShelfBook has no
+  // ordering; CollectionBook has an `order` column), so this is two features,
+  // not one duplicated.
+  { href: "/shelves", label: "Shelves", icon: Library },
   { href: "/collections", label: "Collections", icon: FolderHeart },
   { href: "/sessions", label: "Reading Session", icon: Timer },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
