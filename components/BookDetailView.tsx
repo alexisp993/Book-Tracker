@@ -188,7 +188,10 @@ export function BookDetailView({ id }: { id: string }) {
           </div>
 
           {progress !== null && book.status === "CURRENTLY_READING" ? (
-            <div className="mt-3">
+            // Capped like Home's hero. Unboxing widened this column, and a
+            // rule running the full 1024px read as a page loading bar rather
+            // than one book's progress.
+            <div className="mt-3 max-w-sm">
               <div className="flex items-baseline justify-between">
                 <p className="text-xs text-muted-foreground">
                   {book.currentPage}/{book.pageCount} pages
@@ -370,22 +373,25 @@ function InfoTab({ book }: { book: ReturnType<typeof useBook>["data"] & object }
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {/* A colophon, not six tiles. This is the flat metadata off a book's
+          copyright page — a definition list separated by hairlines, so it
+          doesn't out-rank the description above it. */}
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-5 pt-2 sm:grid-cols-3">
         {cells.map((c) => (
           <InfoCell key={c.label} label={c.label} value={c.value} />
         ))}
-      </div>
+      </dl>
     </div>
   );
 }
 
 function InfoCell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border bg-card p-3 shadow-card">
-      <p className="text-caption-sm font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="border-l border-border/60 pl-3">
+      <dt className="text-caption-sm font-medium uppercase tracking-wide text-muted-foreground">
         {label}
-      </p>
-      <p className="mt-0.5 break-words text-sm font-medium">{value}</p>
+      </dt>
+      <dd className="mt-0.5 break-words text-sm font-medium">{value}</dd>
     </div>
   );
 }
