@@ -2,7 +2,56 @@
 
 import * as React from "react";
 import { BookOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { LibraryBook } from "@/lib/types";
+
+// One cover scale for the whole app.
+//
+// Covers were previously boxed by each caller, which produced seven different
+// treatments across five radii and three shadow states — a 40x56 rounded-md
+// thumbnail in a list row, an 88x132 rounded-xl with shadow-cover in a shelf,
+// a cover with no shadow at all inside a comfortable card. Radius genuinely
+// has to scale with the box (rounded-xl on a 32px-wide thumb looks like a
+// pill), so the fix is a named scale rather than one forced value.
+//
+// Every size carries shadow-cover: MASTER.md §3 makes books physical objects,
+// and that is the app's strongest depth cue.
+const COVER_SIZES = {
+  xs: "h-12 w-8 rounded",
+  sm: "h-14 w-10 rounded-md",
+  md: "h-24 w-16 rounded-lg",
+  lg: "h-[132px] w-[88px] rounded-xl",
+  /** Fills its container at the true 2:3 book ratio. */
+  fill: "aspect-[2/3] w-full rounded-xl",
+} as const;
+
+export type CoverSize = keyof typeof COVER_SIZES;
+
+/**
+ * The framed box a cover sits in — border, clipping, ratio, elevation.
+ * Takes a BookCover (or any image element) as its child.
+ */
+export function CoverFrame({
+  size = "fill",
+  className,
+  children,
+}: {
+  size?: CoverSize;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "shrink-0 overflow-hidden border bg-muted shadow-cover",
+        COVER_SIZES[size],
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 // Cover image that walks the candidate list, skipping load errors and tiny
 // placeholder images (Amazon serves a 1x1 GIF with HTTP 200 when it has no cover).
