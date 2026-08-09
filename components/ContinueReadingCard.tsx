@@ -2,7 +2,7 @@
 
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BookCover } from "@/components/BookCover";
+import { BookCover, CoverFrame } from "@/components/BookCover";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/bar";
 import { useBooks, useSessionStats } from "@/lib/queries";
@@ -42,9 +42,12 @@ export function ContinueReadingCard({
 
   return (
     <Card className="flex h-full items-center gap-4">
-      <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
+      {/* Sized up from 64x96. This is the single most important book on the
+          page and occupies four of six columns, but its cover was smaller
+          than the ones in the shelf rows below it. */}
+      <CoverFrame size="lg">
         <BookCover book={book} />
-      </div>
+      </CoverFrame>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-muted-foreground">
           Continue reading

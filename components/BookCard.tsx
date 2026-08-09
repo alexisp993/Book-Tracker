@@ -4,10 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StatusBadge } from "@/components/StatusBadge";
 import { StarRating } from "@/components/StarRating";
 import { ProgressBar } from "@/components/ui/bar";
-import { BookCover } from "@/components/BookCover";
+import { BookCover, CoverFrame } from "@/components/BookCover";
 import { BookActionsMenu } from "@/components/BookActionsMenu";
 import { STATUS_DOT, STATUS_LABELS, STATUS_TEXT } from "@/lib/constants";
 import type { LibraryBook } from "@/lib/types";
@@ -44,7 +43,10 @@ export const BookCard = React.memo(function BookCard({
         href={`/books/${book.id}`}
         className="group flex flex-col gap-2 text-left"
       >
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border bg-muted shadow-cover transition-shadow group-hover:shadow-card-hover">
+        <CoverFrame
+          size="fill"
+          className="relative transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover"
+        >
           <BookCover book={book} />
           <span
             className={cn(
@@ -55,7 +57,7 @@ export const BookCard = React.memo(function BookCard({
           {book.favorite ? (
             <Heart className="absolute right-1.5 top-1.5 h-3.5 w-3.5 fill-rose-500 text-rose-500" />
           ) : null}
-        </div>
+        </CoverFrame>
         <div className="px-0.5">
           <p className="line-clamp-2 font-display text-[13px] font-semibold leading-tight">
             {book.title}
@@ -68,25 +70,39 @@ export const BookCard = React.memo(function BookCard({
     );
   }
 
-  // Comfortable: full card with details and actions. The cover and text area
-  // link to the detail page; the action buttons stay as separate tap targets.
+  // Comfortable: the same book, larger, with its shelf context.
+  //
+  // This used to be a bordered card with the cover boxed inside it, which made
+  // a book look like a product tile and put a frame around artwork that is
+  // already a designed object. The cover now leads and carries its own
+  // elevation; the metadata sits under it on the page ground.
+  //
+  // Status was previously stated three times over (an overlay badge on the
+  // cover, a coloured dot, and a text label). It now appears once, and only
+  // when it isn't already implied: a progress bar means currently-reading and
+  // a star rating means read, so the label is reserved for the shelves that
+  // show neither.
+  const impliedByMeta =
+    (progress !== null && book.status === "CURRENTLY_READING") ||
+    (book.status === "READ" && !!book.rating);
+
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground transition-shadow hover:shadow-md">
-      <Link href={`/books/${book.id}`} className="relative aspect-[2/3] w-full overflow-hidden bg-muted block">
-        <BookCover book={book} />
-        <StatusBadge
-          status={book.status}
-          overlay
-          className="absolute left-2 top-2 text-caption-sm"
-        />
-        {book.favorite ? (
-          <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 backdrop-blur-md">
-            <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
-          </span>
-        ) : null}
+    <div className="group flex flex-col gap-2.5">
+      <Link href={`/books/${book.id}`} className="block">
+        <CoverFrame
+          size="fill"
+          className="relative transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover"
+        >
+          <BookCover book={book} />
+          {book.favorite ? (
+            <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 backdrop-blur-md">
+              <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
+            </span>
+          ) : null}
+        </CoverFrame>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
+      <div className="flex flex-1 flex-col gap-1.5">
         <Link href={`/books/${book.id}`} className="flex-1">
           <h3 className="line-clamp-2 font-display text-title-sm font-semibold leading-tight">
             {book.title}
@@ -96,23 +112,30 @@ export const BookCard = React.memo(function BookCard({
           </p>
         </Link>
 
-        {/* Shelf-aware meta: reading → progress; read → stars; else status. */}
-        {progress !== null && book.status === "CURRENTLY_READING" ? (
-          <div className="mt-0.5">
-            <ProgressBar value={progress} />
-            <p className="mt-1 text-caption-sm text-muted-foreground">
-              {book.currentPage}/{book.pageCount} pages · {progress}%
-            </p>
+        <div className="mt-auto flex items-end justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {progress !== null && book.status === "CURRENTLY_READING" ? (
+              <>
+                <ProgressBar value={progress} />
+                <p className="mt-1 text-caption-sm text-muted-foreground">
+                  {book.currentPage}/{book.pageCount} pages · {progress}%
+                </p>
+              </>
+            ) : book.status === "READ" && book.rating ? (
+              <StarRating value={book.rating} size={13} />
+            ) : null}
+            {impliedByMeta ? null : (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-caption-sm font-medium",
+                  STATUS_TEXT[book.status],
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[book.status])} />
+                {STATUS_LABELS[book.status]}
+              </span>
+            )}
           </div>
-        ) : book.status === "READ" && book.rating ? (
-          <StarRating value={book.rating} size={13} />
-        ) : null}
-
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <span className={cn("inline-flex items-center gap-1.5 text-caption-sm font-medium", STATUS_TEXT[book.status])}>
-            <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[book.status])} />
-            {STATUS_LABELS[book.status]}
-          </span>
           <BookActionsMenu
             book={book}
             onStartReading={onStartReading}

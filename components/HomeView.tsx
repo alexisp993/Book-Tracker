@@ -14,7 +14,9 @@ import { ReadingGoalCard } from "@/components/ReadingGoalCard";
 import { HomeReadingCalendarPreviewCard } from "@/components/HomeReadingCalendarPreviewCard";
 import { HomeCustomizer } from "@/components/HomeCustomizer";
 import { BookScrollRow } from "@/components/BookScrollRow";
+import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { Card } from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser, useBooks, useGroups, useHomeConfig } from "@/lib/queries";
 import type { BookGroup } from "@/lib/types";
@@ -38,7 +40,13 @@ function useGreeting(): string {
   return greeting;
 }
 
-function ShelfCard({
+// A shelf is a labelled region of the page, not a bounded object, so it gets
+// a heading and open space rather than a border and a shadow. This was the
+// app's most-repeated instance of the boxes-inside-boxes problem: a Card
+// wrapping a scroll row wrapping a framed cover, three rounded rectangles
+// deep, with the covers — the only thing worth looking at — innermost and
+// smallest.
+function Shelf({
   title,
   seeAllHref,
   children,
@@ -48,7 +56,7 @@ function ShelfCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card
+    <Section
       title={title}
       className="h-full"
       actions={
@@ -61,7 +69,7 @@ function ShelfCard({
       }
     >
       {children}
-    </Card>
+    </Section>
   );
 }
 
@@ -70,17 +78,14 @@ function ShelfPreview({ group }: { group: BookGroup }) {
     <Link href="/shelves" className="group flex w-[120px] shrink-0 flex-col gap-2">
       <div className="h-[80px] w-[120px] overflow-hidden rounded-xl border bg-muted shadow-sm transition-transform group-hover:scale-[1.02]">
         {group.covers.length > 0 ? (
+          // Each tile goes through FallbackCoverImg rather than a bare image
+          // tag: these were the app's other unguarded cover path, so an
+          // Amazon 1x1 placeholder (HTTP 200, never fires onError) rendered as
+          // a smear in the mosaic. A shelf thumbnail is not a book cover, so
+          // it keeps its own landscape box rather than joining CoverFrame.
           <div className="grid h-full grid-cols-2 gap-px">
             {group.covers.slice(0, 4).map((url, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={i}
-                src={url}
-                alt=""
-                className="h-full w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
+              <FallbackCoverImg key={i} candidates={[url]} alt="" />
             ))}
           </div>
         ) : (
@@ -160,52 +165,49 @@ export function HomeView() {
       case "calendar":
         return <HomeReadingCalendarPreviewCard showSummary={false} />;
       case "insights":
-        // Header mirrors the Reading Calendar section beside it (same serif
-        // title + icon + subtitle + 16px gap) so the two cards in this row
-        // share a top edge instead of the tiles floating above the heatmap.
+        // This case used to hand-roll its own heading to escape Card's box,
+        // and its copy of the classes had already drifted from Card's. It now
+        // uses the shared Section, which is exactly what that workaround was
+        // asking for.
         return (
-          <section className="flex h-full flex-col gap-4">
-            <div>
-              <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Reading Insights
-              </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Your reading year at a glance
-              </p>
-            </div>
+          <Section
+            title="Reading Insights"
+            subtitle="Your reading year at a glance"
+            icon={<TrendingUp className="h-4 w-4 text-primary" />}
+            className="flex h-full flex-col gap-4"
+          >
             <ReadingInsights />
-          </section>
+          </Section>
         );
       case "currentlyReading":
         return currentlyReadingBooks.length > 0 ? (
-          <ShelfCard title="Currently Reading" seeAllHref="/library?status=CURRENTLY_READING">
+          <Shelf title="Currently Reading" seeAllHref="/library?status=CURRENTLY_READING">
             <BookScrollRow books={currentlyReadingBooks} showProgress />
-          </ShelfCard>
+          </Shelf>
         ) : null;
       case "wantToRead":
         return wantToReadBooks.length > 0 ? (
-          <ShelfCard title="Want to Read" seeAllHref="/library?status=WANT_TO_READ">
+          <Shelf title="Want to Read" seeAllHref="/library?status=WANT_TO_READ">
             <BookScrollRow books={wantToReadBooks} />
-          </ShelfCard>
+          </Shelf>
         ) : null;
       case "recentNotes":
         return <RecentNotesCard />;
       case "recentlyAdded":
         return recentlyAddedBooks.length > 0 ? (
-          <ShelfCard title="Recently Added" seeAllHref="/library">
+          <Shelf title="Recently Added" seeAllHref="/library">
             <BookScrollRow books={recentlyAddedBooks} showTitle={false} />
-          </ShelfCard>
+          </Shelf>
         ) : null;
       case "myShelves":
         return shelvesData.length > 0 ? (
-          <ShelfCard title="My Shelves" seeAllHref="/shelves">
+          <Shelf title="My Shelves" seeAllHref="/shelves">
             <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {shelvesData.map((g) => (
                 <ShelfPreview key={g.id} group={g} />
               ))}
             </div>
-          </ShelfCard>
+          </Shelf>
         ) : null;
       case "streak":
         return <StreakBanner />;

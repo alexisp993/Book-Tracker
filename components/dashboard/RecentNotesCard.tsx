@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ArrowRight, NotebookPen } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { CoverFrame } from "@/components/BookCover";
+import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { useNotes } from "@/lib/queries";
 import { formatDate } from "@/lib/utils";
 
@@ -43,21 +45,22 @@ export function RecentNotesCard() {
               href={`/books/${n.bookId}`}
               className="flex items-start gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-secondary"
             >
-              <div className="flex h-12 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
+              {/* Was a raw image tag whose only guard was onError. Amazon serves a
+                  1x1 placeholder GIF with HTTP 200, so onError never fires and
+                  it renders as a stretched smear — the exact bug FallbackCoverImg's
+                  naturalWidth<=2 check exists to catch. NoteDTO carries a single
+                  resolved coverUrl rather than the candidate list, so this gains
+                  the placeholder guard, not the full ISBN fallback walk. */}
+              <CoverFrame
+                size="xs"
+                className="flex items-center justify-center shadow-none"
+              >
                 {n.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={n.coverUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
+                  <FallbackCoverImg candidates={[n.coverUrl]} alt="" />
                 ) : (
                   <NotebookPen className="h-4 w-4 text-muted-foreground/50" />
                 )}
-              </div>
+              </CoverFrame>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium leading-tight">{n.bookTitle}</p>
                 <p className="line-clamp-1 text-xs text-muted-foreground">{n.body}</p>

@@ -1,20 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { BookCover } from "@/components/BookCover";
+import { BookCover, CoverFrame, COVER_TRACK } from "@/components/BookCover";
 import { ProgressBar } from "@/components/ui/bar";
+import { cn } from "@/lib/utils";
 import type { LibraryBook } from "@/lib/types";
+
+type ShelfSize = "lg" | "xl";
 
 // A single portrait book tile linking to its detail page. Extracted from
 // HomeView so the dashboard shelves can reuse it.
+//
+// `size` exists because the same tile serves two jobs: a dashboard glance
+// (lg) and Library's browsing shelves (xl), where covers are the content
+// rather than a preview and a row of 88px thumbnails left most of a 1600px
+// shell empty.
 export function MiniBookCard({
   book,
   showTitle = true,
   showProgress = false,
+  size = "lg",
 }: {
   book: LibraryBook;
   showTitle?: boolean;
   showProgress?: boolean;
+  size?: ShelfSize;
 }) {
   const progress =
     book.pageCount && book.pageCount > 0
@@ -24,11 +34,14 @@ export function MiniBookCard({
   return (
     <Link
       href={`/books/${book.id}`}
-      className="group flex w-[88px] shrink-0 flex-col gap-1.5"
+      className={cn("group flex shrink-0 flex-col gap-1.5", COVER_TRACK[size])}
     >
-      <div className="h-[132px] w-[88px] overflow-hidden rounded-xl border bg-muted shadow-cover transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover">
+      <CoverFrame
+        size={size}
+        className="transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover"
+      >
         <BookCover book={book} />
-      </div>
+      </CoverFrame>
       {showTitle ? (
         // Always reserve two lines so a one-line title doesn't pull the
         // progress bar up and break the row's horizontal alignment.
@@ -51,10 +64,12 @@ export function BookScrollRow({
   books,
   showTitle = true,
   showProgress = false,
+  size = "lg",
 }: {
   books: LibraryBook[];
   showTitle?: boolean;
   showProgress?: boolean;
+  size?: ShelfSize;
 }) {
   if (books.length === 0) return null;
   return (
@@ -65,6 +80,7 @@ export function BookScrollRow({
           book={b}
           showTitle={showTitle}
           showProgress={showProgress}
+          size={size}
         />
       ))}
     </div>

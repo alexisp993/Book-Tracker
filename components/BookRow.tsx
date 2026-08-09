@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BookCover } from "@/components/BookCover";
+import { BookCover, CoverFrame } from "@/components/BookCover";
+import { ProgressBar } from "@/components/ui/bar";
 import { StarRating } from "@/components/StarRating";
 import { BookActionsMenu } from "@/components/BookActionsMenu";
 import { STATUS_LABELS, STATUS_TEXT } from "@/lib/constants";
@@ -40,9 +41,9 @@ export const BookRow = React.memo(function BookRow({
         className="absolute inset-0 rounded-xl"
         aria-label={`View ${book.title}`}
       />
-      <div className="pointer-events-none relative h-14 w-10 shrink-0 overflow-hidden rounded-md border bg-muted">
+      <CoverFrame size="sm" className="pointer-events-none relative">
         <BookCover book={book} />
-      </div>
+      </CoverFrame>
       <div className="pointer-events-none relative min-w-0 flex-1">
         <p className="line-clamp-1 font-display text-title-sm font-semibold leading-tight">
           {book.title}
@@ -52,12 +53,10 @@ export const BookRow = React.memo(function BookRow({
         </p>
         {progress !== null ? (
           <div className="mt-1.5">
-            <div className="h-1.5 w-full max-w-[180px] overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            {/* Was a hand-rolled track+fill pair — the third of three progress
+                implementations in the app, and the only one that wouldn't pick
+                up a change to the shared primitive. */}
+            <ProgressBar value={progress} className="h-1.5 max-w-[180px]" />
             <p className="mt-1 text-caption-sm text-muted-foreground">
               {book.currentPage}/{book.pageCount} pages · {progress}%
             </p>

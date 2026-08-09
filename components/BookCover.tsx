@@ -21,9 +21,17 @@ const COVER_SIZES = {
   sm: "h-14 w-10 rounded-md",
   md: "h-24 w-16 rounded-lg",
   lg: "h-[132px] w-[88px] rounded-xl",
+  /** Browsing size — Library's shelves, where covers are the content. */
+  xl: "h-[186px] w-[124px] rounded-xl",
   /** Fills its container at the true 2:3 book ratio. */
   fill: "aspect-[2/3] w-full rounded-xl",
 } as const;
+
+/** Track width for a shelf tile, matched to each cover box. */
+export const COVER_TRACK: Record<"lg" | "xl", string> = {
+  lg: "w-[88px]",
+  xl: "w-[124px]",
+};
 
 export type CoverSize = keyof typeof COVER_SIZES;
 

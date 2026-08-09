@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, ScanBarcode, Search, Shuffle } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { useBooks } from "@/lib/queries";
 
 // Four quick-action tiles. Random Book has no backend, but it's a genuine
@@ -22,7 +22,11 @@ export function QuickActions() {
   }
 
   return (
-    <Card title="Quick Actions" className="h-full">
+    // A Section, not a Card: this was a box holding four boxes each holding a
+    // circular icon puck — three rounded rectangles deep for four links. The
+    // tiles keep their own surface (they are the tap targets); the region
+    // around them no longer needs a frame of its own.
+    <Section title="Quick Actions" className="h-full">
       <div className="grid grid-cols-2 gap-3">
         <Tile href="/library/search" icon={<Search className="h-5 w-5" />} label="Search Books" tint="blue" />
         <Tile href="/library?scan=1" icon={<ScanBarcode className="h-5 w-5" />} label="Scan Barcode" tint="teal" />
@@ -39,7 +43,7 @@ export function QuickActions() {
           <span className="text-xs font-medium">Random Book</span>
         </button>
       </div>
-    </Card>
+    </Section>
   );
 }
 

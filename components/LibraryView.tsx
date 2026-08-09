@@ -27,6 +27,7 @@ import { BookRow } from "@/components/BookRow";
 import { BookScrollRow } from "@/components/BookScrollRow";
 import { EmptyState } from "@/components/EmptyState";
 import { ListContainer } from "@/components/ui/list";
+import { Section } from "@/components/ui/section";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
 import { ApiRequestError } from "@/lib/api";
 import { BOOK_SORTS, SORT_LABELS } from "@/lib/constants";
@@ -512,8 +513,8 @@ function ShelfSkeleton() {
           <div className="h-4 w-32 animate-pulse rounded bg-muted" />
           <div className="flex gap-3 overflow-hidden">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="w-[88px] shrink-0 space-y-1.5">
-                <div className="h-[132px] w-[88px] animate-pulse rounded-xl bg-muted" />
+              <div key={i} className="w-[124px] shrink-0 space-y-1.5">
+                <div className="h-[186px] w-[124px] animate-pulse rounded-xl bg-muted" />
                 <div className="h-3 w-full animate-pulse rounded bg-muted" />
                 <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
               </div>
@@ -538,10 +539,13 @@ function Shelf({
 }) {
   if (books.length === 0) return null;
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {onSeeAll ? (
+    // Shared Section rather than a local heading: this row was `text-sm
+    // font-semibold` while Home's identical shelves were serif, so the same
+    // component in two places didn't look related.
+    <Section
+      title={title}
+      actions={
+        onSeeAll ? (
           <button
             type="button"
             onClick={onSeeAll}
@@ -549,9 +553,12 @@ function Shelf({
           >
             See all <ArrowRight className="h-3 w-3" />
           </button>
-        ) : null}
-      </div>
-      <BookScrollRow books={books} showProgress={showProgress} />
-    </section>
+        ) : null
+      }
+    >
+      {/* Browsing size. Library is where you come to look at your books, and
+          88px thumbnails left most of a 1600px shell empty. */}
+      <BookScrollRow books={books} showProgress={showProgress} size="xl" />
+    </Section>
   );
 }
