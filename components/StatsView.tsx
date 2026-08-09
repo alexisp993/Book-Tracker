@@ -13,11 +13,8 @@ import {
   XAxis,
 } from "recharts";
 import {
-  BookCheck,
   BookOpen,
   Clock,
-  Flame,
-  Heart,
   LayoutGrid,
   Library,
   Sparkles,
@@ -32,7 +29,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ReadingHeatmap } from "@/components/ReadingHeatmap";
 import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
-import { Stat } from "@/components/ui/stat";
+import { Band } from "@/components/ui/section";
 import { BarRow } from "@/components/ui/bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
@@ -88,25 +85,21 @@ export function StatsView() {
         <div className="space-y-6">
           <YearHeroCard stats={stats} streakDays={sessionStats?.streakDays ?? 0} />
 
-          <div>
-            <p className="mb-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              All-time totals
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
-              <Stat icon={<BookOpen className="h-4 w-4" />} label="Total" tint="blue" value={<NumberFlow value={stats.total} />} />
-              <Stat icon={<BookCheck className="h-4 w-4" />} label="Read" tint="emerald" value={<NumberFlow value={stats.read} />} />
-              <Stat icon={<Flame className="h-4 w-4" />} label="Reading" tint="amber" value={<NumberFlow value={stats.reading} />} />
-              <Stat
-                icon={<BookOpen className="h-4 w-4" />}
-                label="Pages read"
-                tint="violet"
-                value={<NumberFlow value={stats.pagesRead} />}
-              />
-              <Stat icon={<Heart className="h-4 w-4" />} label="Favorites" tint="rose" value={<NumberFlow value={stats.favorites} />} />
-              <Stat
-                icon={<Star className="h-4 w-4" />}
+          {/* All-time totals as a figure row, not six tinted tiles.
+              Five different accent hues across six boxes was the loudest
+              generic-dashboard signal on this screen, and none of the colours
+              carried meaning — blue for "Total" says nothing. The numbers are
+              the content, so they are set in the serif and separated by
+              hairlines instead of borders and shadows. */}
+          <Band label="All-time totals">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
+              <Figure label="Total" value={<NumberFlow value={stats.total} />} />
+              <Figure label="Read" value={<NumberFlow value={stats.read} />} />
+              <Figure label="Reading" value={<NumberFlow value={stats.reading} />} />
+              <Figure label="Pages read" value={<NumberFlow value={stats.pagesRead} />} />
+              <Figure label="Favorites" value={<NumberFlow value={stats.favorites} />} />
+              <Figure
                 label="Avg rating"
-                tint="amber"
                 value={
                   stats.avgRating ? (
                     <NumberFlow
@@ -118,8 +111,8 @@ export function StatsView() {
                   )
                 }
               />
-            </div>
-          </div>
+            </dl>
+          </Band>
 
           <TimeReadChart
             minutesPerMonth={stats.minutesPerMonth}
@@ -233,28 +226,26 @@ export function StatsView() {
       {tab === "sessions" ? (
         <div className="space-y-3">
           {sessionStats && sessionStats.sessionCount > 0 ? (
-            <Card title="Reading activity" subtitle={`${sessionStats.sessionCount} sessions logged`}>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Stat
-                  icon={<Clock className="h-4 w-4" />}
+            // Figures, not four bordered tiles inside a bordered Card — a box
+            // inside a box, which the design system rules out.
+            <Band label={`Reading activity · ${sessionStats.sessionCount} sessions logged`}>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
+                <Figure
                   label="Lifetime hours"
-                  tint="teal"
                   value={(sessionStats.totalMinutes / 60).toFixed(1)}
                 />
-                <Stat
-                  icon={<Timer className="h-4 w-4" />}
+                <Figure
                   label="Avg pace"
-                  tint="violet"
                   value={
                     sessionStats.avgPagesPerHour
                       ? `${sessionStats.avgPagesPerHour} pg/hr`
                       : "—"
                   }
                 />
-                <Stat icon={<Clock className="h-4 w-4" />} label="This week" tint="teal" value={`${sessionStats.hoursThisWeek}h`} />
-                <Stat icon={<Clock className="h-4 w-4" />} label="This month" tint="teal" value={`${sessionStats.hoursThisMonth}h`} />
-              </div>
-            </Card>
+                <Figure label="This week" value={`${sessionStats.hoursThisWeek}h`} />
+                <Figure label="This month" value={`${sessionStats.hoursThisMonth}h`} />
+              </dl>
+            </Band>
           ) : null}
 
           <ReadingHeatmap />
@@ -482,5 +473,18 @@ function LongestStreakCard({
         </div>
       </div>
     </Card>
+  );
+}
+
+// A number and its name, with nothing around them. Replaces the tinted Stat
+// tile on this screen; Stat survives for its other callers.
+function Figure({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="border-l border-border/60 pl-3">
+      <dt className="text-caption-sm text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-display text-2xl font-semibold tabular-nums">
+        {value}
+      </dd>
+    </div>
   );
 }

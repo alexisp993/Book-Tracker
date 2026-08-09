@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FilterPills, type TabItem } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/EmptyState";
 import { NoteForm } from "@/components/NoteForm";
 import { NoteTypeIcon } from "@/components/NoteTypeIcon";
+import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { ApiRequestError } from "@/lib/api";
 import { cn, formatDate } from "@/lib/utils";
 import {
@@ -155,9 +157,11 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
     <div className={standalone ? "mx-auto w-full max-w-4xl space-y-4" : "space-y-4"}>
       {standalone ? (
         <>
-          {/* Page title + icon-only search/add actions */}
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="font-display text-2xl font-semibold tracking-tight">Notes</h1>
+          {/* The shared header rather than a fourth hand-rolled <h1>. */}
+          <PageHeader
+            title="Notes"
+            subtitle="Quotes, thoughts and marginalia from your reading."
+            actions={
             <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
@@ -176,7 +180,8 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-          </div>
+            }
+          />
 
           {searchOpen ? (
             <div className="relative">
@@ -286,15 +291,11 @@ function NoteCard({
     >
       <div className="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
         {note.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={note.coverUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onError={(e) => (e.currentTarget.style.display = "none")}
-          />
+          // The last unguarded cover in the app. `display:none` on error left
+          // the frame blank, and an Amazon 1x1 placeholder returns HTTP 200 so
+          // onError never fires at all — it rendered as a smear. FallbackCoverImg
+          // rejects sub-2px images and falls through to the icon below.
+          <FallbackCoverImg candidates={[note.coverUrl]} alt="" />
         ) : (
           <NotebookPen className="h-4 w-4 text-muted-foreground/50" />
         )}

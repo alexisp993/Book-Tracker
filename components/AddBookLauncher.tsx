@@ -38,8 +38,15 @@ export function AddBookLauncher() {
   const router = useRouter();
 
   return (
-    <div className="space-y-6">
-      <BackHeader href="/library" backLabel="Back to Library" title="Add a Book" />
+    // Capped: three choices don't need a 1600px shell, and the rows were
+    // stretching a two-line label across the full width.
+    <div className="mx-auto w-full max-w-2xl space-y-6">
+      <BackHeader
+        href="/library"
+        backLabel="Back to Library"
+        title="Add a book"
+        subtitle="Three ways in — the scanner is fastest if you have the book in hand."
+      />
 
       <div className="space-y-3">
         <OptionCard

@@ -27,7 +27,8 @@ import { BookRow } from "@/components/BookRow";
 import { BookScrollRow } from "@/components/BookScrollRow";
 import { EmptyState } from "@/components/EmptyState";
 import { ListContainer } from "@/components/ui/list";
-import { Section } from "@/components/ui/section";
+import { Band } from "@/components/ui/section";
+import { PageHeader } from "@/components/ui/page-header";
 import { ViewToggle, type LibraryViewMode } from "@/components/ViewToggle";
 import { ApiRequestError } from "@/lib/api";
 import { BOOK_SORTS, SORT_LABELS } from "@/lib/constants";
@@ -275,12 +276,20 @@ export function LibraryView() {
     showShelves && !shelvesLoading && recentlyAddedBooks.length === 0;
 
   return (
-    <div className="space-y-4">
-      {/* Compact toolbar: title + search + sort + view + add + scan */}
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* The shared header, not a local copy of it — the subtitle says how
+          much is here so the count doesn't need a badge. */}
+      <PageHeader
+        title="Library"
+        subtitle={
+          stats
+            ? `${stats.total} book${stats.total === 1 ? "" : "s"} on your shelves`
+            : "Everything you've collected"
+        }
+      />
+
+      {/* Controls sit below the masthead rather than crowding its baseline. */}
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto font-display text-2xl font-semibold tracking-tight">
-          Library
-        </h1>
         <div className="relative order-last w-full sm:order-none sm:w-56">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -311,7 +320,10 @@ export function LibraryView() {
           })}
         </Select>
         <ViewToggle value={view} onChange={changeView} />
-        <Button size="sm" onClick={() => router.push("/library/add")}>
+        {/* Outline, not filled. Home spends its one filled affordance on
+            "Continue reading"; a solid button here would out-shout the covers
+            that are supposed to be the page. */}
+        <Button variant="outline" size="sm" onClick={() => router.push("/library/add")}>
           <BookPlus className="h-4 w-4" /> Add Book
         </Button>
         <Button
@@ -371,7 +383,9 @@ export function LibraryView() {
             }
           />
         ) : (
-          <div className="space-y-6">
+          // No space-y here: Band carries its own top rule and padding, so an
+          // extra gap would double the separation between shelves.
+          <div>
             <Shelf title="Recently Added" books={recentlyAddedBooks} />
             <Shelf
               title="Continue Reading"
@@ -539,17 +553,17 @@ function Shelf({
 }) {
   if (books.length === 0) return null;
   return (
-    // Shared Section rather than a local heading: this row was `text-sm
-    // font-semibold` while Home's identical shelves were serif, so the same
-    // component in two places didn't look related.
-    <Section
-      title={title}
+    // Band, matching Home: hairline rule + quiet tracked label, no box. The
+    // shelves on both screens are the same idea and now read as the same
+    // system rather than two different heading treatments.
+    <Band
+      label={title}
       actions={
         onSeeAll ? (
           <button
             type="button"
             onClick={onSeeAll}
-            className="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-0.5 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >
             See all <ArrowRight className="h-3 w-3" />
           </button>
@@ -559,6 +573,6 @@ function Shelf({
       {/* Browsing size. Library is where you come to look at your books, and
           88px thumbnails left most of a 1600px shell empty. */}
       <BookScrollRow books={books} showProgress={showProgress} size="xl" />
-    </Section>
+    </Band>
   );
 }

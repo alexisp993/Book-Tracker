@@ -14,11 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
 import { SegmentedTabs, type TabItem } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
 import { BackHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
-import { BookCover } from "@/components/BookCover";
+import { BookCover, CoverFrame } from "@/components/BookCover";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StarRating } from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
@@ -157,13 +156,16 @@ export function BookDetailView({ id }: { id: string }) {
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <BackHeader href="/library" backLabel="Back to Library" />
 
-      {/* Header card — explicit two-column hero: cover left, content right */}
-      <Card className="grid grid-cols-[auto_1fr] gap-4">
-        <div className="aspect-[2/3] w-24 sm:w-28 shrink-0 overflow-hidden rounded-xl border bg-muted shadow-cover">
+      {/* Unboxed hero, matching Home. This book is the subject of the page,
+          not a liftable object sitting on it, so the composition is carried by
+          the cover's scale and the title's size rather than a border. The
+          cover moves onto the shared scale instead of a one-off width. */}
+      <div className="grid grid-cols-[auto_1fr] gap-5 sm:gap-7">
+        <CoverFrame size="xl">
           <BookCover book={book} />
-        </div>
+        </CoverFrame>
         <div className="min-w-0">
-          <h1 className="font-display text-xl font-semibold leading-tight sm:text-2xl">
+          <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-balance sm:text-3xl">
             {book.title}
           </h1>
           {book.subtitle ? (
@@ -282,7 +284,7 @@ export function BookDetailView({ id }: { id: string }) {
             ) : null}
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Tab bar */}
       <SegmentedTabs value={tab} onChange={setTab} items={DETAIL_TABS} />

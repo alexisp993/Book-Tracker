@@ -44,17 +44,18 @@ export function ProfileView() {
 
   return (
     <div className="space-y-6">
-      {/* Account card */}
-      <Card className="flex items-center gap-3">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
+      {/* The identity block is this page's masthead, not a liftable object, so
+          it isn't boxed — the name reads at title scale, as a name should. */}
+      <div className="flex items-center gap-4 pb-2">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground">
           {initials}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {me?.name ? (
-              <p className="truncate font-display text-base font-semibold leading-tight">
+              <h1 className="truncate font-display text-2xl font-semibold leading-tight tracking-tight">
                 {me.name}
-              </p>
+              </h1>
             ) : null}
             {me?.isAdmin ? (
               <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-caption-sm font-medium text-violet-600 dark:text-violet-300">
@@ -74,7 +75,7 @@ export function ProfileView() {
         >
           <SettingsIcon className="h-5 w-5" />
         </Link>
-      </Card>
+      </div>
 
       {/* Menu */}
       <ListContainer>

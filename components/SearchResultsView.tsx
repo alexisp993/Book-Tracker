@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Plus, Search } from "lucide-react";
+import { Check, Plus, Search } from "lucide-react";
+import { BackHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
+import { FallbackCoverImg } from "@/components/FallbackCoverImg";
 import { BookForm, type BookFormValues, type BookPrefill } from "@/components/BookForm";
 import { ApiRequestError, lookupIsbn } from "@/lib/api";
 import { useBookSearch, useCreateBook } from "@/lib/queries";
@@ -95,14 +97,15 @@ export function SearchResultsView({ initialQ = "" }: { initialQ?: string }) {
   }
 
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        onClick={() => router.push("/library/add")}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back
-      </button>
+    // Capped: search results are a reading list, and full-shell width stretched
+    // each row's title away from its cover.
+    <div className="mx-auto w-full max-w-3xl space-y-4">
+      {/* The shared back affordance, not a sixth hand-rolled one. */}
+      <BackHeader
+        href="/library/add"
+        title="Find a book"
+        subtitle="Search the catalogue, then add what you want to your library."
+      />
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -189,16 +192,11 @@ function ResultRow({
   return (
     <div className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2.5 shadow-card">
       <div className="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
+        {/* Guarded like every other cover in the app: catalogue results are
+            the likeliest source of 1x1 placeholder images, which return HTTP
+            200 so an onError handler never fires. */}
         {result.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={result.coverUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onError={(e) => (e.currentTarget.style.display = "none")}
-          />
+          <FallbackCoverImg candidates={[result.coverUrl]} alt="" />
         ) : null}
       </div>
       <div className="min-w-0 flex-1">

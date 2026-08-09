@@ -134,7 +134,11 @@ export function GroupsView({
               <ListIcon />
             </ViewButton>
           </div>
-          <Button onClick={startCreate}>
+          {/* Outline in the toolbar: the CreateCard tile below is already the
+              primary way in, and two filled calls to the same action on one
+              screen just compete. The empty state keeps its filled button,
+              where it is the only thing to do. */}
+          <Button variant="outline" onClick={startCreate}>
             <Plus className="h-4 w-4" /> New {singular}
           </Button>
         </div>
