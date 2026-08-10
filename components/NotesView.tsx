@@ -3,12 +3,10 @@
 import * as React from "react";
 import { NotebookPen, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FilterPills, type TabItem } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/EmptyState";
 import { NoteForm } from "@/components/NoteForm";
 import { NoteTypeIcon } from "@/components/NoteTypeIcon";
 import { FallbackCoverImg } from "@/components/FallbackCoverImg";
@@ -157,9 +155,6 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
   const groupedView = standalone && viewMode === "byBook";
 
   return (
-    // Notes are prose — capped on the standalone page so lines stay readable
-    // in the full-width shell. Embedded in Book Detail it inherits that page's
-    // own width, so no cap there.
     // Standalone Notes now spans the shell like Shelves. It can't do that as a
     // single column — one 1600px-wide note row is worse than the dead space it
     // replaced — so the list below becomes a multi-column masonry-ish grid.
@@ -194,7 +189,9 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
           />
 
           {searchOpen ? (
-            <div className="relative">
+            // Capped: a search field has no reason to run the width of the
+            // shell now that the page isn't capped for it.
+            <div className="relative max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={q}
@@ -232,16 +229,24 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
 
       {/* List */}
       {isEmpty ? (
-        <EmptyState
-          icon={NotebookPen}
-          title="No notes yet"
-          description="Add highlights, quotes, and thoughts as you read."
-          action={
-            <Button onClick={openAdd}>
-              <Plus className="h-4 w-4" /> Add note
-            </Button>
-          }
-        />
+        // Authored, and left-aligned at a readable measure. The dashed
+        // EmptyState box was already the wrong voice; once this page lost its
+        // width cap it also stretched to 1600px, which made a centred "No
+        // notes yet" look like a rendering failure.
+        <div className="max-w-md py-4">
+          <p className="font-display text-2xl leading-snug">No notes yet.</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            A line you want to keep, a thought you had at page 200, an argument
+            with the author. Anything you&rsquo;d have written in the margin.
+          </p>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="mt-4 inline-flex items-center gap-1.5 border-b border-primary/40 pb-0.5 text-sm font-medium text-primary transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Plus className="h-3.5 w-3.5" /> Write your first note
+          </button>
+        </div>
       ) : groupedView ? (
         <div className="space-y-5">
           {Array.from(grouped.entries()).map(([bookTitle, notes]) => (
