@@ -225,6 +225,35 @@ body {
   to { stroke-dashoffset: 0; }
 }
 
+/* Finishing a book: the seal comes down onto the cover like a stamp.
+   Overshoots past its resting size and settles, with the rotation easing out
+   at the same time, so it reads as something pressed onto the book rather
+   than a graphic that faded in. This is the one place the app is allowed a
+   flourish — it fires at most once per book, ever. */
+@keyframes bt-seal-stamp {
+  0%   { opacity: 0; transform: scale(2.4) rotate(-24deg); }
+  55%  { opacity: 1; transform: scale(0.92) rotate(4deg); }
+  75%  { transform: scale(1.04) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+
+/* The cover recoils a little as the seal lands. Paired with bt-seal-stamp's
+   timing so the impact reads as one event, not two animations. */
+@keyframes bt-seal-impact {
+  0%, 45% { transform: none; }
+  58%     { transform: translateY(3px) scale(0.985); }
+  100%    { transform: none; }
+}
+
+/* A star being chosen. Rating is a small, satisfying act and it deserves to
+   feel like one; the old treatment was a CSS hover scale and nothing on the
+   actual selection. */
+@keyframes bt-star-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
 /* Reduced motion: remove travel, keep feedback.
  *
  * This used to blanket-set transition-duration to 0.01ms, which also erased

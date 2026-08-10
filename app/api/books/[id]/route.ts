@@ -89,6 +89,32 @@ export async function PATCH(
   if (input.startDate !== undefined) entryData.startDate = input.startDate;
   if (input.finishDate !== undefined) entryData.finishDate = input.finishDate;
 
+  // Finishing a book stamps the date it was finished.
+  //
+  // This is the mirror of lib/sessions.ts:241-251, where starting a session on
+  // an unstarted book promotes it to CURRENTLY_READING and stamps startDate.
+  // The ending half was missing: marking a book READ left finishDate null
+  // unless the reader happened to hand-pick a date in the edit form, which
+  // almost nobody does.
+  //
+  // The cost of that gap is visible in app/api/goals/route.ts:29-31, which has
+  // to count *every* null-finishDate read book toward the current year — right
+  // for a book you just finished, wrong for one you backfilled from 2019.
+  // That fallback stays, because rows written before this still have no date;
+  // this only stops the problem growing.
+  //
+  // Guarded three ways: only on a transition *into* READ, never overwriting an
+  // explicit finishDate from the form, and never re-stamping a book that
+  // already has one (so editing an already-read book's title doesn't move the
+  // date to today).
+  if (
+    input.status === "READ" &&
+    input.finishDate === undefined &&
+    owned.finishDate === null
+  ) {
+    entryData.finishDate = new Date();
+  }
+
   // Author replacement (if provided): clear and recreate ordered links.
   const authorNames =
     input.authors !== undefined

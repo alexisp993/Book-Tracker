@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  BookCheck,
   BookOpen,
   ChevronDown,
   Heart,
@@ -19,6 +20,7 @@ import { ProgressBar } from "@/components/ui/bar";
 import { Dialog } from "@/components/ui/dialog";
 import { BookCover, CoverFrame } from "@/components/BookCover";
 import { StatusBadge } from "@/components/StatusBadge";
+import { FinishedMoment } from "@/components/FinishedMoment";
 import { StarRating } from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
 import {
@@ -46,6 +48,7 @@ export function BookDetailView({ id }: { id: string }) {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [sessionError, setSessionError] = React.useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [finishing, setFinishing] = React.useState(false);
   const updateMutation = useUpdateBook();
   const deleteMutation = useDeleteBook();
   const { data: activeSession } = useActiveSession();
@@ -254,6 +257,19 @@ export function BookDetailView({ id }: { id: string }) {
                         : "Start reading session"}
                   </button>
                 ) : null}
+                {book.status !== "READ" ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProgressMenuOpen(false);
+                      setFinishing(true);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+                  >
+                    <BookCheck className="h-3.5 w-3.5" /> Mark as finished
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="menuitem"
@@ -301,6 +317,10 @@ export function BookDetailView({ id }: { id: string }) {
           <NotesTab userBookId={book.id} />
         </Band>
       </div>
+
+      {finishing ? (
+        <FinishedMoment book={book} onClose={() => setFinishing(false)} />
+      ) : null}
 
       {/* Edit modal — no onDelete here: it used to fire deleteMutation with
           zero confirmation (the only unconfirmed delete path in the app,

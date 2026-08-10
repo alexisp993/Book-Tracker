@@ -26,6 +26,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { BookRow } from "@/components/BookRow";
 import { BookScrollRow } from "@/components/BookScrollRow";
 import { EmptyState } from "@/components/EmptyState";
+import { FinishedMoment } from "@/components/FinishedMoment";
 import { ListContainer } from "@/components/ui/list";
 import { Band } from "@/components/ui/section";
 import { PageHeader } from "@/components/ui/page-header";
@@ -213,6 +214,15 @@ export function LibraryView() {
     },
     [updateBookMutate],
   );
+  // Opens the finishing moment rather than silently flipping status — the
+  // moment is where the status change actually gets written, along with the
+  // rating and favourite it collects.
+  const [finishingBook, setFinishingBook] = React.useState<LibraryBook | null>(
+    null,
+  );
+  const handleMarkFinished = React.useCallback((book: LibraryBook) => {
+    setFinishingBook(book);
+  }, []);
 
   async function handleSubmit(values: BookFormValues) {
     setFormError(null);
@@ -425,6 +435,7 @@ export function LibraryView() {
                   onEdit={openEdit}
                   onDelete={setToDelete}
                   onStartReading={handleStartReading}
+                  onMarkFinished={handleMarkFinished}
                   onToggleFavorite={handleToggleFavorite}
                 />
               ))}
@@ -444,6 +455,7 @@ export function LibraryView() {
                   onEdit={openEdit}
                   onDelete={setToDelete}
                   onStartReading={handleStartReading}
+                  onMarkFinished={handleMarkFinished}
                   onToggleFavorite={handleToggleFavorite}
                 />
               ))}
@@ -485,6 +497,16 @@ export function LibraryView() {
           }
         />
       </Dialog>
+
+      {/* No onNotYet: the reader explicitly chose "Mark as finished", so there
+          is nothing to second-guess. The escape hatch only exists on the path
+          where the app guessed from a page count. */}
+      {finishingBook ? (
+        <FinishedMoment
+          book={finishingBook}
+          onClose={() => setFinishingBook(null)}
+        />
+      ) : null}
 
       <BarcodeScanner
         open={scannerOpen}

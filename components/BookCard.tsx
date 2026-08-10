@@ -22,6 +22,7 @@ export const BookCard = React.memo(function BookCard({
   onEdit,
   onDelete,
   onStartReading,
+  onMarkFinished,
   onToggleFavorite,
 }: {
   book: LibraryBook;
@@ -29,6 +30,7 @@ export const BookCard = React.memo(function BookCard({
   onEdit: (book: LibraryBook) => void;
   onDelete: (book: LibraryBook) => void;
   onStartReading?: (book: LibraryBook) => void;
+  onMarkFinished?: (book: LibraryBook) => void;
   onToggleFavorite?: (book: LibraryBook) => void;
 }) {
   const progress =
@@ -139,6 +141,7 @@ export const BookCard = React.memo(function BookCard({
           <BookActionsMenu
             book={book}
             onStartReading={onStartReading}
+            onMarkFinished={onMarkFinished}
             onEdit={onEdit}
             onToggleFavorite={onToggleFavorite}
             onDelete={onDelete}

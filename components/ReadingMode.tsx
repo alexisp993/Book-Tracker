@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { ProgressBar } from "@/components/ui/bar";
 import { FallbackCoverImg } from "@/components/FallbackCoverImg";
+import { FinishedMoment } from "@/components/FinishedMoment";
 import { ApiRequestError } from "@/lib/api";
-import { useDeleteSession, useStopSession } from "@/lib/queries";
+import { useBook, useDeleteSession, useStopSession } from "@/lib/queries";
 import { MOOD_EMOJI, MOOD_LABELS, READING_MOODS } from "@/lib/constants";
 import type { ReadingMood } from "@/lib/constants";
 import type { ReadingSessionDTO } from "@/lib/types";
@@ -177,7 +178,9 @@ export function ReadingMode({
   const [targetMinutes, setTargetMinutes] = React.useState<number | null>(() =>
     readTargetMinutes(session.id),
   );
-  const [view, setView] = React.useState<"timer" | "finish" | "saved">("timer");
+  const [view, setView] = React.useState<
+    "timer" | "finish" | "saved" | "finished"
+  >("timer");
   const [confirmCancel, setConfirmCancel] = React.useState(false);
   const [endPage, setEndPage] = React.useState("");
   const [mood, setMood] = React.useState("");
@@ -190,6 +193,13 @@ export function ReadingMode({
 
   const stopMutation = useStopSession();
   const deleteMutation = useDeleteSession();
+
+  // Only fetched once the reader has actually reached the finished view —
+  // useBook is gated on a truthy id, so an empty string is a no-op query and
+  // every ordinary session avoids the request entirely.
+  const { data: finishedBook } = useBook(
+    view === "finished" ? session.userBookId : "",
+  );
 
   const paused = pause.pausedSince !== null;
 
@@ -279,8 +289,20 @@ export function ReadingMode({
       // Finishing a session is the core loop's one completion event — it
       // used to close with zero acknowledgment. Hold on a brief confirmation
       // instead of closing immediately; the effect below auto-dismisses it.
-      setSavedSummary({ minutes, endPage: endPage ? Number(endPage) : null });
-      setView("saved");
+      const end = endPage ? Number(endPage) : null;
+      setSavedSummary({ minutes, endPage: end });
+
+      // Reading to the last page is the end of the *book*, not just the
+      // session, and until now the app said "Session saved" and closed —
+      // leaving the book Currently Reading forever.
+      //
+      // Offered, never assumed: provider page counts are wrong often enough
+      // that silently marking the book read would be worse than saying
+      // nothing. The finished view carries an explicit "still reading" way
+      // out, which drops back to this same confirmation.
+      const readToTheEnd =
+        end !== null && !!session.pageCount && end >= session.pageCount;
+      setView(readToTheEnd ? "finished" : "saved");
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : "Couldn't save the session.",
@@ -311,6 +333,20 @@ export function ReadingMode({
     hour: "numeric",
     minute: "2-digit",
   });
+
+  // The finished view replaces the whole overlay rather than nesting inside
+  // it — it's about the book, not the session, so none of the session chrome
+  // (minimize, "Reading session" label) belongs around it. The book is only
+  // fetched once we're actually showing it; useBook is gated on a truthy id.
+  if (view === "finished" && finishedBook) {
+    return (
+      <FinishedMoment
+        book={finishedBook}
+        onClose={onClose}
+        onNotYet={() => setView("saved")}
+      />
+    );
+  }
 
   return (
     <div

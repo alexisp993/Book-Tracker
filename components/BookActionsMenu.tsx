@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Heart, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { BookCheck, BookOpen, Heart, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LibraryBook } from "@/lib/types";
 
@@ -11,6 +11,7 @@ import type { LibraryBook } from "@/lib/types";
 export function BookActionsMenu({
   book,
   onStartReading,
+  onMarkFinished,
   onEdit,
   onToggleFavorite,
   onDelete,
@@ -18,12 +19,17 @@ export function BookActionsMenu({
 }: {
   book: LibraryBook;
   onStartReading?: (book: LibraryBook) => void;
+  onMarkFinished?: (book: LibraryBook) => void;
   onEdit?: (book: LibraryBook) => void;
   onToggleFavorite?: (book: LibraryBook) => void;
   onDelete?: (book: LibraryBook) => void;
   className?: string;
 }) {
   const canStart = book.status === "WANT_TO_READ" || book.status === "ON_HOLD";
+  // Finishing a book used to require opening the edit dialog and changing a
+  // <select> — three steps and a form for the most meaningful thing a reader
+  // does. Any book that isn't already read can be finished from here.
+  const canFinish = book.status !== "READ";
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -72,6 +78,16 @@ export function BookActionsMenu({
               className="text-warm"
             >
               <BookOpen className="h-3.5 w-3.5" /> Start reading
+            </Item>
+          ) : null}
+          {canFinish && onMarkFinished ? (
+            <Item
+              onClick={() => {
+                setOpen(false);
+                onMarkFinished(book);
+              }}
+            >
+              <BookCheck className="h-3.5 w-3.5" /> Mark as finished
             </Item>
           ) : null}
           {onEdit ? (
