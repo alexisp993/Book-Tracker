@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { Check, Plus, Sparkles } from "lucide-react";
-import { EmptyState } from "@/components/EmptyState";
 import { Loading } from "@/components/ui/loading";
 import { Dialog } from "@/components/ui/dialog";
 import { BookForm, type BookFormValues, type BookPrefill } from "@/components/BookForm";
@@ -134,22 +133,19 @@ export function SuggestionSection() {
   const [mode, setMode] = React.useState<Mode>("library");
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <SuggestionHeader />
-        <SegmentedTabs value={mode} onChange={setMode} items={MODE_TABS} className="w-auto" />
-      </div>
+    // No local header. This used to be a section buried at the bottom of the
+    // Collections page and needed to announce itself; it is its own route now,
+    // and "Pick Your Next Read" directly under the page title "What to read
+    // next" was the same sentence twice.
+    <section className="space-y-4">
+      <SegmentedTabs
+        value={mode}
+        onChange={setMode}
+        items={MODE_TABS}
+        className="w-auto"
+      />
       {mode === "library" ? <LibrarySuggestions /> : <GenreSuggestions />}
     </section>
-  );
-}
-
-function SuggestionHeader() {
-  return (
-    <div className="flex items-center gap-2">
-      <Sparkles className="h-4 w-4 text-primary" />
-      <h2 className="text-sm font-semibold">Pick Your Next Read</h2>
-    </div>
   );
 }
 
@@ -162,11 +158,23 @@ function LibrarySuggestions() {
   if (isLoading) return <Loading label="Finding suggestions…" />;
   if (suggestions.length === 0) {
     return (
-      <EmptyState
-        icon={Sparkles}
-        title="No suggestions yet"
-        description="Rate or finish some books to get personalised recommendations from your TBR pile."
-      />
+      // Authored and left-aligned, like the rest of the app's empty states.
+      <div className="max-w-md py-4">
+        <p className="font-display text-2xl leading-snug">
+          Not enough to go on yet.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          These are scored against the authors and genres you&rsquo;ve already
+          read and rated. Finish or rate a couple of books and your want-to-read
+          pile will start sorting itself.
+        </p>
+        <Link
+          href="/library?status=WANT_TO_READ"
+          className="mt-4 inline-flex items-center gap-1.5 border-b border-primary/40 pb-0.5 text-sm font-medium text-primary transition-colors hover:border-primary"
+        >
+          See your want-to-read pile
+        </Link>
+      </div>
     );
   }
 
@@ -245,10 +253,9 @@ function GenreSuggestions() {
       />
 
       {!genre ? (
-        <EmptyState
-          icon={Sparkles}
-          title="Pick a genre"
-          description="Choose a genre above to discover books outside your library."
+        <Aside
+          title="Pick a genre."
+          body="Anything above. These come from outside your library, so it's a way to find something you'd never have gone looking for."
         />
       ) : isLoading || isFetching ? (
         <Loading label="Finding books…" />
@@ -257,16 +264,14 @@ function GenreSuggestions() {
         // the reader "nothing found" for both is misleading: one is us
         // failing, the other is them already being well-read in this genre.
         providerCount > 0 ? (
-          <EmptyState
-            icon={Sparkles}
-            title={`Nothing to show for ${genre} right now`}
-            description="We only suggest books we can show a summary for, and none came back this time. Try another genre."
+          <Aside
+            title={`Nothing for ${genre} right now.`}
+            body="We only suggest books we can show a summary for, and none came back this time. Try another genre."
           />
         ) : (
-          <EmptyState
-            icon={Sparkles}
-            title="Couldn't reach the book service"
-            description="No results came back for this genre just now. Try again in a moment, or pick a different genre."
+          <Aside
+            title="Couldn't reach the book service."
+            body="No results came back just now. Try again in a moment, or pick a different genre."
           />
         )
       ) : (
@@ -450,5 +455,17 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
         />
       </Dialog>
     </>
+  );
+}
+
+// The page's shared empty/interstitial voice: a sentence at reading size and
+// one line of explanation, left-aligned. Replaces four dashed EmptyState boxes
+// that each centred a "no results" message in a full-width panel.
+function Aside({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="max-w-md py-4">
+      <p className="font-display text-2xl leading-snug">{title}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+    </div>
   );
 }
