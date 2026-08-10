@@ -114,16 +114,17 @@ export function BookForm({
     initial?.description ?? prefill?.description ?? "",
   );
 
-  // Shelf / collection membership. Cached (60s staleTime) and shared with
-  // GroupsView, so this no longer re-fetches every time the dialog opens.
+  // Shelf membership. Cached (60s staleTime) and shared with GroupsView, so
+  // this no longer re-fetches every time the dialog opens.
   const { data: shelves = [] } = useGroups("shelves");
-  const { data: collections = [] } = useGroups("collections");
   const [shelfIds, setShelfIds] = React.useState<string[]>(
     initial?.shelfIds ?? [],
   );
-  const [collectionIds, setCollectionIds] = React.useState<string[]>(
-    initial?.collectionIds ?? [],
-  );
+  // Collections lost their UI when the route was retired, but the field is
+  // still submitted, seeded from whatever the book already had. Dropping it
+  // from the payload would silently clear an existing book's memberships on
+  // the next edit — the API treats an absent array as "empty", not "unchanged".
+  const collectionIds = initial?.collectionIds ?? [];
 
   const toggle = (
     ids: string[],
@@ -282,14 +283,6 @@ export function BookForm({
           options={shelves}
           selected={shelfIds}
           onToggle={(id) => toggle(shelfIds, setShelfIds, id)}
-        />
-      ) : null}
-      {collections.length > 0 ? (
-        <ChipGroup
-          label="Collections"
-          options={collections}
-          selected={collectionIds}
-          onToggle={(id) => toggle(collectionIds, setCollectionIds, id)}
         />
       ) : null}
 

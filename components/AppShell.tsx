@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
-  FolderHeart,
   House,
   Library,
   NotebookPen,
+  Sparkles,
   Timer,
   User,
 } from "lucide-react";
@@ -22,14 +22,13 @@ import { AccountMenu } from "@/components/AccountMenu";
 const NAV = [
   { href: "/", label: "Home", icon: House },
   { href: "/library", label: "Library", icon: BookOpen },
-  // Both grouping routes are listed. /shelves was previously reachable only
-  // from a Home tile, which is why the two felt like one screen that kept
-  // changing its name — the reader never saw them side by side and so never
-  // learned there were two. They are separate models (ShelfBook has no
-  // ordering; CollectionBook has an `order` column), so this is two features,
-  // not one duplicated.
+  // Shelves is the only grouping surface now. Collections was a second,
+  // near-identical one whose sole real difference was a stored sort order —
+  // not enough to earn a top-level destination, and impossible to tell apart
+  // in use. Its slot goes to Suggestions, which was previously buried at the
+  // bottom of the Collections page.
   { href: "/shelves", label: "Shelves", icon: Library },
-  { href: "/collections", label: "Collections", icon: FolderHeart },
+  { href: "/suggestions", label: "What to read", icon: Sparkles },
   { href: "/sessions", label: "Reading Session", icon: Timer },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/notes", label: "Notes", icon: NotebookPen },

@@ -1,42 +1,40 @@
 "use client";
 
-import { BookOpen, Clock, Flame } from "lucide-react";
-import { Stat } from "@/components/ui/stat";
+import type * as React from "react";
+import { Band } from "@/components/ui/section";
 import { useSessionStats } from "@/lib/queries";
 
-// Today / this week / streak tiles, mirroring StatsView's own stat-card
-// grid. Surfaces streakDays on the Sessions page for the first time (today
-// it's Library-only via StreakBanner).
+// Today / this week / streak, as figures rather than four tinted tiles.
+//
+// This used to render `Stat` with teal, violet, teal and amber icon pucks —
+// four hues across four boxes, none of them meaning anything. Same treatment
+// the Statistics screen already moved to: a number, its name, a hairline.
 export function SessionSummaryStats() {
   const { data } = useSessionStats();
   if (!data || data.sessionCount === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <Stat
-        icon={<Clock className="h-4 w-4" />}
-        label="Today"
-        tint="teal"
-        value={`${data.hoursToday}h`}
-      />
-      <Stat
-        icon={<BookOpen className="h-4 w-4" />}
-        label="Pages today"
-        tint="violet"
-        value={data.pagesToday}
-      />
-      <Stat
-        icon={<Clock className="h-4 w-4" />}
-        label="This week"
-        tint="teal"
-        value={`${data.hoursThisWeek}h`}
-      />
-      <Stat
-        icon={<Flame className="h-4 w-4" />}
-        label="Streak"
-        tint="amber"
-        value={`${data.streakDays}d`}
-      />
+    <Band label="Where you are" divider={false}>
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
+        <Figure label="Today" value={`${data.hoursToday}h`} />
+        <Figure label="Pages today" value={data.pagesToday} />
+        <Figure label="This week" value={`${data.hoursThisWeek}h`} />
+        <Figure
+          label="Streak"
+          value={data.streakDays > 0 ? `${data.streakDays}d` : "—"}
+        />
+      </dl>
+    </Band>
+  );
+}
+
+function Figure({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="border-l border-border/60 pl-3">
+      <dt className="text-caption-sm text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-display text-2xl font-semibold tabular-nums">
+        {value}
+      </dd>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { Band } from "@/components/ui/section";
 import { BarRow } from "@/components/ui/bar";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
 import { useSessionStats } from "@/lib/queries";
@@ -15,8 +15,8 @@ export function MoodBreakdown() {
   const max = Math.max(1, ...data.moodBreakdown.map((m) => m.count));
 
   return (
-    <Card title="Mood history" subtitle="How you've been feeling">
-      <div className="space-y-2.5">
+    <Band label="How you've been feeling">
+      <div className="max-w-2xl space-y-2.5">
         {data.moodBreakdown.map((m) => (
           <BarRow
             key={m.mood}
@@ -33,6 +33,6 @@ export function MoodBreakdown() {
           />
         ))}
       </div>
-    </Card>
+    </Band>
   );
 }

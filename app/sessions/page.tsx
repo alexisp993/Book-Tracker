@@ -6,7 +6,7 @@ export default function SessionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sessions"
-        subtitle="Every reading session you’ve logged, with mood and notes."
+        subtitle="Every sitting you’ve logged — how long, how far, and how it felt."
       />
       <SessionHistoryView />
     </div>

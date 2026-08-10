@@ -276,7 +276,10 @@ export function LibraryView() {
     showShelves && !shelvesLoading && recentlyAddedBooks.length === 0;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    // Uncapped, like Shelves. Library's subject is rows of covers and a grid
+    // of them — both of which want every pixel of the shell. The 1152px cap
+    // was stranding a third of the page and clipping the shelf rows early.
+    <div className="space-y-6">
       {/* The shared header, not a local copy of it — the subtitle says how
           much is here so the count doesn't need a badge. */}
       <PageHeader

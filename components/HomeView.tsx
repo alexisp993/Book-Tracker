@@ -156,7 +156,12 @@ export function HomeView() {
     shelvesData.length > 0;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 sm:space-y-14">
+    // No width cap. The 1152px cap left ~450px of dead paper down the right of
+    // a 1600px shell, which read as an unfinished layout rather than as
+    // breathing room. The Bands, shelf rows and heatmap now span the shell;
+    // anything that is *prose* caps itself locally instead, so line length
+    // stays readable without the whole page shrinking to protect it.
+    <div className="space-y-10 sm:space-y-14">
       {/* Masthead. The greeting is a salutation, not a page title — the book
           below it is what the page is about, so this stays quiet. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between">

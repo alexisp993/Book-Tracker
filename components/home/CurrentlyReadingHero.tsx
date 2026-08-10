@@ -110,7 +110,10 @@ export function CurrentlyReadingHero({
           </CoverFrame>
         </Link>
 
-        <div className="min-w-0 flex-1 pb-1">
+        {/* Capped locally now that Home spans the full shell: the title is
+            display type, and a 1400px measure would set it as a headline
+            across the page rather than as a book's name beside its cover. */}
+        <div className="min-w-0 max-w-3xl flex-1 pb-1">
           <Link href={`/books/${book.id}`} className="group block">
             <h2 className="font-display text-3xl font-semibold leading-[1.1] tracking-tight text-balance transition-colors group-hover:text-primary sm:text-[2.75rem]">
               {book.title}

@@ -59,6 +59,12 @@ const TYPE_FILTER_ITEMS: readonly TabItem<NoteType | "">[] = [
   })),
 ];
 
+// Notes tile across the shell rather than stacking in one narrow column.
+// Only on the standalone page — embedded in Book Detail the notes sit in a
+// column beside other content and a grid would fight it.
+const NOTE_GRID =
+  "grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
+
 export function NotesView({ userBookId }: { userBookId?: string }) {
   const [viewMode, setViewMode] = React.useState<ViewMode>("all");
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -154,7 +160,11 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
     // Notes are prose — capped on the standalone page so lines stay readable
     // in the full-width shell. Embedded in Book Detail it inherits that page's
     // own width, so no cap there.
-    <div className={standalone ? "mx-auto w-full max-w-4xl space-y-4" : "space-y-4"}>
+    // Standalone Notes now spans the shell like Shelves. It can't do that as a
+    // single column — one 1600px-wide note row is worse than the dead space it
+    // replaced — so the list below becomes a multi-column masonry-ish grid.
+    // Embedded in Book Detail it still inherits that page's width.
+    <div className={standalone ? "w-full space-y-4" : "space-y-4"}>
       {standalone ? (
         <>
           {/* The shared header rather than a fourth hand-rolled <h1>. */}
@@ -237,7 +247,7 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
           {Array.from(grouped.entries()).map(([bookTitle, notes]) => (
             <div key={bookTitle} className="space-y-2">
               <h2 className="text-sm font-semibold">{bookTitle}</h2>
-              <div className="space-y-2">
+              <div className={standalone ? NOTE_GRID : "space-y-2"}>
                 {notes.map((note) => (
                   <NoteCard key={note.id} note={note} onEdit={openEdit} showBookLink={false} />
                 ))}
@@ -246,7 +256,7 @@ export function NotesView({ userBookId }: { userBookId?: string }) {
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className={standalone ? NOTE_GRID : "space-y-2"}>
           {items.map((note) => (
             <NoteCard key={note.id} note={note} onEdit={openEdit} showBookLink={standalone} />
           ))}

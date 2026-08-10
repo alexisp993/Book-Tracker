@@ -280,7 +280,7 @@ export function StatsView() {
       ) : null}
 
       <Band label="Reading activity">
-        <ReadingHeatmap />
+        <ReadingHeatmap showCard={false} />
       </Band>
     </div>
   );
