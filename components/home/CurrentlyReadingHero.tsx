@@ -102,10 +102,7 @@ export function CurrentlyReadingHero({
     <Band label="Currently reading" divider={false}>
       <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-9">
         <Link href={`/books/${book.id}`} className="group shrink-0 self-start">
-          <CoverFrame
-            size="hero"
-            className="transition-[transform,box-shadow] group-hover:-translate-y-1 group-hover:shadow-card-hover"
-          >
+          <CoverFrame size="hero" interactive>
             <BookCover book={book} />
           </CoverFrame>
         </Link>

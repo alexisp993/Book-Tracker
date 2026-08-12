@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import NumberFlow from "@number-flow/react";
 import { Band } from "@/components/ui/section";
 import { useGoals, useSessionStats, useStats } from "@/lib/queries";
 import { cn, formatDuration } from "@/lib/utils";
@@ -36,25 +37,50 @@ export function YearInReading() {
 
   // Read as prose, so the units carry the meaning rather than a label under a
   // number. Zero values are dropped instead of rendering "0 books".
-  const parts: string[] = [];
+  //
+  // The counts animate up from zero via NumberFlow (already a dependency, and
+  // already used on /profile/stats). It costs nothing and it makes the one
+  // line of the page that is purely about *your* year feel like it's being
+  // tallied rather than printed.
+  const parts: { key: string; value: number; unit: string }[] = [];
   if (stats.booksThisYear > 0) {
-    parts.push(`${stats.booksThisYear} book${stats.booksThisYear === 1 ? "" : "s"}`);
+    parts.push({
+      key: "books",
+      value: stats.booksThisYear,
+      unit: stats.booksThisYear === 1 ? "book" : "books",
+    });
   }
-  if (stats.pagesThisYear > 0) parts.push(`${stats.pagesThisYear.toLocaleString()} pages`);
-  if (stats.minutesThisYear > 0) parts.push(formatDuration(stats.minutesThisYear));
+  if (stats.pagesThisYear > 0) {
+    parts.push({ key: "pages", value: stats.pagesThisYear, unit: "pages" });
+  }
 
   return (
     <Band label={`This year · ${year}`}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
         <div className="min-w-0">
           <p className="font-display text-3xl leading-snug text-balance sm:text-4xl">
-            {parts.length > 0 ? (
-              parts.map((p, i) => (
-                <span key={p}>
-                  {i > 0 ? <span className="text-muted-foreground"> · </span> : null}
-                  {p}
-                </span>
-              ))
+            {parts.length > 0 || stats.minutesThisYear > 0 ? (
+              <>
+                {parts.map((p, i) => (
+                  <span key={p.key}>
+                    {i > 0 ? (
+                      <span className="text-muted-foreground"> · </span>
+                    ) : null}
+                    <NumberFlow value={p.value} /> {p.unit}
+                  </span>
+                ))}
+                {stats.minutesThisYear > 0 ? (
+                  <span>
+                    {parts.length > 0 ? (
+                      <span className="text-muted-foreground"> · </span>
+                    ) : null}
+                    {/* Duration stays formatted text — "6h 20m" isn't a single
+                        number, and NumberFlow would have to tear it apart to
+                        animate it. */}
+                    {formatDuration(stats.minutesThisYear)}
+                  </span>
+                ) : null}
+              </>
             ) : (
               <span className="text-muted-foreground">
                 Your year is still a blank page.

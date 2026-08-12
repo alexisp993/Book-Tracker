@@ -20,11 +20,14 @@ export function MiniBookCard({
   showTitle = true,
   showProgress = false,
   size = "lg",
+  index = 0,
 }: {
   book: LibraryBook;
   showTitle?: boolean;
   showProgress?: boolean;
   size?: ShelfSize;
+  /** Position in its row, used only to stagger the entry animation. */
+  index?: number;
 }) {
   const progress =
     book.pageCount && book.pageCount > 0
@@ -34,11 +37,19 @@ export function MiniBookCard({
   return (
     <Link
       href={`/books/${book.id}`}
-      className={cn("group flex shrink-0 flex-col gap-1.5", COVER_TRACK[size])}
+      className={cn(
+        "group flex shrink-0 flex-col gap-1.5",
+        // Covers arrive left-to-right rather than all at once. Capped at 8
+        // steps so a long shelf doesn't have a straggler still animating in
+        // half a second after the rest have settled.
+        "animate-[bt-rise-in_320ms_ease-out_both]",
+        COVER_TRACK[size],
+      )}
+      style={{ animationDelay: `${Math.min(index, 7) * 45}ms` }}
     >
       <CoverFrame
         size={size}
-        className="transition-[transform,box-shadow] group-hover:-translate-y-0.5 group-hover:shadow-card-hover"
+        interactive
       >
         <BookCover book={book} />
       </CoverFrame>
@@ -74,13 +85,14 @@ export function BookScrollRow({
   if (books.length === 0) return null;
   return (
     <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {books.map((b) => (
+      {books.map((b, i) => (
         <MiniBookCard
           key={b.id}
           book={b}
           showTitle={showTitle}
           showProgress={showProgress}
           size={size}
+          index={i}
         />
       ))}
     </div>

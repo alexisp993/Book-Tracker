@@ -48,16 +48,29 @@ export type CoverSize = keyof typeof COVER_SIZES;
 export function CoverFrame({
   size = "fill",
   className,
+  interactive = false,
   children,
 }: {
   size?: CoverSize;
   className?: string;
+  /**
+   * Adds the pick-it-up response — a lift, a slight tilt, and a deeper
+   * shadow under the cursor. Opt-in because a cover that isn't a link
+   * shouldn't pretend to be one (the hero on Book Detail, for instance,
+   * goes nowhere).
+   */
+  interactive?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
         "shrink-0 overflow-hidden border bg-muted shadow-cover",
+        // Books are objects. A shelf where nothing responds to the cursor is
+        // a picture of a shelf; this makes the covers feel liftable without
+        // any of the tilt-card excess — 4px up, one degree over.
+        interactive &&
+          "transition-[transform,box-shadow] duration-200 ease-out will-change-transform group-hover:-translate-y-1 group-hover:rotate-[-1deg] group-hover:shadow-card-hover group-focus-visible:-translate-y-1",
         COVER_SIZES[size],
         className,
       )}
