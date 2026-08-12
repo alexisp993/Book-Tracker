@@ -290,6 +290,13 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* Delays have to go too, not just durations. Staggered entries (shelf
+       rows, the finishing moment's sequence) set an inline animation-delay,
+       and with `both` fill the element sits at its "from" state — usually
+       opacity 0 — for the whole delay. Zeroing only the duration would leave
+       a reduced-motion reader watching content pop in one item at a time over
+       a third of a second, which is exactly the effect they asked to avoid. */
+    animation-delay: 0ms !important;
     transition-property: color, background-color, border-color, outline-color,
       text-decoration-color, fill, stroke, opacity, box-shadow !important;
     transition-duration: 120ms !important;
