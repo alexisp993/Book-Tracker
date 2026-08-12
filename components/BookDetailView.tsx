@@ -203,7 +203,7 @@ export function BookDetailView({ id }: { id: string }) {
               and finding this exact card's kebab — found via /impeccable
               critique, since this is the page a reader spends the most time
               on per book. */}
-          <div className="relative mt-4" ref={progressMenuRef}>
+          <div className="relative mt-4 flex flex-wrap items-center gap-3" ref={progressMenuRef}>
             <div className="flex">
               {/* Outline, and sentence case. A filled button beside a hero
                   cover competes with the artwork for the same attention —
@@ -231,6 +231,26 @@ export function BookDetailView({ id }: { id: string }) {
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </div>
+
+            {/* Starting a session is the single most common thing to do from
+                this page, and it was hidden behind the chevron — two clicks
+                and a guess for the app's core loop. It sits in the open now,
+                as a text-and-rule affordance so it doesn't fight the cover. */}
+            {book.status !== "READ" ? (
+              <button
+                type="button"
+                onClick={handleStartReading}
+                disabled={startSession.isPending}
+                className="inline-flex items-center gap-1.5 border-b border-primary/40 pb-0.5 text-sm font-medium text-primary transition-colors hover:border-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Timer className="h-3.5 w-3.5" />
+                {startSession.isPending
+                  ? "Starting…"
+                  : activeSession?.userBookId === book.id
+                    ? "Back to your session"
+                    : "Start a session"}
+              </button>
+            ) : null}
             {progressMenuOpen ? (
               <div
                 role="menu"
