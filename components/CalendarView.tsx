@@ -123,27 +123,23 @@ async function downloadCalendarImage(
   // and a stack of books; shipping stock photography inside a personal export
   // would be inventing something that isn't theirs, so the warmth comes from
   // the books they actually read this month instead.
-  const coverSources = cells
+  const coverCellCandidates = cells
     .filter((c) => c.hasCover && c.coverCandidates.length > 0)
-    .map((c) => c.coverCandidates[0]);
-  if (coverSources.length > 0 && "filter" in ctx) {
+    .map((c) => c.coverCandidates);
+  if (coverCellCandidates.length > 0 && "filter" in ctx) {
     const spots: [number, number, number][] = [
       [-40, S - 300, 320],
       [S - 260, S - 240, 300],
     ];
-    for (let i = 0; i < Math.min(2, coverSources.length); i++) {
-      try {
-        const img = await loadImage(coverSources[i % coverSources.length]);
-        if (img.naturalWidth <= 2) continue;
-        const [bx, by, bw] = spots[i];
-        ctx.save();
-        ctx.filter = "blur(46px)";
-        ctx.globalAlpha = 0.32;
-        ctx.drawImage(img, bx, by, bw, bw * 1.4);
-        ctx.restore();
-      } catch {
-        // Ambient decoration only — a failed load just means less colour.
-      }
+    for (let i = 0; i < Math.min(2, coverCellCandidates.length); i++) {
+      const img = await loadFirstUsableCover(coverCellCandidates[i]);
+      if (!img) continue;
+      const [bx, by, bw] = spots[i];
+      ctx.save();
+      ctx.filter = "blur(46px)";
+      ctx.globalAlpha = 0.32;
+      ctx.drawImage(img, bx, by, bw, bw * 1.4);
+      ctx.restore();
     }
   }
 
@@ -160,12 +156,15 @@ async function downloadCalendarImage(
 
   // The one display moment. Two lines, the second in the accent, italic —
   // the same serif the app titles everything else with.
-  ctx.font = `600 52px ${serif}`;
+  // 46px, not the 52 this started at: at 52 the first line measured to within
+  // 4px of the calendar card's left edge, so the two columns read as colliding
+  // rather than as a composition.
+  ctx.font = `600 46px ${serif}`;
   ctx.fillStyle = palette.foreground;
-  ctx.fillText("Your reading", LX, 210);
-  ctx.font = `italic 600 52px ${serif}`;
+  ctx.fillText("Your reading", LX, 208);
+  ctx.font = `italic 600 46px ${serif}`;
   ctx.fillStyle = palette.primary;
-  ctx.fillText("calendar.", LX, 272);
+  ctx.fillText("calendar.", LX, 264);
 
   ctx.font = `400 19px ${sans}`;
   ctx.fillStyle = palette.mutedForeground;
@@ -374,34 +373,28 @@ async function downloadCalendarImage(
 
     let coverLoaded = false;
     if (cell.hasCover) {
-      for (const candidate of cell.coverCandidates) {
-        try {
-          const img = await loadImage(candidate);
-          if (img.naturalWidth <= 2) continue;
-          const cw = Math.min(CELL_W - 22, 52);
-          const ch = Math.round(cw * 1.45);
-          const cx = centreX - cw / 2;
-          const cy = contentMid - ch / 2;
+      const img = await loadFirstUsableCover(cell.coverCandidates);
+      if (img) {
+        const cw = Math.min(CELL_W - 22, 52);
+        const ch = Math.round(cw * 1.45);
+        const cx = centreX - cw / 2;
+        const cy = contentMid - ch / 2;
 
-          ctx.save();
-          ctx.shadowColor = "rgba(0,0,0,0.24)";
-          ctx.shadowBlur = 7;
-          ctx.shadowOffsetY = 3;
-          roundRect(ctx, cx, cy, cw, ch, 4);
-          ctx.fillStyle = palette.card;
-          ctx.fill();
-          ctx.restore();
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.24)";
+        ctx.shadowBlur = 7;
+        ctx.shadowOffsetY = 3;
+        roundRect(ctx, cx, cy, cw, ch, 4);
+        ctx.fillStyle = palette.card;
+        ctx.fill();
+        ctx.restore();
 
-          ctx.save();
-          roundRect(ctx, cx, cy, cw, ch, 4);
-          ctx.clip();
-          drawCoverFit(ctx, img, cx, cy, cw, ch);
-          ctx.restore();
-          coverLoaded = true;
-          break;
-        } catch {
-          // Try the next candidate.
-        }
+        ctx.save();
+        roundRect(ctx, cx, cy, cw, ch, 4);
+        ctx.clip();
+        drawCoverFit(ctx, img, cx, cy, cw, ch);
+        ctx.restore();
+        coverLoaded = true;
       }
     }
 
@@ -495,23 +488,14 @@ async function downloadCalendarImage(
       const th = 56;
       const tx = coX + 16;
       const ty = coY + 68 + 20 - th / 2;
-      let drew = false;
-      for (const cand of best.data.primary.coverCandidates) {
-        try {
-          const img = await loadImage(cand);
-          if (img.naturalWidth <= 2) continue;
-          ctx.save();
-          roundRect(ctx, tx, ty, tw, th, 3);
-          ctx.clip();
-          drawCoverFit(ctx, img, tx, ty, tw, th);
-          ctx.restore();
-          drew = true;
-          break;
-        } catch {
-          // fall through
-        }
-      }
-      if (!drew) {
+      const thumb = await loadFirstUsableCover(best.data.primary.coverCandidates);
+      if (thumb) {
+        ctx.save();
+        roundRect(ctx, tx, ty, tw, th, 3);
+        ctx.clip();
+        drawCoverFit(ctx, thumb, tx, ty, tw, th);
+        ctx.restore();
+      } else {
         roundRect(ctx, tx, ty, tw, th, 3);
         ctx.fillStyle = palette.emptyCell;
         ctx.fill();
@@ -543,6 +527,29 @@ async function downloadCalendarImage(
   a.download = `reading-calendar-${yearMonth}.png`;
   a.href = canvas.toDataURL("image/png");
   a.click();
+}
+
+// Walks a cover-candidate chain and returns the first image that actually
+// loads and isn't a 1x1 placeholder, or null.
+//
+// This exists because the walk used to be copy-pasted per draw site, and one
+// copy — the ambient background — took only candidates[0]. When the first
+// candidate was dead the grid still found a cover further down the chain while
+// the background silently drew nothing, so the ambient tint was missing from
+// every export and looked like it had never been implemented.
+async function loadFirstUsableCover(
+  candidates: string[],
+): Promise<HTMLImageElement | null> {
+  for (const candidate of candidates) {
+    try {
+      const img = await loadImage(candidate);
+      if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
+      return img;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return null;
 }
 
 // Word-wraps into at most `maxLines`, ellipsing the last one. Book titles are
