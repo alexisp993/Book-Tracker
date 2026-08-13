@@ -74,265 +74,182 @@ function readThemePalette(): CanvasPalette {
 // cover-candidate resolution, same summary totals. No separate calculation
 // path exists here anymore.
 // ---------------------------------------------------------------------------
+// The exported card is square and built for sharing.
+//
+// It used to be a 1080x1630 portrait sheet — a picture of the calendar, and
+// nothing else. Feed platforms crop tall images, and a bare grid gives a
+// viewer who doesn't use the app no way to read what they're looking at. This
+// is a 1:1 composition instead: an editorial column that explains the grid,
+// the month itself as the focal object, the reader's own totals, and one
+// highlighted day.
+//
+// Rendered at 2x and downscaled by the platform, so the type stays crisp.
 async function downloadCalendarImage(
   viewModel: MonthCalendarViewModel,
   streakDays: number,
 ) {
   const { monthLabel, weekdayLabels, cells, summary } = viewModel;
 
-  // The month title is set in the app's serif, which only resolves on canvas
-  // once the webfont has actually loaded — otherwise the browser silently
-  // substitutes and the export gets a different typeface from the screen.
+  // Canvas silently substitutes a different family if the webfont hasn't
+  // loaded, which would ship the export in Georgia while the screen shows
+  // Literata.
   try {
     await document.fonts.ready;
   } catch {
-    // Font loading API unavailable: the stack below falls back to Georgia.
+    // Font Loading API unavailable — the stacks below fall back to Georgia.
   }
 
-  const W = 1080;
-  const PAGE_PAD = 28; // paper visible around the card
-  const PAD = 56; // content inset inside the card
-  const GAP = 10;
-
-  const CARD_X = PAGE_PAD;
-  const CARD_W = W - PAGE_PAD * 2;
-  const CONTENT_X = CARD_X + PAD;
-  const CONTENT_W = CARD_W - PAD * 2;
-
-  // Portrait cells, close to the reference's 1:1.42 — tall enough to seat a
-  // book cover, short enough that six rows don't run off the card.
-  const CELL_W = Math.floor((CONTENT_W - GAP * 6) / 7);
-  const CELL_H = Math.round(CELL_W * 1.42);
-
-  const HEADER_H = 214; // brand + month + subtitle/legend row
-  const LABEL_H = 44; // weekday row
-  const FOOTER_H = 104; // stats panel
-  const FOOTER_GAP = 34;
-
-  const rows = cells.length / 7;
-  const gridH = rows * CELL_H + (rows - 1) * GAP;
-  const H =
-    PAGE_PAD * 2 + PAD * 2 + HEADER_H + LABEL_H + gridH + FOOTER_GAP + FOOTER_H;
+  const S = 1080; // logical square; everything below is in these units
+  const DPR = 2;
 
   const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = S * DPR;
+  canvas.height = S * DPR;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  ctx.scale(DPR, DPR);
 
   const palette = readThemePalette();
   const serif = `"Literata", Georgia, "Times New Roman", serif`;
   const sans = `-apple-system, "Segoe UI", system-ui, sans-serif`;
 
-  // Paper ground
-  ctx.fillStyle = palette.background;
-  ctx.fillRect(0, 0, W, H);
+  // --- Ground -------------------------------------------------------------
 
-  // The card. A soft drop shadow lifts it off the paper the way the live
-  // surfaces do; the hairline keeps it delineated on light themes where card
-  // and background are only a few percent apart.
+  ctx.fillStyle = palette.background;
+  ctx.fillRect(0, 0, S, S);
+
+  // Ambient colour from the reader's own covers, heavily blurred into the
+  // bottom corners. The reference sets its mockup on a photograph of a plant
+  // and a stack of books; shipping stock photography inside a personal export
+  // would be inventing something that isn't theirs, so the warmth comes from
+  // the books they actually read this month instead.
+  const coverSources = cells
+    .filter((c) => c.hasCover && c.coverCandidates.length > 0)
+    .map((c) => c.coverCandidates[0]);
+  if (coverSources.length > 0 && "filter" in ctx) {
+    const spots: [number, number, number][] = [
+      [-40, S - 300, 320],
+      [S - 260, S - 240, 300],
+    ];
+    for (let i = 0; i < Math.min(2, coverSources.length); i++) {
+      try {
+        const img = await loadImage(coverSources[i % coverSources.length]);
+        if (img.naturalWidth <= 2) continue;
+        const [bx, by, bw] = spots[i];
+        ctx.save();
+        ctx.filter = "blur(46px)";
+        ctx.globalAlpha = 0.32;
+        ctx.drawImage(img, bx, by, bw, bw * 1.4);
+        ctx.restore();
+      } catch {
+        // Ambient decoration only — a failed load just means less colour.
+      }
+    }
+  }
+
+  // --- Left column --------------------------------------------------------
+
+  const LX = 52; // left column origin
+
+  drawBookGlyph(ctx, LX + 13, 78, 26, palette.primary);
+  ctx.font = `700 25px ${sans}`;
+  ctx.fillStyle = palette.foreground;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("Book Tracker", LX + 36, 87);
+
+  // The one display moment. Two lines, the second in the accent, italic —
+  // the same serif the app titles everything else with.
+  ctx.font = `600 52px ${serif}`;
+  ctx.fillStyle = palette.foreground;
+  ctx.fillText("Your reading", LX, 210);
+  ctx.font = `italic 600 52px ${serif}`;
+  ctx.fillStyle = palette.primary;
+  ctx.fillText("calendar.", LX, 272);
+
+  ctx.font = `400 19px ${sans}`;
+  ctx.fillStyle = palette.mutedForeground;
+  ctx.fillText("See your reading.", LX, 326);
+  ctx.fillText("Celebrate every day.", LX, 354);
+
+  // Three notes that make the grid readable to someone who has never used the
+  // app. The reference's third item is "Hover for details", which is nothing
+  // in a still image; the dots are the thing actually left unexplained, so
+  // they take that slot.
+  const notes: { glyph: Glyph; title: string; body: string[] }[] = [
+    {
+      glyph: "book",
+      title: "Covers mark the days",
+      body: ["The book you read that day,", "shown on the day itself."],
+    },
+    {
+      glyph: "bars",
+      title: "Darker means longer",
+      body: ["The deeper the colour, the more", "time you spent reading."],
+    },
+    {
+      glyph: "dots",
+      title: "A dot for every sitting",
+      body: ["One dot per session logged", "on that day."],
+    },
+  ];
+
+  let ny = 424;
+  for (const note of notes) {
+    ctx.beginPath();
+    ctx.arc(LX + 22, ny + 6, 22, 0, Math.PI * 2);
+    ctx.fillStyle = withAlpha(palette.primary, 0.12);
+    ctx.fill();
+    drawStatGlyph(ctx, note.glyph, LX + 22, ny + 6, palette.primary);
+
+    ctx.font = `600 17px ${sans}`;
+    ctx.fillStyle = palette.foreground;
+    ctx.fillText(note.title, LX + 58, ny + 1);
+    ctx.font = `400 14px ${sans}`;
+    ctx.fillStyle = palette.mutedForeground;
+    ctx.fillText(note.body[0], LX + 58, ny + 23);
+    ctx.fillText(note.body[1], LX + 58, ny + 42);
+    ny += 96;
+  }
+
+  // The reference's handwritten flourish. No script face is guaranteed on a
+  // canvas, so this is the serif in italic at a slight angle rather than a
+  // webfont the export can't rely on.
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.10)";
-  ctx.shadowBlur = 28;
+  ctx.translate(LX + 34, 748);
+  ctx.rotate(-0.045);
+  ctx.font = `italic 600 27px ${serif}`;
+  ctx.fillStyle = palette.primary;
+  ctx.fillText("Every day counts.", 0, 0);
+  const swooshW = ctx.measureText("Every day counts.").width;
+  ctx.beginPath();
+  ctx.moveTo(2, 13);
+  ctx.quadraticCurveTo(swooshW / 2, 22, swooshW - 4, 11);
+  ctx.strokeStyle = withAlpha(palette.primary, 0.55);
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.stroke();
+  ctx.restore();
+
+  // --- Stats card (floating, bottom-left) ---------------------------------
+
+  const SC_X = 36;
+  const SC_Y = 892;
+  const SC_W = 320;
+  const SC_H = 118;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.13)";
+  ctx.shadowBlur = 26;
   ctx.shadowOffsetY = 8;
-  roundRect(ctx, CARD_X, CARD_X, CARD_W, H - CARD_X * 2, 32);
+  roundRect(ctx, SC_X, SC_Y, SC_W, SC_H, 22);
   ctx.fillStyle = palette.card;
   ctx.fill();
   ctx.restore();
-  roundRect(ctx, CARD_X, CARD_X, CARD_W, H - CARD_X * 2, 32);
-  ctx.strokeStyle = palette.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // --- Header -------------------------------------------------------------
-
-  const brandY = CARD_X + PAD;
-  const BADGE = 44;
-
-  // Tinted badge behind the mark, matching the reference's soft square chip.
-  roundRect(ctx, CONTENT_X, brandY, BADGE, BADGE, 14);
-  ctx.fillStyle = withAlpha(palette.primary, 0.12);
-  ctx.fill();
-  drawBookGlyph(ctx, CONTENT_X + BADGE / 2, brandY + BADGE / 2, 20, palette.primary);
-
-  ctx.font = `700 22px ${sans}`;
-  ctx.fillStyle = palette.primary;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Book Tracker", CONTENT_X + BADGE + 16, brandY + BADGE / 2 + 1);
-
-  // Month — the one display moment, set in the serif like every other title
-  // in the app.
-  ctx.textBaseline = "alphabetic";
-  ctx.font = `600 52px ${serif}`;
-  ctx.fillStyle = palette.foreground;
-  const titleBaseline = brandY + BADGE + 74;
-  ctx.fillText(monthLabel, CONTENT_X, titleBaseline);
-
-  // Caption. The on-screen version says "Hover a day to see details", which is
-  // nonsense in a downloaded image — it says what the picture is instead.
-  ctx.font = `400 15px ${sans}`;
-  ctx.fillStyle = palette.mutedForeground;
-  const captionY = titleBaseline + 32;
-  ctx.fillText("A calendar of your reading days.", CONTENT_X, captionY);
-
-  // Legend, right-aligned on the caption line. Ordered Less -> More, light ->
-  // dark: the reference art has "More" beside its palest swatch, which reads
-  // backwards against its own ramp.
-  const SW = 18;
-  const SW_GAP = 6;
-  const ramp = [palette.emptyCell, ...palette.bucketFill];
-  const rampW = ramp.length * SW + (ramp.length - 1) * SW_GAP;
-  ctx.font = `500 14px ${sans}`;
-  const moreW = ctx.measureText("More").width;
-  const legendRight = CONTENT_X + CONTENT_W;
-  const rampX = legendRight - moreW - 10 - rampW;
-
-  ctx.textAlign = "right";
-  ctx.fillStyle = palette.mutedForeground;
-  ctx.fillText("Less", rampX - 10, captionY);
-  ctx.textAlign = "left";
-  ctx.fillText("More", legendRight - moreW, captionY);
-
-  for (let i = 0; i < ramp.length; i++) {
-    roundRect(ctx, rampX + i * (SW + SW_GAP), captionY - 14, SW, SW, 5);
-    ctx.fillStyle = ramp[i];
-    ctx.fill();
-  }
-
-  // --- Weekday labels -----------------------------------------------------
-
-  const labelY = CARD_X + PAD + HEADER_H + 20;
-  ctx.font = `500 15px ${sans}`;
-  ctx.fillStyle = palette.mutedForeground;
-  ctx.textAlign = "center";
-  for (let d = 0; d < 7; d++) {
-    ctx.fillText(weekdayLabels[d], CONTENT_X + d * (CELL_W + GAP) + CELL_W / 2, labelY);
-  }
-
-  // --- Grid ---------------------------------------------------------------
-
-  // The structural change from the previous export: the cell is a calm light
-  // tile and the reading intensity is a small swatch *inside* it, rather than
-  // the intensity colouring the whole cell and a cover bleeding edge to edge
-  // under a dark scrim. Covers read as objects sitting on the calendar, the
-  // day numbers stay dark on light at every intensity, and a quiet month no
-  // longer looks like a wall of colour blocks.
-  const gridY = CARD_X + PAD + HEADER_H + LABEL_H;
-
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
-    const col = i % 7;
-    const row = Math.floor(i / 7);
-    const x = CONTENT_X + col * (CELL_W + GAP);
-    const y = gridY + row * (CELL_H + GAP);
-
-    const outside = cell.day === null;
-
-    ctx.save();
-    if (outside) ctx.globalAlpha = 0.45;
-
-    roundRect(ctx, x, y, CELL_W, CELL_H, 16);
-    ctx.fillStyle = palette.emptyCell;
-    ctx.fill();
-
-    if (outside) {
-      ctx.restore();
-      continue;
-    }
-
-    // Day number, top-left. Always dark on light now, so there's no
-    // white-over-scrim special case to get wrong.
-    ctx.font = `600 16px ${sans}`;
-    ctx.fillStyle = palette.foreground;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(String(cell.day), x + 12, y + 26);
-
-    const centreX = x + CELL_W / 2;
-    const sessionCount = cell.data?.sessions.length ?? 0;
-    const dotsH = sessionCount > 0 ? 14 : 0;
-    // Content sits in the space below the day number, centred in what's left.
-    const contentTop = y + 34;
-    const contentH = CELL_H - 34 - 12 - dotsH;
-    const contentMid = contentTop + contentH / 2;
-
-    let coverLoaded = false;
-    if (cell.hasCover) {
-      for (const candidate of cell.coverCandidates) {
-        try {
-          const img = await loadImage(candidate);
-          if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
-          const cw = Math.min(CELL_W - 34, 64);
-          const ch = Math.round(cw * 1.45);
-          const cx = centreX - cw / 2;
-          const cy = contentMid - ch / 2;
-
-          ctx.save();
-          ctx.shadowColor = "rgba(0,0,0,0.22)";
-          ctx.shadowBlur = 8;
-          ctx.shadowOffsetY = 3;
-          roundRect(ctx, cx, cy, cw, ch, 5);
-          ctx.fillStyle = palette.card;
-          ctx.fill();
-          ctx.restore();
-
-          ctx.save();
-          roundRect(ctx, cx, cy, cw, ch, 5);
-          ctx.clip();
-          drawCoverFit(ctx, img, cx, cy, cw, ch);
-          ctx.restore();
-
-          coverLoaded = true;
-          break;
-        } catch {
-          // Try the next candidate.
-        }
-      }
-    }
-
-    // No cover: the intensity swatch stands in for it, which is what gives a
-    // month without cover art a readable shape at a glance.
-    if (!coverLoaded && cell.bucket > 0) {
-      const s = 30;
-      roundRect(ctx, centreX - s / 2, contentMid - s / 2, s, s, 8);
-      ctx.fillStyle = palette.bucketFill[cell.bucket];
-      ctx.fill();
-    }
-
-    // One dot per session, capped so a heavy day doesn't overflow the cell.
-    if (sessionCount > 0) {
-      const shown = Math.min(sessionCount, 4);
-      const dotR = 3.5;
-      // Centre-to-centre, so it has to exceed the diameter or the dots touch
-      // and four sessions render as one solid bar.
-      const step = 11;
-      let dx = centreX - ((shown - 1) * step) / 2;
-      const dy = y + CELL_H - 16;
-      ctx.fillStyle = palette.primary;
-      for (let d = 0; d < shown; d++) {
-        ctx.beginPath();
-        ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
-        ctx.fill();
-        dx += step;
-      }
-    }
-
-    ctx.restore();
-  }
-
-  // --- Stats footer -------------------------------------------------------
-
-  const footY = gridY + gridH + FOOTER_GAP;
-  roundRect(ctx, CONTENT_X, footY, CONTENT_W, FOOTER_H, 20);
-  ctx.strokeStyle = palette.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
 
   const stats: { glyph: Glyph; value: string; label: string }[] = [
     {
       glyph: "book",
-      value: `${summary.daysRead} day${summary.daysRead === 1 ? "" : "s"}`,
+      value: String(summary.daysRead),
       label: "Days read",
     },
     {
@@ -347,44 +264,278 @@ async function downloadCalendarImage(
     },
     {
       glyph: "flame",
-      value: streakDays > 0 ? `${streakDays} day${streakDays === 1 ? "" : "s"}` : "—",
-      label: "Current streak",
+      value: streakDays > 0 ? `${streakDays}d` : "—",
+      label: "Streak",
     },
   ];
 
-  const colW = CONTENT_W / stats.length;
+  const statColW = SC_W / stats.length;
+  ctx.textAlign = "center";
   for (let i = 0; i < stats.length; i++) {
-    const s = stats[i];
-    const cx = CONTENT_X + i * colW;
-
-    if (i > 0) {
-      ctx.beginPath();
-      ctx.moveTo(cx, footY + 22);
-      ctx.lineTo(cx, footY + FOOTER_H - 22);
-      ctx.strokeStyle = palette.border;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    const badgeR = 21;
-    const bx = cx + 30 + badgeR;
-    const by = footY + FOOTER_H / 2;
+    const cx = SC_X + statColW * (i + 0.5);
     ctx.beginPath();
-    ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
+    ctx.arc(cx, SC_Y + 34, 17, 0, Math.PI * 2);
     ctx.fillStyle = withAlpha(palette.primary, 0.12);
     ctx.fill();
-    drawStatGlyph(ctx, s.glyph, bx, by, palette.primary);
+    drawStatGlyph(ctx, stats[i].glyph, cx, SC_Y + 34, palette.primary);
 
-    const textX = bx + badgeR + 16;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.font = `600 24px ${serif}`;
+    ctx.font = `600 21px ${serif}`;
     ctx.fillStyle = palette.foreground;
-    ctx.fillText(s.value, textX, by - 2);
-    ctx.font = `400 13px ${sans}`;
+    ctx.fillText(stats[i].value, cx, SC_Y + 82);
+    ctx.font = `400 11px ${sans}`;
     ctx.fillStyle = palette.mutedForeground;
-    ctx.fillText(s.label, textX, by + 18);
+    ctx.fillText(stats[i].label, cx, SC_Y + 100);
   }
+  ctx.textAlign = "left";
+
+  // --- Calendar card ------------------------------------------------------
+
+  const CD_X = 372;
+  const CD_Y = 52;
+  const CD_W = S - CD_X - 44;
+  const CD_H = 918;
+  const CD_PAD = 30;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.12)";
+  ctx.shadowBlur = 34;
+  ctx.shadowOffsetY = 10;
+  roundRect(ctx, CD_X, CD_Y, CD_W, CD_H, 28);
+  ctx.fillStyle = palette.card;
+  ctx.fill();
+  ctx.restore();
+
+  // Month. Centred, and without the prev/next/"Month" controls the reference
+  // shows — they're interactive chrome and do nothing in a downloaded image.
+  ctx.font = `600 42px ${serif}`;
+  ctx.fillStyle = palette.foreground;
+  ctx.textAlign = "center";
+  ctx.fillText(monthLabel, CD_X + CD_W / 2, CD_Y + 92);
+
+  const GRID_X = CD_X + CD_PAD;
+  const GRID_W = CD_W - CD_PAD * 2;
+  const GAP = 7;
+  const CELL_W = Math.floor((GRID_W - GAP * 6) / 7);
+  const rows = cells.length / 7;
+
+  ctx.font = `500 14px ${sans}`;
+  ctx.fillStyle = palette.mutedForeground;
+  const wdY = CD_Y + 138;
+  for (let d = 0; d < 7; d++) {
+    ctx.fillText(weekdayLabels[d], GRID_X + d * (CELL_W + GAP) + CELL_W / 2, wdY);
+  }
+
+  const GRID_Y = CD_Y + 158;
+  const LEGEND_H = 52;
+  const gridAvail = CD_Y + CD_H - CD_PAD - LEGEND_H - GRID_Y;
+  const CELL_H = Math.floor((gridAvail - GAP * (rows - 1)) / rows);
+
+  // The best day, for the callout below. Real data: the in-month day with the
+  // most minutes, if any day has any.
+  let best: (typeof cells)[number] | null = null;
+  for (const c of cells) {
+    if (c.day === null || !c.data) continue;
+    if (!best || (c.data.totalMinutes ?? 0) > (best.data?.totalMinutes ?? 0)) best = c;
+  }
+  if (best && (best.data?.totalMinutes ?? 0) <= 0) best = null;
+  let bestRect: { x: number; y: number } | null = null;
+
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    const col = i % 7;
+    const row = Math.floor(i / 7);
+    const x = GRID_X + col * (CELL_W + GAP);
+    const y = GRID_Y + row * (CELL_H + GAP);
+    if (cell === best) bestRect = { x, y };
+
+    const outside = cell.day === null;
+    ctx.save();
+    if (outside) ctx.globalAlpha = 0.5;
+
+    roundRect(ctx, x, y, CELL_W, CELL_H, 12);
+    ctx.fillStyle = palette.emptyCell;
+    ctx.fill();
+
+    if (outside) {
+      ctx.restore();
+      continue;
+    }
+
+    ctx.font = `600 14px ${sans}`;
+    ctx.fillStyle = palette.foreground;
+    ctx.textAlign = "left";
+    ctx.fillText(String(cell.day), x + 9, y + 21);
+
+    const centreX = x + CELL_W / 2;
+    const sessionCount = cell.data?.sessions.length ?? 0;
+    const dotsH = sessionCount > 0 ? 12 : 0;
+    const contentTop = y + 26;
+    const contentMid = contentTop + (CELL_H - 26 - 10 - dotsH) / 2;
+
+    let coverLoaded = false;
+    if (cell.hasCover) {
+      for (const candidate of cell.coverCandidates) {
+        try {
+          const img = await loadImage(candidate);
+          if (img.naturalWidth <= 2) continue;
+          const cw = Math.min(CELL_W - 22, 52);
+          const ch = Math.round(cw * 1.45);
+          const cx = centreX - cw / 2;
+          const cy = contentMid - ch / 2;
+
+          ctx.save();
+          ctx.shadowColor = "rgba(0,0,0,0.24)";
+          ctx.shadowBlur = 7;
+          ctx.shadowOffsetY = 3;
+          roundRect(ctx, cx, cy, cw, ch, 4);
+          ctx.fillStyle = palette.card;
+          ctx.fill();
+          ctx.restore();
+
+          ctx.save();
+          roundRect(ctx, cx, cy, cw, ch, 4);
+          ctx.clip();
+          drawCoverFit(ctx, img, cx, cy, cw, ch);
+          ctx.restore();
+          coverLoaded = true;
+          break;
+        } catch {
+          // Try the next candidate.
+        }
+      }
+    }
+
+    if (!coverLoaded && cell.bucket > 0) {
+      const sw = 26;
+      roundRect(ctx, centreX - sw / 2, contentMid - sw / 2, sw, sw, 7);
+      ctx.fillStyle = palette.bucketFill[cell.bucket];
+      ctx.fill();
+    }
+
+    if (sessionCount > 0) {
+      const shown = Math.min(sessionCount, 4);
+      const step = 9;
+      let dx = centreX - ((shown - 1) * step) / 2;
+      const dy = y + CELL_H - 13;
+      ctx.fillStyle = palette.primary;
+      for (let d = 0; d < shown; d++) {
+        ctx.beginPath();
+        ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        dx += step;
+      }
+    }
+    ctx.restore();
+  }
+
+  // Legend. Less -> More, light -> dark: the reference labels its palest
+  // swatch "More time", which reads backwards against its own ramp.
+  const ramp = [palette.emptyCell, ...palette.bucketFill];
+  const LSW = 20;
+  const LGAP = 7;
+  const rampW = ramp.length * LSW + (ramp.length - 1) * LGAP;
+  ctx.font = `500 14px ${sans}`;
+  const lessW = ctx.measureText("Less time").width;
+  const moreW = ctx.measureText("More time").width;
+  const totalLegend = lessW + 12 + rampW + 12 + moreW;
+  let lx = CD_X + CD_W / 2 - totalLegend / 2;
+  const ly = CD_Y + CD_H - CD_PAD - 12;
+  ctx.textAlign = "left";
+  ctx.fillStyle = palette.mutedForeground;
+  ctx.fillText("Less time", lx, ly);
+  lx += lessW + 12;
+  for (let i = 0; i < ramp.length; i++) {
+    roundRect(ctx, lx + i * (LSW + LGAP), ly - 15, LSW, LSW, 6);
+    ctx.fillStyle = ramp[i];
+    ctx.fill();
+  }
+  lx += rampW + 12;
+  ctx.fillStyle = palette.mutedForeground;
+  ctx.fillText("More time", lx, ly);
+
+  // --- Best-day callout ---------------------------------------------------
+
+  // The reference floats a hover tooltip over the grid. A still image has no
+  // hover, so the same shape carries something a still image *can* say: the
+  // month's biggest reading day, from real session data.
+  if (best && bestRect && best.data) {
+    const CO_W = 246;
+    const CO_H = best.data.primary ? 116 : 74;
+    let coX = bestRect.x + CELL_W + 14;
+    if (coX + CO_W > CD_X + CD_W - 12) coX = bestRect.x - CO_W - 14;
+    coX = Math.max(CD_X + 12, coX);
+    let coY = bestRect.y + CELL_H / 2 - CO_H / 2;
+    coY = Math.min(Math.max(coY, CD_Y + 120), CD_Y + CD_H - CO_H - 70);
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.18)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 8;
+    roundRect(ctx, coX, coY, CO_W, CO_H, 16);
+    ctx.fillStyle = palette.card;
+    ctx.fill();
+    ctx.restore();
+    roundRect(ctx, coX, coY, CO_W, CO_H, 16);
+    ctx.strokeStyle = palette.border;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.textAlign = "left";
+    ctx.font = `600 14px ${sans}`;
+    ctx.fillStyle = palette.primary;
+    ctx.fillText("Your longest day", coX + 16, coY + 28);
+
+    drawStatGlyph(ctx, "clock", coX + 24, coY + 48, palette.mutedForeground);
+    ctx.font = `500 15px ${sans}`;
+    ctx.fillStyle = palette.foreground;
+    ctx.fillText(`${formatDuration(best.data.totalMinutes)} read`, coX + 40, coY + 53);
+
+    if (best.data.primary) {
+      const tw = 40;
+      const th = 56;
+      const tx = coX + 16;
+      const ty = coY + 68 + 20 - th / 2;
+      let drew = false;
+      for (const cand of best.data.primary.coverCandidates) {
+        try {
+          const img = await loadImage(cand);
+          if (img.naturalWidth <= 2) continue;
+          ctx.save();
+          roundRect(ctx, tx, ty, tw, th, 3);
+          ctx.clip();
+          drawCoverFit(ctx, img, tx, ty, tw, th);
+          ctx.restore();
+          drew = true;
+          break;
+        } catch {
+          // fall through
+        }
+      }
+      if (!drew) {
+        roundRect(ctx, tx, ty, tw, th, 3);
+        ctx.fillStyle = palette.emptyCell;
+        ctx.fill();
+      }
+      ctx.font = `600 14px ${sans}`;
+      ctx.fillStyle = palette.foreground;
+      wrapText(ctx, best.data.primary.bookTitle, tx + tw + 12, ty + 20, CO_W - tw - 42, 18, 2);
+    }
+  }
+
+  // --- Tagline ------------------------------------------------------------
+
+  ctx.beginPath();
+  ctx.arc(CD_X + 26, S - 52, 22, 0, Math.PI * 2);
+  ctx.fillStyle = withAlpha(palette.primary, 0.12);
+  ctx.fill();
+  drawStatGlyph(ctx, "book", CD_X + 26, S - 52, palette.primary);
+  ctx.textAlign = "left";
+  ctx.font = `600 18px ${sans}`;
+  ctx.fillStyle = palette.foreground;
+  ctx.fillText("Track your journey.", CD_X + 62, S - 58);
+  ctx.font = `400 18px ${sans}`;
+  ctx.fillStyle = palette.mutedForeground;
+  ctx.fillText("Build your story.", CD_X + 62, S - 34);
 
   // Download
   const yearMonth = cells.find((c) => c.dateKey)?.dateKey?.slice(0, 7) ?? "";
@@ -394,7 +545,44 @@ async function downloadCalendarImage(
   a.click();
 }
 
-type Glyph = "book" | "clock" | "pages" | "flame";
+// Word-wraps into at most `maxLines`, ellipsing the last one. Book titles are
+// arbitrary length and the callout is a fixed width.
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines: number,
+) {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = w;
+      if (lines.length === maxLines) break;
+    } else {
+      line = test;
+    }
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length === maxLines) {
+    let last = lines[maxLines - 1];
+    if (ctx.measureText(last).width > maxWidth) {
+      while (last.length > 1 && ctx.measureText(`${last}…`).width > maxWidth) {
+        last = last.slice(0, -1);
+      }
+      lines[maxLines - 1] = `${last}…`;
+    }
+  }
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineHeight));
+}
+
+type Glyph = "book" | "clock" | "pages" | "flame" | "bars" | "dots";
 
 // Canvas can't render a Lucide component, so the footer marks are drawn by
 // hand — the same reason the brand mark already was. Deliberately simple:
@@ -413,7 +601,19 @@ function drawStatGlyph(
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  if (glyph === "clock") {
+  if (glyph === "bars") {
+    // Three rising bars — "more colour means more time".
+    ctx.fillRect(cx - 8, cy + 1, 4, 8);
+    ctx.fillRect(cx - 2, cy - 4, 4, 13);
+    ctx.fillRect(cx + 4, cy - 9, 4, 18);
+  } else if (glyph === "dots") {
+    // Three dots in a row, matching the session markers under a day.
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.arc(cx + i * 7, cy, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (glyph === "clock") {
     ctx.beginPath();
     ctx.arc(cx, cy, 8.5, 0, Math.PI * 2);
     ctx.stroke();
