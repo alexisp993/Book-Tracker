@@ -12,60 +12,21 @@ import {
   type MonthCalendarViewModel,
 } from "@/lib/calendarViewModel";
 import { formatDuration } from "@/lib/utils";
+import {
+  CALENDAR_TEMPLATES,
+  DEFAULT_TEMPLATE_ID,
+  getTemplate,
+  loadFirstUsableCover,
+  loadImage,
+  readThemePalette,
+  seededRandom,
+  type CanvasPalette,
+} from "@/lib/calendarTemplates";
+import { CalendarTemplatePicker } from "@/components/CalendarTemplatePicker";
 import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { withCalendarTransition } from "@/lib/viewTransition";
 import type { CalendarDay } from "@/lib/api";
-
-// Canvas palette read from the active theme's CSS variables at export time,
-// so the downloaded image mirrors whatever theme is live (default / dark /
-// forest / any future theme) instead of a fixed palette. A <canvas> can't
-// consume CSS variables directly, so we resolve them to concrete hsla()
-// strings here. Runs client-side only (downloadCalendarImage is click-driven).
-interface CanvasPalette {
-  background: string;
-  card: string;
-  border: string;
-  foreground: string;
-  mutedForeground: string;
-  primary: string;
-  bucketFill: string[]; // [0..4], mirroring the shared BUCKET_CLASS ramp
-  emptyCell: string;
-  texture: string;
-  badgeBg: string;
-}
-
-function readThemePalette(): CanvasPalette {
-  const cs = getComputedStyle(document.documentElement);
-  // CSS vars are stored as an "H S% L%" triple (e.g. "36 28% 97%").
-  const hsl = (name: string, alpha = 1): string => {
-    const triple = cs.getPropertyValue(name).trim();
-    const [h, s, l] = triple.split(/\s+/);
-    // hsla(H, S%, L%, A) — the most cross-browser-safe canvas color form.
-    return `hsla(${h}, ${s}, ${l}, ${alpha})`;
-  };
-  // The green heat vars are stored as plain hex, usable directly as canvas
-  // fillStyle (no HSL conversion needed).
-  const raw = (name: string): string => cs.getPropertyValue(name).trim();
-  return {
-    background: hsl("--background"),
-    card: hsl("--card"),
-    border: hsl("--border"),
-    foreground: hsl("--foreground"),
-    mutedForeground: hsl("--muted-foreground"),
-    primary: hsl("--primary"),
-    // The shared green intensity ramp (lib/calendarViewModel.ts) read straight
-    // from its CSS vars, so the exported image matches the on-screen heatmap.
-    bucketFill: BUCKET_VARS.map(raw),
-    // --heat-0, the same var the live grid paints an empty day with
-    // (BUCKET_CLASS[0] in lib/calendarViewModel.ts). This was `--muted` at
-    // 20%, so the exported PNG quietly disagreed with the screen on every
-    // zero-reading day.
-    emptyCell: raw("--heat-0"),
-    texture: hsl("--foreground", 0.03),
-    badgeBg: hsl("--background", 0.8),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Canvas-based social share card (1080×1080, no external dependencies).
@@ -87,6 +48,7 @@ function readThemePalette(): CanvasPalette {
 async function downloadCalendarImage(
   viewModel: MonthCalendarViewModel,
   streakDays: number,
+  templateId: string,
 ) {
   const { monthLabel, weekdayLabels, cells, summary } = viewModel;
 
@@ -109,39 +71,38 @@ async function downloadCalendarImage(
   if (!ctx) return;
   ctx.scale(DPR, DPR);
 
-  const palette = readThemePalette();
   const serif = `"Literata", Georgia, "Times New Roman", serif`;
   const sans = `-apple-system, "Segoe UI", system-ui, sans-serif`;
 
   // --- Ground -------------------------------------------------------------
 
-  ctx.fillStyle = palette.background;
-  ctx.fillRect(0, 0, S, S);
+  // The chosen template paints the ground and then hands back the ink that
+  // works against it. Without that second half a dark template would keep the
+  // theme's near-black day numbers and render them invisible on its own
+  // surface.
+  const template = getTemplate(templateId);
+  const themePalette = readThemePalette();
 
-  // Ambient colour from the reader's own covers, heavily blurred into the
-  // bottom corners. The reference sets its mockup on a photograph of a plant
-  // and a stack of books; shipping stock photography inside a personal export
-  // would be inventing something that isn't theirs, so the warmth comes from
-  // the books they actually read this month instead.
-  const coverCellCandidates = cells
-    .filter((c) => c.hasCover && c.coverCandidates.length > 0)
-    .map((c) => c.coverCandidates);
-  if (coverCellCandidates.length > 0 && "filter" in ctx) {
-    const spots: [number, number, number][] = [
-      [-40, S - 300, 320],
-      [S - 260, S - 240, 300],
-    ];
-    for (let i = 0; i < Math.min(2, coverCellCandidates.length); i++) {
-      const img = await loadFirstUsableCover(coverCellCandidates[i]);
-      if (!img) continue;
-      const [bx, by, bw] = spots[i];
-      ctx.save();
-      ctx.filter = "blur(46px)";
-      ctx.globalAlpha = 0.32;
-      ctx.drawImage(img, bx, by, bw, bw * 1.4);
-      ctx.restore();
-    }
+  // Resolved up front because several templates build their ground from the
+  // reader's covers, and a painter can't await.
+  const monthCovers: HTMLImageElement[] = [];
+  for (const cell of cells) {
+    if (monthCovers.length >= 4) break;
+    if (!cell.hasCover || cell.coverCandidates.length === 0) continue;
+    const img = await loadFirstUsableCover(cell.coverCandidates);
+    if (img) monthCovers.push(img);
   }
+
+  const seedKey = cells.find((c) => c.dateKey)?.dateKey?.slice(0, 7) ?? monthLabel;
+  template.paint({
+    ctx,
+    size: S,
+    palette: themePalette,
+    covers: monthCovers,
+    rand: seededRandom(`${template.id}:${seedKey}`),
+  });
+
+  const palette: CanvasPalette = { ...themePalette, ...(template.ink?.(themePalette) ?? {}) };
 
   // --- Left column --------------------------------------------------------
 
@@ -529,29 +490,6 @@ async function downloadCalendarImage(
   a.click();
 }
 
-// Walks a cover-candidate chain and returns the first image that actually
-// loads and isn't a 1x1 placeholder, or null.
-//
-// This exists because the walk used to be copy-pasted per draw site, and one
-// copy — the ambient background — took only candidates[0]. When the first
-// candidate was dead the grid still found a cover further down the chain while
-// the background silently drew nothing, so the ambient tint was missing from
-// every export and looked like it had never been implemented.
-async function loadFirstUsableCover(
-  candidates: string[],
-): Promise<HTMLImageElement | null> {
-  for (const candidate of candidates) {
-    try {
-      const img = await loadImage(candidate);
-      if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
-      return img;
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
-}
-
 // Word-wraps into at most `maxLines`, ellipsing the last one. Book titles are
 // arbitrary length and the callout is a fixed width.
 function wrapText(
@@ -730,16 +668,6 @@ function drawCoverFit(
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
 function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -813,10 +741,30 @@ export function CalendarView() {
     ? viewModel.cells.find((c) => c.dateKey === selectedDate)?.data ?? null
     : null;
 
+  // Which background the download uses. localStorage rather than a column on
+  // User, matching how bt_view and bt_theme already persist — it's a display
+  // preference, not data. The tradeoff is that it's per-device; a column would
+  // be a migration away if it should follow the reader everywhere.
+  const [templateId, setTemplateId] = React.useState<string>(DEFAULT_TEMPLATE_ID);
+  React.useEffect(() => {
+    const saved = localStorage.getItem("bt_calendar_template");
+    if (saved && CALENDAR_TEMPLATES.some((t) => t.id === saved)) {
+      setTemplateId(saved);
+    }
+  }, []);
+  function chooseTemplate(id: string) {
+    setTemplateId(id);
+    localStorage.setItem("bt_calendar_template", id);
+  }
+
   async function handleDownload() {
     setDownloading(true);
     try {
-      await downloadCalendarImage(viewModel, sessionStats?.streakDays ?? 0);
+      await downloadCalendarImage(
+        viewModel,
+        sessionStats?.streakDays ?? 0,
+        templateId,
+      );
     } finally {
       setDownloading(false);
     }
@@ -961,6 +909,16 @@ export function CalendarView() {
       {selectedDay ? (
         <DayDetail day={selectedDay} />
       ) : null}
+
+      {/* Sits below the calendar, not above it: the month is what the page is
+          for, and the download design is a setting you visit occasionally. */}
+      <CalendarTemplatePicker
+        value={templateId}
+        onChange={chooseTemplate}
+        coverCandidates={viewModel.cells
+          .filter((c) => c.hasCover && c.coverCandidates.length > 0)
+          .map((c) => c.coverCandidates)}
+      />
     </div>
   );
 }
