@@ -304,16 +304,17 @@ async function downloadCalendarImage(
     if (sessionCount > 0) {
       const shown = Math.min(sessionCount, 4);
       const dotR = 3.5;
-      const dotGap = 7;
-      const totalW = shown * dotR * 2 + (shown - 1) * (dotGap - dotR * 2);
-      let dx = centreX - totalW / 2 + dotR;
+      // Centre-to-centre, so it has to exceed the diameter or the dots touch
+      // and four sessions render as one solid bar.
+      const step = 11;
+      let dx = centreX - ((shown - 1) * step) / 2;
       const dy = y + CELL_H - 16;
       ctx.fillStyle = palette.primary;
       for (let d = 0; d < shown; d++) {
         ctx.beginPath();
         ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
         ctx.fill();
-        dx += dotGap;
+        dx += step;
       }
     }
 
@@ -422,16 +423,29 @@ function drawStatGlyph(
     ctx.lineTo(cx + 4, cy + 2.5);
     ctx.stroke();
   } else if (glyph === "flame") {
+    // Asymmetric, with an inner lick. A symmetric teardrop reads as a water
+    // drop, which is what the first version of this drew.
     ctx.beginPath();
-    ctx.moveTo(cx, cy - 9);
-    ctx.bezierCurveTo(cx + 7, cy - 2, cx + 6, cy + 7, cx, cy + 9);
-    ctx.bezierCurveTo(cx - 6, cy + 7, cx - 7, cy - 2, cx, cy - 9);
+    ctx.moveTo(cx, cy + 9);
+    ctx.bezierCurveTo(cx - 7, cy + 6, cx - 6, cy - 2, cx - 2, cy - 9);
+    ctx.bezierCurveTo(cx - 1, cy - 4, cx + 2, cy - 3, cx + 3, cy - 6);
+    ctx.bezierCurveTo(cx + 7, cy - 1, cx + 7, cy + 6, cx, cy + 9);
     ctx.stroke();
   } else if (glyph === "pages") {
-    // A stack: two offset sheets.
-    roundRect(ctx, cx - 8, cy - 8, 12, 14, 2);
+    // A sheet with a folded corner. Two offset rectangles read as a
+    // duplicate/copy icon instead of paper.
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy - 9);
+    ctx.lineTo(cx + 2, cy - 9);
+    ctx.lineTo(cx + 7, cy - 4);
+    ctx.lineTo(cx + 7, cy + 9);
+    ctx.lineTo(cx - 6, cy + 9);
+    ctx.closePath();
     ctx.stroke();
-    roundRect(ctx, cx - 4, cy - 5, 12, 14, 2);
+    ctx.beginPath();
+    ctx.moveTo(cx + 2, cy - 9);
+    ctx.lineTo(cx + 2, cy - 4);
+    ctx.lineTo(cx + 7, cy - 4);
     ctx.stroke();
   } else {
     drawBookGlyph(ctx, cx, cy, 18, color);
