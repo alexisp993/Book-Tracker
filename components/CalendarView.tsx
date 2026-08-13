@@ -3,7 +3,7 @@
 import * as React from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Clock, Download } from "lucide-react";
 import { MOOD_EMOJI, MOOD_LABELS } from "@/lib/constants";
-import { useCalendar } from "@/lib/queries";
+import { useCalendar, useSessionStats } from "@/lib/queries";
 import { FallbackCoverImg, CellCover } from "@/components/FallbackCoverImg";
 import {
   buildMonthCalendarViewModel,
@@ -74,23 +74,45 @@ function readThemePalette(): CanvasPalette {
 // cover-candidate resolution, same summary totals. No separate calculation
 // path exists here anymore.
 // ---------------------------------------------------------------------------
-async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
+async function downloadCalendarImage(
+  viewModel: MonthCalendarViewModel,
+  streakDays: number,
+) {
   const { monthLabel, weekdayLabels, cells, summary } = viewModel;
 
-  const W = 1080;
-  const PAD = 72;
-  const GAP = 10;
-  const HEADER_H = 160;
-  const LABEL_H = 48;
-  const FOOTER_H = 100;
+  // The month title is set in the app's serif, which only resolves on canvas
+  // once the webfont has actually loaded — otherwise the browser silently
+  // substitutes and the export gets a different typeface from the screen.
+  try {
+    await document.fonts.ready;
+  } catch {
+    // Font loading API unavailable: the stack below falls back to Georgia.
+  }
 
-  // Portrait cells (2:3), matching the live grid's aspect-[2/3] day cells.
-  const CELL_W = Math.floor((W - PAD * 2 - GAP * 6) / 7);
-  const CELL_H = Math.round(CELL_W * 1.5);
+  const W = 1080;
+  const PAGE_PAD = 28; // paper visible around the card
+  const PAD = 56; // content inset inside the card
+  const GAP = 10;
+
+  const CARD_X = PAGE_PAD;
+  const CARD_W = W - PAGE_PAD * 2;
+  const CONTENT_X = CARD_X + PAD;
+  const CONTENT_W = CARD_W - PAD * 2;
+
+  // Portrait cells, close to the reference's 1:1.42 — tall enough to seat a
+  // book cover, short enough that six rows don't run off the card.
+  const CELL_W = Math.floor((CONTENT_W - GAP * 6) / 7);
+  const CELL_H = Math.round(CELL_W * 1.42);
+
+  const HEADER_H = 214; // brand + month + subtitle/legend row
+  const LABEL_H = 44; // weekday row
+  const FOOTER_H = 104; // stats panel
+  const FOOTER_GAP = 34;
 
   const rows = cells.length / 7;
   const gridH = rows * CELL_H + (rows - 1) * GAP;
-  const H = HEADER_H + LABEL_H + gridH + FOOTER_H + PAD * 2;
+  const H =
+    PAGE_PAD * 2 + PAD * 2 + HEADER_H + LABEL_H + gridH + FOOTER_GAP + FOOTER_H;
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -98,157 +120,270 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // Resolve the active theme's colors so the export matches the live UI.
   const palette = readThemePalette();
+  const serif = `"Literata", Georgia, "Times New Roman", serif`;
+  const sans = `-apple-system, "Segoe UI", system-ui, sans-serif`;
 
-  // Background
+  // Paper ground
   ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle grid texture (very faint)
-  ctx.strokeStyle = palette.texture;
-  ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-
-  // Card rect — filled + a subtle border so it stays delineated even on
-  // light themes where the card color is close to the background.
-  const CARD_PAD = 40;
-  roundRect(ctx, CARD_PAD, CARD_PAD, W - CARD_PAD * 2, H - CARD_PAD * 2, 32);
+  // The card. A soft drop shadow lifts it off the paper the way the live
+  // surfaces do; the hairline keeps it delineated on light themes where card
+  // and background are only a few percent apart.
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.10)";
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 8;
+  roundRect(ctx, CARD_X, CARD_X, CARD_W, H - CARD_X * 2, 32);
   ctx.fillStyle = palette.card;
   ctx.fill();
+  ctx.restore();
+  roundRect(ctx, CARD_X, CARD_X, CARD_W, H - CARD_X * 2, 32);
   ctx.strokeStyle = palette.border;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // "Book Tracker" brand — a small vector book mark (a canvas can't render a
-  // Lucide component, so the glyph is drawn by hand) instead of an emoji, which
-  // renders inconsistently across platforms and reads as a UI icon.
-  const markY = PAD + 30;
-  ctx.fillStyle = palette.primary;
-  ctx.beginPath();
-  roundRect(ctx, PAD, markY, 26, 30, 4);
+  // --- Header -------------------------------------------------------------
+
+  const brandY = CARD_X + PAD;
+  const BADGE = 44;
+
+  // Tinted badge behind the mark, matching the reference's soft square chip.
+  roundRect(ctx, CONTENT_X, brandY, BADGE, BADGE, 14);
+  ctx.fillStyle = withAlpha(palette.primary, 0.12);
   ctx.fill();
-  ctx.strokeStyle = palette.card;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PAD + 13, markY + 4);
-  ctx.lineTo(PAD + 13, markY + 26);
-  ctx.stroke();
-  ctx.font = "600 28px -apple-system, system-ui, sans-serif";
+  drawBookGlyph(ctx, CONTENT_X + BADGE / 2, brandY + BADGE / 2, 20, palette.primary);
+
+  ctx.font = `700 22px ${sans}`;
   ctx.fillStyle = palette.primary;
   ctx.textAlign = "left";
-  ctx.fillText("Book Tracker", PAD + 40, PAD + 52);
+  ctx.textBaseline = "middle";
+  ctx.fillText("Book Tracker", CONTENT_X + BADGE + 16, brandY + BADGE / 2 + 1);
 
-  // Month + Year — same monthLabel string the live header shows
-  ctx.font = `700 64px -apple-system, system-ui, sans-serif`;
+  // Month — the one display moment, set in the serif like every other title
+  // in the app.
+  ctx.textBaseline = "alphabetic";
+  ctx.font = `600 52px ${serif}`;
   ctx.fillStyle = palette.foreground;
-  ctx.textAlign = "center";
-  ctx.fillText(monthLabel, W / 2, PAD + 136);
+  const titleBaseline = brandY + BADGE + 74;
+  ctx.fillText(monthLabel, CONTENT_X, titleBaseline);
 
-  // Day-of-week labels — same order as the live grid's WEEKDAY_LABELS
-  const labelY = PAD + HEADER_H + 28;
-  ctx.font = "600 24px -apple-system, system-ui, sans-serif";
+  // Caption. The on-screen version says "Hover a day to see details", which is
+  // nonsense in a downloaded image — it says what the picture is instead.
+  ctx.font = `400 15px ${sans}`;
+  ctx.fillStyle = palette.mutedForeground;
+  const captionY = titleBaseline + 32;
+  ctx.fillText("A calendar of your reading days.", CONTENT_X, captionY);
+
+  // Legend, right-aligned on the caption line. Ordered Less -> More, light ->
+  // dark: the reference art has "More" beside its palest swatch, which reads
+  // backwards against its own ramp.
+  const SW = 18;
+  const SW_GAP = 6;
+  const ramp = [palette.emptyCell, ...palette.bucketFill];
+  const rampW = ramp.length * SW + (ramp.length - 1) * SW_GAP;
+  ctx.font = `500 14px ${sans}`;
+  const moreW = ctx.measureText("More").width;
+  const legendRight = CONTENT_X + CONTENT_W;
+  const rampX = legendRight - moreW - 10 - rampW;
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = palette.mutedForeground;
+  ctx.fillText("Less", rampX - 10, captionY);
+  ctx.textAlign = "left";
+  ctx.fillText("More", legendRight - moreW, captionY);
+
+  for (let i = 0; i < ramp.length; i++) {
+    roundRect(ctx, rampX + i * (SW + SW_GAP), captionY - 14, SW, SW, 5);
+    ctx.fillStyle = ramp[i];
+    ctx.fill();
+  }
+
+  // --- Weekday labels -----------------------------------------------------
+
+  const labelY = CARD_X + PAD + HEADER_H + 20;
+  ctx.font = `500 15px ${sans}`;
   ctx.fillStyle = palette.mutedForeground;
   ctx.textAlign = "center";
   for (let d = 0; d < 7; d++) {
-    const x = PAD + d * (CELL_W + GAP) + CELL_W / 2;
-    ctx.fillText(weekdayLabels[d], x, labelY);
+    ctx.fillText(weekdayLabels[d], CONTENT_X + d * (CELL_W + GAP) + CELL_W / 2, labelY);
   }
 
-  // Calendar grid — iterates the same cells[] the live grid maps over
-  const gridY = PAD + HEADER_H + LABEL_H;
+  // --- Grid ---------------------------------------------------------------
+
+  // The structural change from the previous export: the cell is a calm light
+  // tile and the reading intensity is a small swatch *inside* it, rather than
+  // the intensity colouring the whole cell and a cover bleeding edge to edge
+  // under a dark scrim. Covers read as objects sitting on the calendar, the
+  // day numbers stay dark on light at every intensity, and a quiet month no
+  // longer looks like a wall of colour blocks.
+  const gridY = CARD_X + PAD + HEADER_H + LABEL_H;
+
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     const col = i % 7;
     const row = Math.floor(i / 7);
-    const x = PAD + col * (CELL_W + GAP);
+    const x = CONTENT_X + col * (CELL_W + GAP);
     const y = gridY + row * (CELL_H + GAP);
 
-    if (cell.day === null) {
-      // Empty leading/trailing cell
-      ctx.fillStyle = palette.emptyCell;
-      roundRect(ctx, x, y, CELL_W, CELL_H, 14);
-      ctx.fill();
+    const outside = cell.day === null;
+
+    ctx.save();
+    if (outside) ctx.globalAlpha = 0.45;
+
+    roundRect(ctx, x, y, CELL_W, CELL_H, 16);
+    ctx.fillStyle = palette.emptyCell;
+    ctx.fill();
+
+    if (outside) {
+      ctx.restore();
       continue;
     }
 
-    // Cell background
-    ctx.fillStyle = palette.bucketFill[cell.bucket];
-    roundRect(ctx, x, y, CELL_W, CELL_H, 14);
-    ctx.fill();
+    // Day number, top-left. Always dark on light now, so there's no
+    // white-over-scrim special case to get wrong.
+    ctx.font = `600 16px ${sans}`;
+    ctx.fillStyle = palette.foreground;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(String(cell.day), x + 12, y + 26);
 
-    // Draw the most-recently-read book's cover — same fallback-chain walk
-    // used live, so a missing/dead first candidate doesn't leave the cell
-    // blank when a later candidate would have worked.
+    const centreX = x + CELL_W / 2;
+    const sessionCount = cell.data?.sessions.length ?? 0;
+    const dotsH = sessionCount > 0 ? 14 : 0;
+    // Content sits in the space below the day number, centred in what's left.
+    const contentTop = y + 34;
+    const contentH = CELL_H - 34 - 12 - dotsH;
+    const contentMid = contentTop + contentH / 2;
+
     let coverLoaded = false;
-    for (const candidate of cell.coverCandidates) {
-      try {
-        const img = await loadImage(candidate);
-        if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
-        ctx.save();
-        roundRect(ctx, x, y, CELL_W, CELL_H, 14);
-        ctx.clip();
-        // Cropped-to-fill (matches CSS object-cover on the live grid),
-        // full opacity + top scrim.
-        drawCoverFit(ctx, img, x, y, CELL_W, CELL_H);
-        const scrim = ctx.createLinearGradient(x, y, x, y + 44);
-        scrim.addColorStop(0, "rgba(0,0,0,0.6)");
-        scrim.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = scrim;
-        ctx.fillRect(x, y, CELL_W, 44);
-        ctx.restore();
-        coverLoaded = true;
-        break;
-      } catch {
-        // Try the next candidate.
+    if (cell.hasCover) {
+      for (const candidate of cell.coverCandidates) {
+        try {
+          const img = await loadImage(candidate);
+          if (img.naturalWidth <= 2) continue; // Amazon 1x1 placeholder
+          const cw = Math.min(CELL_W - 34, 64);
+          const ch = Math.round(cw * 1.45);
+          const cx = centreX - cw / 2;
+          const cy = contentMid - ch / 2;
+
+          ctx.save();
+          ctx.shadowColor = "rgba(0,0,0,0.22)";
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetY = 3;
+          roundRect(ctx, cx, cy, cw, ch, 5);
+          ctx.fillStyle = palette.card;
+          ctx.fill();
+          ctx.restore();
+
+          ctx.save();
+          roundRect(ctx, cx, cy, cw, ch, 5);
+          ctx.clip();
+          drawCoverFit(ctx, img, cx, cy, cw, ch);
+          ctx.restore();
+
+          coverLoaded = true;
+          break;
+        } catch {
+          // Try the next candidate.
+        }
       }
     }
 
-    // Day number — small, top-left, matching the live cell's self-start
-    // placement instead of a large centered digit. Over a cover the dark
-    // scrim is theme-independent so white always reads; otherwise use the
-    // theme's foreground (and white on the strongest bucket for contrast
-    // against the near-solid primary fill).
-    ctx.font = `700 22px -apple-system, system-ui, sans-serif`;
-    ctx.fillStyle = coverLoaded || cell.bucket >= 4 ? "#ffffff" : palette.foreground;
-    ctx.textAlign = "left";
-    ctx.fillText(String(cell.day), x + 14, y + 28);
-    ctx.textAlign = "center"; // restore default used elsewhere in this function
-
-    // "+N" badge for extra books read that day
-    if (cell.extraBookCount > 0) {
-      const badgeR = 18;
-      const bx = x + CELL_W - badgeR - 6;
-      const by = y + CELL_H - badgeR - 6;
-      ctx.beginPath();
-      ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
-      ctx.fillStyle = palette.badgeBg;
-      ctx.fill();
-      ctx.font = "700 18px -apple-system, system-ui, sans-serif";
-      ctx.fillStyle = palette.foreground;
-      ctx.textAlign = "center";
-      ctx.fillText(`+${cell.extraBookCount}`, bx, by + 6);
-    } else if (!coverLoaded && cell.hasData) {
-      // Activity dot only when there's no cover taking its place.
-      ctx.beginPath();
-      ctx.arc(x + CELL_W / 2, y + CELL_H - 16, 4, 0, Math.PI * 2);
-      ctx.fillStyle = palette.primary;
+    // No cover: the intensity swatch stands in for it, which is what gives a
+    // month without cover art a readable shape at a glance.
+    if (!coverLoaded && cell.bucket > 0) {
+      const s = 30;
+      roundRect(ctx, centreX - s / 2, contentMid - s / 2, s, s, 8);
+      ctx.fillStyle = palette.bucketFill[cell.bucket];
       ctx.fill();
     }
+
+    // One dot per session, capped so a heavy day doesn't overflow the cell.
+    if (sessionCount > 0) {
+      const shown = Math.min(sessionCount, 4);
+      const dotR = 3.5;
+      const dotGap = 7;
+      const totalW = shown * dotR * 2 + (shown - 1) * (dotGap - dotR * 2);
+      let dx = centreX - totalW / 2 + dotR;
+      const dy = y + CELL_H - 16;
+      ctx.fillStyle = palette.primary;
+      for (let d = 0; d < shown; d++) {
+        ctx.beginPath();
+        ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+        dx += dotGap;
+      }
+    }
+
+    ctx.restore();
   }
 
-  // Stats footer — from the same summary the view model computes
-  const statsY = gridY + gridH + 48;
-  ctx.font = "500 26px -apple-system, system-ui, sans-serif";
-  ctx.fillStyle = palette.mutedForeground;
-  ctx.textAlign = "center";
-  const parts = [
-    `${summary.daysRead} day${summary.daysRead === 1 ? "" : "s"} read`,
-    summary.totalMinutes > 0 ? formatDuration(summary.totalMinutes) : null,
-    summary.totalPages > 0 ? `${summary.totalPages} pages` : null,
-  ].filter(Boolean);
-  ctx.fillText(parts.join("  ·  "), W / 2, statsY);
+  // --- Stats footer -------------------------------------------------------
+
+  const footY = gridY + gridH + FOOTER_GAP;
+  roundRect(ctx, CONTENT_X, footY, CONTENT_W, FOOTER_H, 20);
+  ctx.strokeStyle = palette.border;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  const stats: { glyph: Glyph; value: string; label: string }[] = [
+    {
+      glyph: "book",
+      value: `${summary.daysRead} day${summary.daysRead === 1 ? "" : "s"}`,
+      label: "Days read",
+    },
+    {
+      glyph: "clock",
+      value: summary.totalMinutes > 0 ? formatDuration(summary.totalMinutes) : "—",
+      label: "Time read",
+    },
+    {
+      glyph: "pages",
+      value: summary.totalPages > 0 ? String(summary.totalPages) : "—",
+      label: "Pages read",
+    },
+    {
+      glyph: "flame",
+      value: streakDays > 0 ? `${streakDays} day${streakDays === 1 ? "" : "s"}` : "—",
+      label: "Current streak",
+    },
+  ];
+
+  const colW = CONTENT_W / stats.length;
+  for (let i = 0; i < stats.length; i++) {
+    const s = stats[i];
+    const cx = CONTENT_X + i * colW;
+
+    if (i > 0) {
+      ctx.beginPath();
+      ctx.moveTo(cx, footY + 22);
+      ctx.lineTo(cx, footY + FOOTER_H - 22);
+      ctx.strokeStyle = palette.border;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    const badgeR = 21;
+    const bx = cx + 30 + badgeR;
+    const by = footY + FOOTER_H / 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
+    ctx.fillStyle = withAlpha(palette.primary, 0.12);
+    ctx.fill();
+    drawStatGlyph(ctx, s.glyph, bx, by, palette.primary);
+
+    const textX = bx + badgeR + 16;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.font = `600 24px ${serif}`;
+    ctx.fillStyle = palette.foreground;
+    ctx.fillText(s.value, textX, by - 2);
+    ctx.font = `400 13px ${sans}`;
+    ctx.fillStyle = palette.mutedForeground;
+    ctx.fillText(s.label, textX, by + 18);
+  }
 
   // Download
   const yearMonth = cells.find((c) => c.dateKey)?.dateKey?.slice(0, 7) ?? "";
@@ -256,6 +391,94 @@ async function downloadCalendarImage(viewModel: MonthCalendarViewModel) {
   a.download = `reading-calendar-${yearMonth}.png`;
   a.href = canvas.toDataURL("image/png");
   a.click();
+}
+
+type Glyph = "book" | "clock" | "pages" | "flame";
+
+// Canvas can't render a Lucide component, so the footer marks are drawn by
+// hand — the same reason the brand mark already was. Deliberately simple:
+// at 20px a stroked outline reads better than a detailed silhouette.
+function drawStatGlyph(
+  ctx: CanvasRenderingContext2D,
+  glyph: Glyph,
+  cx: number,
+  cy: number,
+  color: string,
+) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  if (glyph === "clock") {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 5);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx + 4, cy + 2.5);
+    ctx.stroke();
+  } else if (glyph === "flame") {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 9);
+    ctx.bezierCurveTo(cx + 7, cy - 2, cx + 6, cy + 7, cx, cy + 9);
+    ctx.bezierCurveTo(cx - 6, cy + 7, cx - 7, cy - 2, cx, cy - 9);
+    ctx.stroke();
+  } else if (glyph === "pages") {
+    // A stack: two offset sheets.
+    roundRect(ctx, cx - 8, cy - 8, 12, 14, 2);
+    ctx.stroke();
+    roundRect(ctx, cx - 4, cy - 5, 12, 14, 2);
+    ctx.stroke();
+  } else {
+    drawBookGlyph(ctx, cx, cy, 18, color);
+  }
+
+  ctx.restore();
+}
+
+// An open book: two facing pages with a spine between them.
+function drawBookGlyph(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  color: string,
+) {
+  const w = size;
+  const h = size * 0.78;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  // Left page
+  ctx.moveTo(cx, cy + h / 2 - 1);
+  ctx.lineTo(cx - w / 2, cy + h / 2 - 3);
+  ctx.lineTo(cx - w / 2, cy - h / 2);
+  ctx.lineTo(cx, cy - h / 2 + 2);
+  // Right page
+  ctx.lineTo(cx + w / 2, cy - h / 2);
+  ctx.lineTo(cx + w / 2, cy + h / 2 - 3);
+  ctx.lineTo(cx, cy + h / 2 - 1);
+  ctx.stroke();
+  // Spine
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - h / 2 + 2);
+  ctx.lineTo(cx, cy + h / 2 - 1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// readThemePalette hands back `hsla(H, S%, L%, A)` strings; this swaps the
+// alpha so tinted chips can be derived from the theme's own primary rather
+// than hard-coding a second colour that wouldn't follow the theme.
+function withAlpha(hsla: string, alpha: number): string {
+  return hsla.replace(/,\s*[\d.]+\s*\)$/, `, ${alpha})`);
 }
 
 // CSS object-cover equivalent: crops the wider or taller side of the source
@@ -328,6 +551,10 @@ export function CalendarView() {
   const [downloading, setDownloading] = React.useState(false);
 
   const { data: calData = [], isLoading } = useCalendar(year, month);
+  // The exported card reports the current streak alongside the month totals.
+  // It is not derivable from the calendar range, so it comes from the same
+  // session stats the rest of the app reads rather than being approximated.
+  const { data: sessionStats } = useSessionStats();
 
   // Single source of truth for this month's grid — the live JSX below and
   // downloadCalendarImage() both render from this same view model, so they
@@ -368,7 +595,7 @@ export function CalendarView() {
   async function handleDownload() {
     setDownloading(true);
     try {
-      await downloadCalendarImage(viewModel);
+      await downloadCalendarImage(viewModel, sessionStats?.streakDays ?? 0);
     } finally {
       setDownloading(false);
     }
