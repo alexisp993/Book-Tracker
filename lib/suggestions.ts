@@ -204,6 +204,11 @@ export async function getSuggestions(userId: string): Promise<SuggestionDTO[]> {
 // that recency with zero quality signal just surfaces obscure filler.
 const RECENT_YEARS = 12;
 
+// How recent a book has to be before the card is willing to *say* it's
+// recent. Separate from the scoring window above on purpose — see the note at
+// the call site.
+const RECENT_LABEL_YEARS = 2;
+
 function publishedYear(publishedDate: string | undefined): number | null {
   const match = publishedDate?.match(/^(\d{4})/);
   return match ? Number(match[1]) : null;
@@ -216,6 +221,83 @@ function publishedYear(publishedDate: string | undefined): number | null {
 // lines. `description` is an unvalidated free-text bin, not a synopsis field.
 const CATALOG_NOISE =
   /\$\s?\d|Grade level|Points\s+\d|\bAR\b.{0,12}\b(BL|Quiz)\b|Lexile|Contains the complete|^\s*Set of \d/i;
+
+// Copy that sells the *edition* rather than telling you the story. Observed
+// live: "Our hardcover and paperback digest editions of THE CHRONICLES OF
+// NARNIA are now graced with new jacket and cover art by 2-time Caldecott
+// medalist David Wiesner." That is a printing announcement, and it names the
+// series in the process — useless on a card whose entire premise is judging
+// an unnamed story.
+const EDITION_MARKETING =
+  /\b(jacket|cover art|digest edition|deluxe edition|anniversary edition|box(ed)? set|reissue|now available in|this (new )?edition|movie tie-in)\b/i;
+
+// Language guard.
+//
+// searchBooksByGenre asks Google Books for langRestrict=en, but that filters
+// on the volume's language metadata, which is frequently absent or wrong —
+// non-English descriptions still come back. The synopsis is the whole card,
+// so an unreadable one is worse than dropping the result.
+//
+// Two tests. Non-Latin script is decisive. For Latin-script languages
+// (Spanish, French, German, Italian, Portuguese) the tell is the absence of
+// English function words: English prose is roughly a third stopwords, and a
+// Spanish or French passage will contain almost none of *these* — the list
+// deliberately omits "a", "in" and "no", which collide across Romance
+// languages.
+const NON_LATIN = /[Ѐ-ӿ֐-׿؀-ۿऀ-ॿ⺀-鿿가-힯]/g;
+const ENGLISH_MARKERS =
+  /\b(the|and|of|to|is|was|were|that|with|his|her|from|they|this|which|when|after|into|their|been|are|has|have|but|for|not|who|she|he|it)\b/gi;
+
+function looksEnglish(text: string): boolean {
+  const letters = text.replace(/[^\p{L}]/gu, "");
+  if (letters.length === 0) return false;
+  // More than a sixth of the letters outside the Latin range: not English.
+  const foreign = text.match(NON_LATIN)?.length ?? 0;
+  if (foreign / letters.length > 0.15) return false;
+
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const hits = text.match(ENGLISH_MARKERS)?.length ?? 0;
+  // A 60-character minimum is already enforced, so there are at least ~10
+  // words here. Genuine English prose clears this comfortably; the bar is set
+  // low enough that terse blurbs aren't punished.
+  return hits >= 2 && hits / Math.max(words, 1) >= 0.08;
+}
+
+// Words too common to identify a book by.
+const TITLE_STOPWORDS = new Set([
+  "the", "a", "an", "of", "and", "or", "in", "on", "at", "to", "for", "with",
+  "from", "by", "book", "novel", "volume", "part", "series", "edition",
+]);
+
+/**
+ * Does the synopsis give away what the book is?
+ *
+ * The card exists so a reader judges the story before seeing the title, which
+ * a blurb like "The final adventure in J.K. Rowling's phenomenal Harry Potter
+ * book series" destroys. A whole-title match is too strict to catch that —
+ * the title is "Harry Potter and the Deathly Hallows" and only the first two
+ * words appear — so this tests adjacent pairs of the title's significant
+ * words instead. "Harry Potter" is caught; a title whose only significant
+ * word is generic is not, which is the right trade.
+ */
+function synopsisRevealsTitle(synopsis: string, title: string): boolean {
+  const words = title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !TITLE_STOPWORDS.has(w));
+  if (words.length === 0) return false;
+
+  const haystack = synopsis.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ");
+  if (words.length === 1) {
+    // A single distinctive word still gives it away ("Dune", "Frankenstein").
+    return words[0].length >= 6 && new RegExp(`\\b${words[0]}\\b`).test(haystack);
+  }
+  for (let i = 0; i < words.length - 1; i++) {
+    if (haystack.includes(`${words[i]} ${words[i + 1]}`)) return true;
+  }
+  return false;
+}
 
 // Suffixes providers append to otherwise-fine copy.
 const SOURCE_SUFFIX = /\s*--\s*(Provided by publisher|Publisher'?s description|From publisher)\.?\s*$/i;
@@ -249,11 +331,34 @@ function juvenilePenalty(
   return penalty;
 }
 
-export function usableSynopsis(description: string | null | undefined): string | null {
+export function usableSynopsis(
+  description: string | null | undefined,
+  opts: {
+    /**
+     * Reject the synopsis if it names the book. Passed in discovery mode
+     * only: there the card's whole premise is judging an unnamed story. For
+     * the reader's own shelf the book is already theirs and naming it costs
+     * nothing.
+     */
+    title?: string;
+    /**
+     * Reject non-English text. Also discovery-only — that junk comes from the
+     * providers ignoring langRestrict. A reader's own library may legitimately
+     * hold books in any language, and silently hiding them from their own
+     * suggestions because the blurb isn't English would be the app deciding
+     * what counts as a real book.
+     */
+    requireEnglish?: boolean;
+  } = {},
+): string | null {
+  const { title, requireEnglish = false } = opts;
   const cleaned = description?.replace(SOURCE_SUFFIX, "").trim();
   if (!cleaned) return null;
   if (cleaned.length < 60) return null;
   if (CATALOG_NOISE.test(cleaned)) return null;
+  if (EDITION_MARKETING.test(cleaned)) return null;
+  if (requireEnglish && !looksEnglish(cleaned)) return null;
+  if (title && synopsisRevealsTitle(cleaned, title)) return null;
   return cleaned;
 }
 
@@ -315,17 +420,31 @@ export async function getGenreSuggestions(
         reasons.push("Highly rated by readers");
       }
 
+      // Scoring window and label are deliberately different sizes.
+      //
+      // The +8 nudge over 12 years is a ranking preference and doesn't need
+      // to survive being read aloud. The *label* does, and "Recently
+      // published" on a book from nine years ago is simply untrue — it was
+      // appearing on 2017 titles. The tag now only fires inside a window a
+      // reader would actually call recent, and names the year so the claim is
+      // checkable rather than vague.
       const year = publishedYear(r.publishedDate);
-      if (year !== null && year >= new Date().getFullYear() - RECENT_YEARS) {
+      const thisYear = new Date().getFullYear();
+      if (year !== null && year >= thisYear - RECENT_YEARS) {
         score += 8;
-        reasons.push("Recently published");
+        if (year >= thisYear - RECENT_LABEL_YEARS) {
+          reasons.push(year >= thisYear ? "Published this year" : `Published in ${year}`);
+        }
       }
 
       // The card leads with the synopsis, so a result that has a usable one
       // is worth more than a bare record — but this is a ranking nudge,
       // never a filter (see the fail-open note on the return). No reason
       // string: "has a description" isn't a recommendation a reader reads.
-      const synopsis = usableSynopsis(r.description);
+      const synopsis = usableSynopsis(r.description, {
+        title: r.title,
+        requireEnglish: true,
+      });
       if (synopsis) score += 6;
 
       score += juvenilePenalty(r, genre);
