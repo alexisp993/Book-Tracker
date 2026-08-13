@@ -29,32 +29,22 @@ const GENRE_ITEMS: readonly TabItem<string>[] = SUGGESTION_GENRES.map((g) => ({
   label: g,
 }));
 
-// Scrollable list shell shared by both modes: a capped-height column with a
-// visible (not auto-hidden) scrollbar — this section can hold more entries
-// than comfortably fit, so the scrollbar itself needs to read as "more
-// below," not disappear like the app's other horizontal-scroll rows do —
-// plus a bottom fade as a second, harder-to-miss hint.
+// The list shell for both modes.
+//
+// This used to be a 420px-tall inner scroll box with its own scrollbar and a
+// bottom fade. On a page whose only job is this list, that meant the
+// suggestions were squeezed into the top third of the viewport with several
+// hundred pixels of empty paper beneath them, and a second scrollbar competing
+// with the page's own. It also forced every card to the full width of the
+// shell, so each synopsis ran ~180 characters a line — unreadable, and the
+// whole point of these cards is that you read the blurb.
+//
+// Now: a responsive grid that uses the width, with the page itself doing the
+// scrolling. Two columns from `md`, three from `xl` — each card lands near a
+// 65–75 character measure, which is the readable range.
 function SuggestionList({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative">
-      <div
-        className={cn(
-          "flex max-h-[420px] flex-col gap-2.5 overflow-y-auto pb-1 pr-2",
-          "[scrollbar-width:thin] [scrollbar-color:hsl(var(--muted-foreground)/0.35)_transparent]",
-          "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent",
-          "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/35",
-        )}
-      >
-        {children}
-      </div>
-      {/* Shortened from h-10: the taller fade washed over the last visible
-          card's add button, dimming a live control to signal scroll. 24px
-          still reads as "more below" without touching the button row. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background to-transparent"
-      />
-    </div>
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
   );
 }
 
@@ -198,13 +188,13 @@ function LibrarySuggestionRow({ suggestion }: { suggestion: SuggestionItem }) {
     <Link
       href={`/books/${suggestion.id}`}
       className={cn(
-        "block shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-[box-shadow,transform] hover:shadow-card-hover active:scale-[0.99]",
+        "flex h-full flex-col rounded-2xl border bg-card p-4 shadow-card transition-[box-shadow,transform] hover:shadow-card-hover active:scale-[0.99]",
         focusRing,
       )}
     >
       <SuggestionBody synopsis={suggestion.description ?? ""} />
       {suggestion.reasons[0] ? (
-        <div className="mt-2.5">
+        <div className="mt-auto pt-3">
           <ReasonTag reason={suggestion.reasons[0]} />
         </div>
       ) : null}
@@ -371,7 +361,11 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
 
   return (
     <>
-      <div className="shrink-0 rounded-2xl border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover">
+      {/* h-full + flex column so every card in a grid row is the same height
+          and the action row sits on a common baseline, however long the
+          synopsis is. Ragged button positions were the giveaway that this had
+          been a single-column list. */}
+      <div className="flex h-full flex-col rounded-2xl border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover">
         {/* The read-only rung between "no identity" and "a 10-field editable
             record". Browsing used to mean opening and dismissing a modal per
             card just to find out what a book was; now the body itself opens
@@ -391,7 +385,7 @@ function GenreSuggestionRow({ result }: { result: GenreSuggestionItem }) {
               away as surely as the title does. */}
           <SuggestionBody synopsis={result.description ?? ""} expanded={expanded} />
         </button>
-        <div className="mt-2.5 flex items-center gap-2">
+        <div className="mt-auto flex items-center gap-2 pt-3">
           <ReasonTag reason={result.reasons[0]} />
           <button
             type="button"
