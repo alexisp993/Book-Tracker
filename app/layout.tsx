@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Literata } from "next/font/google";
+import { Caveat, Inter, Literata } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
@@ -23,6 +23,21 @@ const sans = Inter({
 const serif = Literata({
   subsets: ["latin"],
   variable: "--font-serif",
+  display: "swap",
+});
+
+// Handwriting, loaded for exactly one purpose: the downloadable calendar's
+// script accents ("my", "one more chapter", "this month"). Those were serif
+// italic before, which is a different gesture entirely — italic is emphasis,
+// handwriting is a person's hand on a page, and the whole point of the accent
+// is that it looks written rather than typeset.
+//
+// One weight only, and nothing in the app's own UI uses it, so it costs a
+// single small file and never enters the interface's type system.
+const script = Caveat({
+  subsets: ["latin"],
+  weight: ["600"],
+  variable: "--font-script",
   display: "swap",
 });
 
@@ -86,7 +101,7 @@ export default function RootLayout({
     // right after paint (the intermittent "loads in light mode" bug).
     <html
       lang="en"
-      className={`${sans.variable} ${serif.variable}`}
+      className={`${sans.variable} ${serif.variable} ${script.variable}`}
       suppressHydrationWarning
     >
       <head>

@@ -71,8 +71,26 @@ async function downloadCalendarImage(
   if (!ctx) return;
   ctx.scale(DPR, DPR);
 
-  const serif = `"Literata", Georgia, "Times New Roman", serif`;
-  const sans = `-apple-system, "Segoe UI", system-ui, sans-serif`;
+  // Font families must come from the CSS variables, not from the family name.
+  //
+  // next/font doesn't register "Literata" or "Caveat" under those names — it
+  // emits a hashed family (`__Literata_1a2b3c`) and exposes it through
+  // --font-serif. So `font: 600 46px "Literata", Georgia, serif` silently
+  // matched nothing and fell through to Georgia, meaning every export shipped
+  // in a face the app never uses. The fallbacks stay for the case where the
+  // variable is missing entirely.
+  const cssFont = (varName: string, fallback: string) => {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(varName)
+      .trim();
+    return v ? `${v}, ${fallback}` : fallback;
+  };
+  const serif = cssFont("--font-serif", `Georgia, "Times New Roman", serif`);
+  const sans = cssFont(
+    "--font-sans",
+    `-apple-system, "Segoe UI", system-ui, sans-serif`,
+  );
+  const script = cssFont("--font-script", `${serif}`);
 
   // --- Ground -------------------------------------------------------------
 
@@ -107,30 +125,70 @@ async function downloadCalendarImage(
   // --- Left column --------------------------------------------------------
 
   const LX = 52; // left column origin
+  const LW = 292; // left column measure, up to the calendar card
 
-  drawBookGlyph(ctx, LX + 13, 78, 26, palette.primary);
-  ctx.font = `700 25px ${sans}`;
+  // A hairline that separates the rail into sections. The rail used to be one
+  // undifferentiated stack with a large hole at the bottom; these give it
+  // structure and let the stats sit where the hole was.
+  const rule = (y: number) => {
+    ctx.beginPath();
+    ctx.moveTo(LX, y);
+    ctx.lineTo(LX + LW, y);
+    ctx.strokeStyle = withAlpha(palette.mutedForeground, 0.28);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  };
+
+  drawBookGlyph(ctx, LX + 13, 74, 26, palette.primary);
+  ctx.font = `700 15px ${sans}`;
   ctx.fillStyle = palette.foreground;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("Book Tracker", LX + 36, 87);
+  ctx.letterSpacing = "2px";
+  ctx.fillText("BOOK TRACKER", LX + 36, 80);
+  ctx.letterSpacing = "0px";
 
-  // The one display moment. Two lines, the second in the accent, italic —
-  // the same serif the app titles everything else with.
-  // 46px, not the 52 this started at: at 52 the first line measured to within
-  // 4px of the calendar card's left edge, so the two columns read as colliding
-  // rather than as a composition.
+  // "my" in a real hand, then the title in the serif. This was serif italic
+  // before, which is a different gesture — italic is emphasis, handwriting is
+  // someone's hand on a page, and the accent only works if it looks written.
+  ctx.font = `600 54px ${script}`;
+  ctx.fillStyle = palette.primary;
+  ctx.fillText("my", LX + 2, 168);
+
   ctx.font = `600 46px ${serif}`;
   ctx.fillStyle = palette.foreground;
-  ctx.fillText("Your reading", LX, 208);
-  ctx.font = `italic 600 46px ${serif}`;
-  ctx.fillStyle = palette.primary;
-  ctx.fillText("calendar.", LX, 264);
+  ctx.fillText("reading", LX, 224);
+  ctx.fillText("calendar", LX, 274);
 
-  ctx.font = `400 19px ${sans}`;
+  ctx.beginPath();
+  ctx.moveTo(LX, 296);
+  ctx.lineTo(LX + 96, 296);
+  ctx.strokeStyle = palette.foreground;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.font = `400 17px ${sans}`;
   ctx.fillStyle = palette.mutedForeground;
-  ctx.fillText("See your reading.", LX, 326);
-  ctx.fillText("Celebrate every day.", LX, 354);
+  ctx.fillText("Each day you read", LX, 336);
+  ctx.fillText("is a step forward.", LX, 360);
+  ctx.font = `600 17px ${sans}`;
+  ctx.fillStyle = palette.foreground;
+  ctx.fillText("Keep the streak alive.", LX, 386);
+  const keepW = ctx.measureText("Keep the streak alive.").width;
+  ctx.beginPath();
+  ctx.moveTo(LX, 392);
+  ctx.lineTo(LX + keepW, 392);
+  ctx.strokeStyle = withAlpha(palette.primary, 0.45);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  rule(418);
+
+  ctx.font = `600 12px ${sans}`;
+  ctx.fillStyle = palette.mutedForeground;
+  ctx.letterSpacing = "1.6px";
+  ctx.fillText("HOW TO READ THIS", LX, 446);
+  ctx.letterSpacing = "0px";
 
   // Three notes that make the grid readable to someone who has never used the
   // app. The reference's third item is "Hover for details", which is nothing
@@ -154,57 +212,45 @@ async function downloadCalendarImage(
     },
   ];
 
-  let ny = 424;
-  for (const note of notes) {
-    ctx.beginPath();
-    ctx.arc(LX + 22, ny + 6, 22, 0, Math.PI * 2);
-    ctx.fillStyle = withAlpha(palette.primary, 0.12);
+  // Rounded-square chips in three descending tones rather than three identical
+  // circles — the mock uses the tonal step to imply the ramp the middle note
+  // is describing, so the legend demonstrates itself.
+  const chipTone = [1, 0.42, 0.2];
+  let ny = 486;
+  notes.forEach((note, i) => {
+    roundRect(ctx, LX, ny - 16, 34, 34, 10);
+    ctx.fillStyle = withAlpha(palette.primary, chipTone[i]);
     ctx.fill();
-    drawStatGlyph(ctx, note.glyph, LX + 22, ny + 6, palette.primary);
+    drawStatGlyph(
+      ctx,
+      note.glyph,
+      LX + 17,
+      ny + 1,
+      i === 0 ? palette.card : palette.foreground,
+    );
 
-    ctx.font = `600 17px ${sans}`;
+    ctx.font = `600 12px ${sans}`;
     ctx.fillStyle = palette.foreground;
-    ctx.fillText(note.title, LX + 58, ny + 1);
-    ctx.font = `400 14px ${sans}`;
+    ctx.letterSpacing = "1.2px";
+    ctx.fillText(note.title.toUpperCase(), LX + 48, ny - 4);
+    ctx.letterSpacing = "0px";
+    ctx.font = `400 13px ${sans}`;
     ctx.fillStyle = palette.mutedForeground;
-    ctx.fillText(note.body[0], LX + 58, ny + 23);
-    ctx.fillText(note.body[1], LX + 58, ny + 42);
-    ny += 96;
-  }
+    ctx.fillText(note.body[0], LX + 48, ny + 15);
+    ctx.fillText(note.body[1], LX + 48, ny + 32);
+    ny += 78;
+  });
 
-  // The reference's handwritten flourish. No script face is guaranteed on a
-  // canvas, so this is the serif in italic at a slight angle rather than a
-  // webfont the export can't rely on.
-  ctx.save();
-  ctx.translate(LX + 34, 748);
-  ctx.rotate(-0.045);
-  ctx.font = `italic 600 27px ${serif}`;
+  rule(ny - 26);
+
+  // --- This month (rail, vertical) ----------------------------------------
+
+  // Was a floating four-across card pinned to the bottom-left corner, which
+  // left a visible hole in the middle of the rail. As a vertical list it
+  // reads down the column like the rest of the rail and closes that gap.
+  ctx.font = `600 34px ${script}`;
   ctx.fillStyle = palette.primary;
-  ctx.fillText("Every day counts.", 0, 0);
-  const swooshW = ctx.measureText("Every day counts.").width;
-  ctx.beginPath();
-  ctx.moveTo(2, 13);
-  ctx.quadraticCurveTo(swooshW / 2, 22, swooshW - 4, 11);
-  ctx.strokeStyle = withAlpha(palette.primary, 0.55);
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = "round";
-  ctx.stroke();
-  ctx.restore();
-
-  // --- Stats card (floating, bottom-left) ---------------------------------
-
-  const SC_X = 36;
-  const SC_Y = 892;
-  const SC_W = 320;
-  const SC_H = 118;
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.13)";
-  ctx.shadowBlur = 26;
-  ctx.shadowOffsetY = 8;
-  roundRect(ctx, SC_X, SC_Y, SC_W, SC_H, 22);
-  ctx.fillStyle = palette.card;
-  ctx.fill();
-  ctx.restore();
+  ctx.fillText("this month", LX, ny + 22);
 
   const stats: { glyph: Glyph; value: string; label: string }[] = [
     {
@@ -229,24 +275,30 @@ async function downloadCalendarImage(
     },
   ];
 
-  const statColW = SC_W / stats.length;
-  ctx.textAlign = "center";
-  for (let i = 0; i < stats.length; i++) {
-    const cx = SC_X + statColW * (i + 0.5);
-    ctx.beginPath();
-    ctx.arc(cx, SC_Y + 34, 17, 0, Math.PI * 2);
-    ctx.fillStyle = withAlpha(palette.primary, 0.12);
+  let sy = ny + 68;
+  stats.forEach((stat, i) => {
+    roundRect(ctx, LX, sy - 17, 34, 34, 10);
+    ctx.fillStyle = withAlpha(palette.primary, [1, 0.42, 0.2, 0.32][i]);
     ctx.fill();
-    drawStatGlyph(ctx, stats[i].glyph, cx, SC_Y + 34, palette.primary);
+    drawStatGlyph(
+      ctx,
+      stat.glyph,
+      LX + 17,
+      sy,
+      i === 0 ? palette.card : palette.foreground,
+    );
 
-    ctx.font = `600 21px ${serif}`;
+    ctx.font = `600 26px ${serif}`;
     ctx.fillStyle = palette.foreground;
-    ctx.fillText(stats[i].value, cx, SC_Y + 82);
-    ctx.font = `400 11px ${sans}`;
+    ctx.fillText(stat.value, LX + 50, sy + 9);
+    const vw = ctx.measureText(stat.value).width;
+    ctx.font = `600 11px ${sans}`;
     ctx.fillStyle = palette.mutedForeground;
-    ctx.fillText(stats[i].label, cx, SC_Y + 100);
-  }
-  ctx.textAlign = "left";
+    ctx.letterSpacing = "1.4px";
+    ctx.fillText(stat.label.toUpperCase(), LX + 62 + vw, sy + 7);
+    ctx.letterSpacing = "0px";
+    sy += 52;
+  });
 
   // --- Calendar card ------------------------------------------------------
 
@@ -265,28 +317,77 @@ async function downloadCalendarImage(
   ctx.fill();
   ctx.restore();
 
-  // Month. Centred, and without the prev/next/"Month" controls the reference
-  // shows — they're interactive chrome and do nothing in a downloaded image.
-  ctx.font = `600 42px ${serif}`;
-  ctx.fillStyle = palette.foreground;
-  ctx.textAlign = "center";
-  ctx.fillText(monthLabel, CD_X + CD_W / 2, CD_Y + 92);
-
+  // Month, set left with the script line beneath it. The mock's letterspaced
+  // caps give the title the width the card needs; centring it left the top of
+  // the sheet feeling narrow.
   const GRID_X = CD_X + CD_PAD;
   const GRID_W = CD_W - CD_PAD * 2;
+
+  ctx.font = `600 36px ${serif}`;
+  ctx.fillStyle = palette.foreground;
+  ctx.textAlign = "left";
+  ctx.letterSpacing = "4px";
+  ctx.fillText(monthLabel.toUpperCase(), GRID_X, CD_Y + 76);
+  ctx.letterSpacing = "0px";
+
+  ctx.font = `600 30px ${script}`;
+  ctx.fillStyle = palette.primary;
+  ctx.fillText("one more chapter", GRID_X + 4, CD_Y + 116);
+  const chapW = ctx.measureText("one more chapter").width;
+  ctx.beginPath();
+  ctx.moveTo(GRID_X + 4, CD_Y + 126);
+  ctx.quadraticCurveTo(
+    GRID_X + 4 + chapW / 2,
+    CD_Y + 134,
+    GRID_X + chapW,
+    CD_Y + 124,
+  );
+  ctx.strokeStyle = withAlpha(palette.primary, 0.45);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // The mock puts a canned inspirational quote here, attributed to "Unknown".
+  // Filler in a personal export — so the slot carries the reader's own words
+  // instead: a note they wrote on a session this month. Omitted entirely when
+  // they didn't write one, rather than substituted.
+  const ownNote = cells
+    .flatMap((c) => c.data?.sessions ?? [])
+    .map((s) => s.note?.trim())
+    .find((n): n is string => !!n && n.length > 3);
+  if (ownNote) {
+    const QX = CD_X + CD_W - CD_PAD - 250;
+    ctx.font = `600 46px ${serif}`;
+    ctx.fillStyle = withAlpha(palette.primary, 0.28);
+    ctx.fillText("“", QX, CD_Y + 92);
+    ctx.font = `400 15px ${sans}`;
+    ctx.fillStyle = palette.foreground;
+    wrapText(ctx, ownNote, QX + 34, CD_Y + 70, 216, 21, 3);
+    ctx.font = `400 13px ${sans}`;
+    ctx.fillStyle = palette.mutedForeground;
+    ctx.fillText("— from your notes", QX + 34, CD_Y + 136);
+  }
+
   const GAP = 7;
   const CELL_W = Math.floor((GRID_W - GAP * 6) / 7);
   const rows = cells.length / 7;
 
-  ctx.font = `500 14px ${sans}`;
+  ctx.font = `600 12px ${sans}`;
   ctx.fillStyle = palette.mutedForeground;
-  const wdY = CD_Y + 138;
+  ctx.textAlign = "center";
+  ctx.letterSpacing = "1.6px";
+  const wdY = CD_Y + 172;
   for (let d = 0; d < 7; d++) {
-    ctx.fillText(weekdayLabels[d], GRID_X + d * (CELL_W + GAP) + CELL_W / 2, wdY);
+    ctx.fillText(
+      weekdayLabels[d].toUpperCase(),
+      GRID_X + d * (CELL_W + GAP) + CELL_W / 2,
+      wdY,
+    );
   }
+  ctx.letterSpacing = "0px";
 
-  const GRID_Y = CD_Y + 158;
-  const LEGEND_H = 52;
+  const GRID_Y = CD_Y + 192;
+  const LEGEND_H = 92;
   const gridAvail = CD_Y + CD_H - CD_PAD - LEGEND_H - GRID_Y;
   const CELL_H = Math.floor((gridAvail - GAP * (rows - 1)) / rows);
 
@@ -382,30 +483,51 @@ async function downloadCalendarImage(
     ctx.restore();
   }
 
-  // Legend. Less -> More, light -> dark: the reference labels its palest
-  // swatch "More time", which reads backwards against its own ramp.
+  // Reading time guide, as a labelled panel on a tinted strip rather than a
+  // loose row of swatches floating under the grid. Less -> More, light ->
+  // dark: the mock labels its palest swatch "More time", which reads backwards
+  // against its own ramp.
   const ramp = [palette.emptyCell, ...palette.bucketFill];
-  const LSW = 20;
-  const LGAP = 7;
-  const rampW = ramp.length * LSW + (ramp.length - 1) * LGAP;
-  ctx.font = `500 14px ${sans}`;
-  const lessW = ctx.measureText("Less time").width;
-  const moreW = ctx.measureText("More time").width;
-  const totalLegend = lessW + 12 + rampW + 12 + moreW;
-  let lx = CD_X + CD_W / 2 - totalLegend / 2;
-  const ly = CD_Y + CD_H - CD_PAD - 12;
+  const GP_Y = CD_Y + CD_H - CD_PAD - 62;
+  const GP_H = 62;
+  roundRect(ctx, GRID_X, GP_Y, GRID_W, GP_H, 14);
+  ctx.fillStyle = withAlpha(palette.mutedForeground, 0.07);
+  ctx.fill();
+
   ctx.textAlign = "left";
+  ctx.font = `600 11px ${sans}`;
   ctx.fillStyle = palette.mutedForeground;
-  ctx.fillText("Less time", lx, ly);
-  lx += lessW + 12;
+  ctx.letterSpacing = "1.6px";
+  ctx.fillText("READING TIME GUIDE", GRID_X + 20, GP_Y + 24);
+  ctx.letterSpacing = "0px";
+
+  const LSW = 22;
+  const LGAP = 8;
+  const rampW = ramp.length * LSW + (ramp.length - 1) * LGAP;
+  let lx = GRID_X + 20;
   for (let i = 0; i < ramp.length; i++) {
-    roundRect(ctx, lx + i * (LSW + LGAP), ly - 15, LSW, LSW, 6);
+    roundRect(ctx, lx + i * (LSW + LGAP), GP_Y + 32, LSW, LSW, 7);
     ctx.fillStyle = ramp[i];
     ctx.fill();
   }
-  lx += rampW + 12;
+
+  ctx.font = `400 12px ${sans}`;
   ctx.fillStyle = palette.mutedForeground;
-  ctx.fillText("More time", lx, ly);
+  const arrowX = lx + rampW + 16;
+  ctx.fillText("less time", arrowX, GP_Y + 48);
+  const ltW = ctx.measureText("less time").width;
+  const aStart = arrowX + ltW + 10;
+  const aEnd = aStart + 46;
+  ctx.beginPath();
+  ctx.moveTo(aStart, GP_Y + 44);
+  ctx.lineTo(aEnd, GP_Y + 44);
+  ctx.moveTo(aEnd - 5, GP_Y + 41);
+  ctx.lineTo(aEnd, GP_Y + 44);
+  ctx.lineTo(aEnd - 5, GP_Y + 47);
+  ctx.strokeStyle = withAlpha(palette.mutedForeground, 0.7);
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.fillText("more time", aEnd + 10, GP_Y + 48);
 
   // --- Best-day callout ---------------------------------------------------
 
@@ -434,21 +556,41 @@ async function downloadCalendarImage(
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.textAlign = "left";
-    ctx.font = `600 14px ${sans}`;
-    ctx.fillStyle = palette.primary;
-    ctx.fillText("Your longest day", coX + 16, coY + 28);
+    // Washi tape. The mock tapes this card to the sheet, which is the one
+    // touch that stops the callout reading as a UI tooltip and starts it
+    // reading as something stuck onto a paper calendar. Translucent, slightly
+    // rotated, with softened ends.
+    ctx.save();
+    ctx.translate(coX + CO_W / 2, coY);
+    ctx.rotate(-0.03);
+    ctx.globalAlpha = 0.62;
+    ctx.fillStyle = withAlpha(palette.mutedForeground, 0.45);
+    roundRect(ctx, -52, -13, 104, 26, 2);
+    ctx.fill();
+    // A few lighter streaks so the tape reads as fibrous rather than as a
+    // flat grey rectangle.
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = palette.card;
+    for (let i = -44; i < 44; i += 9) ctx.fillRect(i, -13, 2.5, 26);
+    ctx.restore();
 
-    drawStatGlyph(ctx, "clock", coX + 24, coY + 48, palette.mutedForeground);
-    ctx.font = `500 15px ${sans}`;
+    ctx.textAlign = "left";
+    ctx.font = `600 11px ${sans}`;
+    ctx.fillStyle = palette.mutedForeground;
+    ctx.letterSpacing = "1.6px";
+    ctx.fillText("BEST DAY SO FAR", coX + 16, coY + 34);
+    ctx.letterSpacing = "0px";
+
+    drawStatGlyph(ctx, "clock", coX + 24, coY + 56, palette.mutedForeground);
+    ctx.font = `600 16px ${sans}`;
     ctx.fillStyle = palette.foreground;
-    ctx.fillText(`${formatDuration(best.data.totalMinutes)} read`, coX + 40, coY + 53);
+    ctx.fillText(`${formatDuration(best.data.totalMinutes)} read`, coX + 40, coY + 61);
 
     if (best.data.primary) {
       const tw = 40;
       const th = 56;
       const tx = coX + 16;
-      const ty = coY + 68 + 20 - th / 2;
+      const ty = coY + 76 + 20 - th / 2;
       const thumb = await loadFirstUsableCover(best.data.primary.coverCandidates);
       if (thumb) {
         ctx.save();
@@ -469,18 +611,27 @@ async function downloadCalendarImage(
 
   // --- Tagline ------------------------------------------------------------
 
-  ctx.beginPath();
-  ctx.arc(CD_X + 26, S - 52, 22, 0, Math.PI * 2);
-  ctx.fillStyle = withAlpha(palette.primary, 0.12);
-  ctx.fill();
-  drawStatGlyph(ctx, "book", CD_X + 26, S - 52, palette.primary);
-  ctx.textAlign = "left";
-  ctx.font = `600 18px ${sans}`;
-  ctx.fillStyle = palette.foreground;
-  ctx.fillText("Track your journey.", CD_X + 62, S - 58);
+  // Centred under the sheet, one line, with a small heart. Two stacked lines
+  // beside an icon chip read as another UI row; this reads as a sign-off.
+  ctx.textAlign = "center";
   ctx.font = `400 18px ${sans}`;
+  const signoff = "Small moments. Big stories.";
+  const signW = ctx.measureText(signoff).width;
+  const signX = CD_X + CD_W / 2;
   ctx.fillStyle = palette.mutedForeground;
-  ctx.fillText("Build your story.", CD_X + 62, S - 34);
+  ctx.fillText(signoff, signX + 13, S - 40);
+
+  // A drawn heart rather than the emoji, which renders differently on every
+  // platform and would be the only emoji in the export.
+  const hx = signX - signW / 2 - 4;
+  const hy = S - 46;
+  ctx.beginPath();
+  ctx.moveTo(hx, hy + 5);
+  ctx.bezierCurveTo(hx - 8, hy - 2, hx - 4, hy - 9, hx, hy - 4);
+  ctx.bezierCurveTo(hx + 4, hy - 9, hx + 8, hy - 2, hx, hy + 5);
+  ctx.fillStyle = withAlpha(palette.primary, 0.7);
+  ctx.fill();
+  ctx.textAlign = "left";
 
   // Download
   const yearMonth = cells.find((c) => c.dateKey)?.dateKey?.slice(0, 7) ?? "";

@@ -470,8 +470,50 @@ const coverCollage: CalendarTemplate = {
   },
 };
 
+const linen: CalendarTemplate = {
+  id: "linen",
+  name: "Linen",
+  description: "Warm cream and forest green, with a woven tooth.",
+  paint: ({ ctx, size, rand }) => {
+    ctx.fillStyle = "#F5F2EA";
+    ctx.fillRect(0, 0, size, size);
+
+    // A woven tooth rather than random specks: faint threads crossing both
+    // ways, which is what separates linen from paper at this scale.
+    ctx.save();
+    ctx.strokeStyle = "#9A9377";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < size; i += 3) {
+      ctx.globalAlpha = 0.012 + rand() * 0.022;
+      ctx.beginPath();
+      ctx.moveTo(i + rand() * 2, 0);
+      ctx.lineTo(i + rand() * 2, size);
+      ctx.stroke();
+      ctx.globalAlpha = 0.01 + rand() * 0.018;
+      ctx.beginPath();
+      ctx.moveTo(0, i + rand() * 2);
+      ctx.lineTo(size, i + rand() * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    grain(ctx, size, rand, 2600, "#6E7A5E", 0.06);
+    vignette(ctx, size, "rgba(110,122,94,0.32)", 0.34);
+  },
+  ink: () => ({
+    background: "#F5F2EA",
+    card: "#FDFCF9",
+    border: "rgba(70,88,64,0.16)",
+    foreground: "#2F4032",
+    mutedForeground: "#6B6F5E",
+    primary: "hsla(128, 15%, 28%, 1)",
+    emptyCell: "#EFEDE3",
+  }),
+};
+
 export const CALENDAR_TEMPLATES: CalendarTemplate[] = [
   paper,
+  linen,
   coverCollage,
   paperTexture,
   vintageLibrary,
