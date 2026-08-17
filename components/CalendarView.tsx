@@ -787,8 +787,31 @@ function drawBookGlyph(
 // readThemePalette hands back `hsla(H, S%, L%, A)` strings; this swaps the
 // alpha so tinted chips can be derived from the theme's own primary rather
 // than hard-coding a second colour that wouldn't follow the theme.
-function withAlpha(hsla: string, alpha: number): string {
-  return hsla.replace(/,\s*[\d.]+\s*\)$/, `, ${alpha})`);
+function withAlpha(color: string, alpha: number): string {
+  // hsla()/rgba() — swap the trailing alpha channel.
+  if (/^(hsla?|rgba?)\(/i.test(color)) {
+    if (/,\s*[\d.]+\s*\)$/.test(color)) {
+      return color.replace(/,\s*[\d.]+\s*\)$/, `, ${alpha})`);
+    }
+    // hsl(h, s%, l%) / rgb(r, g, b) with no alpha channel to replace.
+    return color.replace(/^(hsl|rgb)\(/i, "$1a(").replace(/\)$/, `, ${alpha})`);
+  }
+
+  // Hex. This is the case that was silently broken: the regex above matches
+  // nothing on "#6B6F5E", so the string came back unchanged and every
+  // "translucent" fill drawn from a template's ink rendered fully opaque —
+  // the reading-time panel was a solid olive slab with its own label
+  // invisible on top of it.
+  const hex = color.trim().replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(hex)) {
+    const [r, g, b] = hex.split("").map((c) => parseInt(c + c, 16));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  if (/^[0-9a-f]{6}$/i.test(hex)) {
+    const n = parseInt(hex, 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+  return color;
 }
 
 // CSS object-cover equivalent: crops the wider or taller side of the source
